@@ -71,7 +71,7 @@ export function infosScreen() {
   return {
     title: 'Infos', back: 'kassenbuch', actions: [],
     node: h('div', { class: 'stack' }, h('div', { class: 'card stack' }, h('h3', {}, `Kassenbuch Version ${VERSION}`),
-      h('p', { class: 'muted' }, 'Die dritte Stelle der Versionsnummer ist der Merge-Code, die ersten beiden werden manuell vergeben.'),
+      h('p', { class: 'muted' }, 'Die dritte Stelle der Versionsnummer ist der Branch-Code, die ersten beiden werden manuell vergeben.'),
       h('h4', {}, 'Versionsverlauf'),
       ...CHANGES.map((c) => h('p', {}, h('strong', {}, `v${c.v}`), ` – ${c.text}`)))),
   };
