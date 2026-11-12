@@ -1,0 +1,89 @@
+// App-Start, Navigation, Sperre
+import * as db from './db.js';
+import { h, fmtDateTime } from './util.js';
+import { nav } from './nav.js';
+import { lockScreen } from './lock.js';
+import { toast } from './ui.js';
+import { startRestore, startBackup } from './backup.js';
+import { kassenbuchScreen } from './kassenbuch.js';
+import { kontakteScreen } from './kontakte.js';
+import { auswertungenScreen } from './auswertungen.js';
+import { einstellungenScreen, infosScreen } from './einstellungen.js';
+import { VERSION } from './version.js';
+
+const app = document.getElementById('app');
+let current = { name: 'lock' };
+let unlocked = false;
+let hiddenAt = 0;
+const LOCK_AFTER_MS = 5 * 60 * 1000;
+
+function startScreen() {
+  const n = [...db.data.kontakt.values()].filter((k) => !k.sys).length;
+  const empty = db.isEmpty();
+  return {
+    title: 'Kassenbuch', back: null, actions: [],
+    node: h('div', { class: 'card stack start' },
+      h('h2', {}, 'Willkommen'),
+      h('p', { class: 'muted pre' }, empty
+        ? 'Auf diesem Gerät sind noch keine Daten vorhanden.\nWenn du bereits eine Datensicherung hast, spiele sie jetzt ein.'
+        : `Lokale Daten: ${db.data.buchung.size} Buchungen, ${n} Kontakte\nLetzte Änderung: ${fmtDateTime(db.data.meta.lastChange)}\nLetzte Datensicherung: ${fmtDateTime(db.data.meta.lastBackup)}`),
+      !empty && db.hasUnsavedChanges() ? h('p', { class: 'notice' }, 'Es gibt ungesicherte Änderungen.') : null,
+      h('button', { class: `btn big ${empty ? '' : 'primary'}`, onclick: () => nav.go('kassenbuch') }, empty ? 'Ohne Restore starten' : 'Weiter zum Kassenbuch'),
+      h('button', { class: `btn big ${empty ? 'primary' : ''}`, onclick: () => startRestore() }, 'Datensicherung einspielen (Restore)')),
+  };
+}
+
+const screens = {
+  start: startScreen,
+  kassenbuch: kassenbuchScreen,
+  kunden: () => kontakteScreen('kunde'),
+  lieferanten: () => kontakteScreen('lieferant'),
+  auswertungen: auswertungenScreen,
+  einstellungen: einstellungenScreen,
+  infos: infosScreen,
+};
+
+function render() {
+  if (!unlocked) { showLock(); return; }
+  const s = screens[current.name](current.params);
+  const top = h('header', { class: 'top' },
+    s.back ? h('button', { class: 'btn', onclick: () => nav.go(s.back) }, '‹ Zurück') : null,
+    h('h1', {}, s.title), h('div', { class: 'top-actions' }, ...s.actions));
+  const scrollY = current.keepScroll ? window.scrollY : 0;
+  app.replaceChildren(top, h('main', {}, s.node), h('footer', { class: 'foot muted' }, `Kassenbuch v${VERSION}`));
+  window.scrollTo(0, scrollY);
+  current.keepScroll = false;
+}
+
+function showLock() {
+  app.replaceChildren(h('main', { class: 'center' }, lockScreen(() => { unlocked = true; nav.go('start'); })));
+}
+
+nav.go = (name, params) => { current = { name, params }; render(); };
+nav.refresh = () => { current.keepScroll = true; render(); };
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) hiddenAt = Date.now();
+  else if (unlocked && hiddenAt && Date.now() - hiddenAt > LOCK_AFTER_MS) {
+    unlocked = false;
+    document.getElementById('modal-root').replaceChildren();
+    document.body.classList.remove('modal-open');
+    render();
+  }
+});
+
+window.addEventListener('unhandledrejection', (e) => { console.error(e.reason); toast(e.reason?.message || 'Unerwarteter Fehler', 'err'); });
+
+(async function boot() {
+  try {
+    if (!window.indexedDB) throw new Error('Dieser Browser unterstützt keine lokale Datenspeicherung (IndexedDB).');
+    if (!crypto.subtle) throw new Error('Bitte die App über eine https://-Adresse öffnen (Verschlüsselung nicht verfügbar).');
+    await db.init();
+    if (navigator.storage?.persist) navigator.storage.persist().catch(() => {});
+    window.__kassenbuch = { db, nav, startBackup }; // für Tests/Debugging
+    showLock();
+  } catch (e) {
+    console.error(e);
+    app.replaceChildren(h('main', { class: 'center' }, h('div', { class: 'card' }, h('h1', {}, 'Fehler'), h('p', {}, e.message))));
+  }
+})();
