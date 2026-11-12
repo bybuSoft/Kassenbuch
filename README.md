@@ -24,7 +24,7 @@ Auf dem iPad/iPhone: in Safari öffnen, *Teilen → Zum Home-Bildschirm*.
 - **Datensicherung**: verschlüsselt (PBKDF2 + AES-GCM), Dateiname mit Zeitstempel und Version, Speichern über das Share-Sheet bzw. die Dateien-App (iCloud Drive). Roter Punkt bei ungesicherten Änderungen. Beim Start kann ein **Restore** gemacht werden, mit Hinweis auf Sicherungs-/Änderungsdatum und Warnung, wenn die lokalen Daten neuer sind.
 - **PIN** als Zugriffsschutz (pro Gerät; sperrt nach 5 Minuten im Hintergrund).
 - **Testdaten**: Button in den Einstellungen (10 Kunden, 2 Lieferanten, Buchungen für jeden Fall), wieder entfernbar.
-- **Versionierung**: `js/version.js` – MAJOR.MINOR manuell, dritte Stelle = Branch-Code (z. B. 4a3xvr); Änderungsbeschreibung auf dem Infos-Screen.
+- **Versionierung**: `js/version.js` – MAJOR.MINOR manuell, dritte Stelle = Branch-Code (z. B. 4a3xvr), der bei jedem Commit automatisch aus dem Git-Branch gesetzt wird (`tools/set-version.sh`, Hook in `.githooks/`). Einmalig pro Clone aktivieren: `git config core.hooksPath .githooks`. Auf master/main bleibt der Code des gemergten Branches stehen. Änderungsbeschreibung auf dem Infos-Screen.
 
 ## Struktur
 

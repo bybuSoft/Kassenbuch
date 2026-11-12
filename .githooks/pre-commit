@@ -1,0 +1,4 @@
+#!/bin/sh
+# Aktualisiert die Versionsnummer (Branch-Code) bei jedem Commit.
+root=$(git rev-parse --show-toplevel)
+sh "$root/tools/set-version.sh" && git add "$root/js/version.js"
