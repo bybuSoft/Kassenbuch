@@ -1,0 +1,16 @@
+{
+  "name": "Kassenbuch",
+  "short_name": "Kassenbuch",
+  "description": "Einfache Kosten-/Ertragserfassung",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f5f7",
+  "theme_color": "#0a6cff",
+  "lang": "de-CH",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
