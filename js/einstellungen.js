@@ -6,7 +6,7 @@ import { editKontakt } from './kontakte.js';
 import { changePin } from './lock.js';
 import { createTestData, removeTestData, hasTestData } from './testdata.js';
 import { VERSION, CHANGES } from './version.js';
-import { startBackup, startRestore } from './backup.js';
+import { startBackup, startRestore, folderSupported, backupFolder, chooseBackupFolder, clearBackupFolder } from './backup.js';
 import { nav } from './nav.js';
 
 /** Liste der Kategorien mit Neu/Ändern/Löschen (nur wenn nirgends verwendet) */
@@ -49,6 +49,12 @@ export function einstellungenScreen() {
         h('p', { class: 'muted' }, 'Wird Teil des Dateinamens der Datensicherung und beim Restore angezeigt. Er wird nicht in der Sicherung gespeichert.')),
       h('div', { class: 'card stack' }, h('h3', {}, 'Datensicherung'),
         h('p', { class: 'muted' }, `Letzte Änderung der Daten: ${fmtDateTime(db.data.meta.lastChange)}\nLetzte Datensicherung: ${fmtDateTime(db.data.meta.lastBackup)}`),
+        folderSupported()
+          ? h('div', { class: 'stack' }, h('p', {}, h('strong', {}, 'Standardordner: '), backupFolder() ? backupFolder().name : 'nicht festgelegt (Auswahl bei jeder Sicherung)'),
+            h('div', { class: 'presets' },
+              h('button', { class: 'btn', onclick: async () => { try { await chooseBackupFolder(); toast('Standardordner festgelegt'); nav.refresh(); } catch (err) { if (err.name !== 'AbortError') toast(err.message, 'err'); } } }, 'Ordner wählen'),
+              backupFolder() ? h('button', { class: 'btn', onclick: async () => { await clearBackupFolder(); nav.refresh(); } }, 'Ordner entfernen') : null))
+          : h('p', { class: 'muted' }, 'Ein fester Standardordner kann auf iPhone/iPad nicht eingestellt werden (Einschränkung von Safari). Beim Sichern „In Dateien sichern“ wählen – iOS merkt sich meist den zuletzt benutzten Ordner. Auf Desktop-Chrome/Edge ist die Einstellung möglich.'),
         h('div', { class: 'presets' }, h('button', { class: 'btn', onclick: () => startBackup() }, 'Sicherung erstellen'), h('button', { class: 'btn', onclick: () => startRestore() }, 'Restore aus Datei'))),
       h('div', { class: 'card stack' }, h('h3', {}, 'PIN'),
         h('button', { class: 'btn', onclick: async () => {
