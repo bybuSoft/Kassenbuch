@@ -55,6 +55,7 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
   const ex = id ? db.data.kontakt.get(id) : null;
   const k = ex ? { ...ex } : db.newKontakt({ ...prefill, ...(lockType ? { istLieferant: lockType === 'lieferant' } : {}) });
   const comms = ex ? db.commsOf(id).map((c) => ({ ...c })) : [];
+  comms.forEach((c, i) => { if (c.bevorzugt && comms.findIndex((o) => o.bevorzugt) !== i) c.bevorzugt = false; }); // nur eine bevorzugt
   const locked = !!lockType || !!k.sys;
 
   // ---- Felder
@@ -76,16 +77,16 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
   const briefErh = h('input', { type: 'checkbox', checked: !!k.briefErhalten });
   const briefDat = h('input', { type: 'date', value: k.briefDatum });
 
-  const kundeBox = h('div', { class: 'stack' },
+  const kundeTop = h('div', { class: 'stack' },
     h('div', { class: 'grid2' }, field('Vorname', vorname), field('Name', name)),
-    h('div', { class: 'grid2' }, field('Geburtsdatum', geb), field('Kundenkategorie', kat)),
-    h('fieldset', { class: 'fs' }, h('legend', {}, 'Gesundheit'),
-      h('div', { class: 'checks' }, ...HEALTH.map(([key, label]) => checkField(label, health[key])))),
-    h('fieldset', { class: 'fs' }, h('legend', {}, 'Serienbrief'),
-      h('div', { class: 'grid2' }, checkField('Brief erhalten', briefErh), field('Datum letzter Versand', briefDat))));
+    h('div', { class: 'grid2' }, field('Geburtsdatum', geb), field('Kundenkategorie', kat)));
+  const kundeHealth = h('fieldset', { class: 'fs' }, h('legend', {}, 'Gesundheit'),
+    h('div', { class: 'checks' }, ...HEALTH.map(([key, label]) => checkField(label, health[key]))));
+  const kundeBrief = h('fieldset', { class: 'fs' }, h('legend', {}, 'Serienbrief'),
+    h('div', { class: 'grid2' }, checkField('Brief erhalten', briefErh), field('Datum letzter Versand', briefDat)));
   const lieferantBox = h('div', { class: 'grid2' }, field('Name 1', name1), field('Name 2', name2));
   const syncType = () => {
-    kundeBox.hidden = chkLief.checked; lieferantBox.hidden = !chkLief.checked;
+    kundeTop.hidden = kundeHealth.hidden = kundeBrief.hidden = chkLief.checked; lieferantBox.hidden = !chkLief.checked;
   };
   chkLief.addEventListener('change', syncType);
   syncType();
@@ -99,7 +100,7 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
       typ.value = c.typ;
       const wert = h('input', { value: c.wert, type: c.typ === 'mail' ? 'email' : 'tel', 'aria-label': c.typ === 'mail' ? 'E-Mail' : 'Telefonnummer', autocomplete: 'off', oninput: () => { c.wert = wert.value; } });
       const pref = h('input', { type: 'checkbox', checked: !!c.bevorzugt, onchange: () => {
-        comms.forEach((o) => { if (o.typ === c.typ) o.bevorzugt = false; });
+        comms.forEach((o) => { o.bevorzugt = false; }); // es kann nur eine Kommunikation bevorzugt sein
         c.bevorzugt = pref.checked; drawComms();
       } });
       return h('div', { class: 'comm' }, typ, wert, checkField('bevorzugt', pref),
@@ -118,10 +119,12 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
   const body = h('div', { class: 'stack' },
     k.sys === 'eigene' ? h('p', { class: 'muted' }, 'Eigene Firma: erscheint auf Quittungen und kann bei Ausgaben als Kontakt gewählt werden.') : null,
     locked ? null : checkField('Lieferant (juristische Person)', chkLief),
-    kundeBox, lieferantBox,
+    kundeTop, lieferantBox,
     h('div', { class: 'grid3' }, field('Strasse', strasse, 'span3'), field('PLZ', plz), field('Ort', ort, 'span2')),
     h('fieldset', { class: 'fs' }, h('legend', {}, 'Kommunikation'), commBox),
-    h('fieldset', { class: 'fs' }, h('legend', {}, 'Notizen'), notizen, marker));
+    kundeHealth,
+    h('fieldset', { class: 'fs' }, h('legend', {}, 'Notizen'), notizen, marker),
+    kundeBrief);
 
   const buttons = [];
   if (ex && !ex.sys) {
@@ -151,6 +154,7 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
       out.briefErhalten = briefErh.checked; out.briefDatum = briefDat.value;
     }
     const cl = comms.filter((c) => c.wert.trim()).map((c) => ({ ...c, wert: c.wert.trim() }));
+    let seenPref = false; cl.forEach((c) => { if (c.bevorzugt) { if (seenPref) c.bevorzugt = false; seenPref = true; } });
     const dups = db.findDuplicates(out, cl);
     if (dups.length) {
       const d = dups[0];

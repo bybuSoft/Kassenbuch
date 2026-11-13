@@ -9,7 +9,7 @@ const now = new Date();
 const state = {
   tab: 'perioden',
   from: `${monthOf(today())}-01`, to: lastDayOfMonth(monthOf(today())),
-  senKat: '', serKat: '',
+  senKat: '', serKat: '', vj: false,
 };
 const REPORTS = [
   ['perioden', 'Perioden'], ['kategorien', 'Kundenkategorien'], ['senioren', 'Kundenliste'],
@@ -42,47 +42,79 @@ export function auswertungenScreen() {
   return { title: 'Auswertungen', back: 'kassenbuch', actions: [], node: h('div', { class: 'stack' }, tabs, body) };
 }
 
-// ---- Perioden ---------------------------------------------------------------
-function perioden() {
-  const bs = db.buchungenList().filter(inRange);
-  const ein = sum(bs.filter((b) => b.betrag > 0)), aus = -sum(bs.filter((b) => b.betrag < 0));
-  const byCat = (art) => {
-    const m = new Map();
-    bs.filter((b) => db.artOf(b) === art).forEach((b) => m.set(b.kategorieId, (m.get(b.kategorieId) || 0) + Math.abs(b.betrag)));
-    return [...m].map(([id, v]) => [db.data.buchungskategorie.get(id)?.name || '?', v]).sort((a, b) => collator.compare(a[0], b[0]));
-  };
-  const catTable = (title, rows, total, cls) => h('div', { class: 'card' }, h('h3', {}, title),
-    h('table', { class: 'tbl' }, h('tbody', {}, ...rows.map(([n, v]) => h('tr', {}, h('td', {}, n), h('td', { class: 'num' }, chf(v)))),
-      h('tr', { class: 'total' }, h('td', {}, 'Total'), h('td', { class: `num ${cls}` }, chf(total))))));
-  const months = new Map();
-  bs.forEach((b) => { const m = monthOf(b.datum); const o = months.get(m) || { e: 0, a: 0 }; if (b.betrag > 0) o.e += b.betrag; else o.a -= b.betrag; months.set(m, o); });
-  const monthRows = [...months].sort().map(([m, o]) => h('tr', {}, h('td', {}, monthLabel(m)), h('td', { class: 'num' }, chf(o.e)), h('td', { class: 'num' }, chf(o.a)), h('td', { class: 'num' }, chf(o.e - o.a))));
-  return h('div', { class: 'stack' }, periodControl(),
-    h('div', { class: 'summary' }, h('div', {}, h('span', { class: 'muted' }, 'Einnahmen'), h('strong', { class: 'in' }, chf(ein))),
-      h('div', {}, h('span', { class: 'muted' }, 'Ausgaben'), h('strong', { class: 'out' }, chf(aus))),
-      h('div', {}, h('span', { class: 'muted' }, 'Saldo'), h('strong', {}, chf(ein - aus)))),
-    catTable('Einnahmen nach Kategorie', byCat('einnahme'), ein, 'in'),
-    catTable('Ausgaben nach Kategorie', byCat('ausgabe'), aus, 'out'),
-    h('div', { class: 'card' }, h('h3', {}, 'Nach Monat'),
-      h('table', { class: 'tbl' }, th('Monat', { t: 'Einnahmen', num: 1 }, { t: 'Ausgaben', num: 1 }, { t: 'Saldo', num: 1 }), h('tbody', {}, ...monthRows))));
+// ---- Vorjahresvergleich (optional) -------------------------------------------------------
+const shiftYear = (iso) => {
+  const [y, m, d] = iso.split('-').map(Number);
+  return isoDate(new Date(y - 1, m - 1, Math.min(d, new Date(y - 1, m, 0).getDate())));
+};
+const prevRange = (b) => b.datum >= shiftYear(state.from) && b.datum <= shiftYear(state.to);
+
+function compareControl() {
+  return checkField('Vorjahresvergleich anzeigen', h('input', { type: 'checkbox', checked: state.vj, onchange: (e) => { state.vj = e.target.checked; nav.refresh(); } }));
 }
 
-// ---- Kundenkategorien -----------------------------------------------------------
-function kategorien() {
-  const bs = db.buchungenList().filter(inRange).filter((b) => b.betrag > 0);
+/** Tabelle mit optionaler Vorjahresspalte. rows: [name, aktuell, vorjahr, [anzahl]] */
+function compareTable(title, firstCol, rows, cls, { count = false } = {}) {
+  const vj = state.vj;
+  const tot = rows.reduce((t, r) => [t[0] + r[1], t[1] + r[2]], [0, 0]);
+  const diff = (a, b) => h('td', { class: `num ${a - b >= 0 ? 'in' : 'out'}` }, `${a - b > 0 ? '+' : ''}${chf(a - b)}`);
+  return h('div', { class: 'card' }, h('h3', {}, title),
+    h('table', { class: 'tbl' },
+      th(firstCol, ...(count ? [{ t: 'Anzahl', num: 1 }] : []), { t: 'Betrag', num: 1 }, ...(vj ? [{ t: 'Vorjahr', num: 1 }, { t: 'Diff.', num: 1 }] : [])),
+      h('tbody', {}, ...rows.map(([n, v, p, c]) => h('tr', {}, h('td', {}, n), ...(count ? [h('td', { class: 'num' }, c ?? '')] : []), h('td', { class: 'num' }, chf(v)),
+        ...(vj ? [h('td', { class: 'num' }, chf(p)), diff(v, p)] : []))),
+        h('tr', { class: 'total' }, h('td', {}, 'Total'), ...(count ? [h('td', {})] : []), h('td', { class: `num ${cls}` }, chf(tot[0])),
+          ...(vj ? [h('td', { class: 'num' }, chf(tot[1])), diff(tot[0], tot[1])] : [])))));
+}
+
+/** Gruppiert Buchungen (aktuell/Vorjahr) nach keyFn und liefert [name, summe, vorjahr, anzahl] */
+function groupRows(cur, prev, keyFn, nameFn) {
   const m = new Map();
-  bs.forEach((b) => {
-    const k = db.data.kontakt.get(b.kontaktId);
-    const key = k?.kategorieId || '';
-    const o = m.get(key) || { sum: 0, n: 0 };
-    o.sum += b.betrag; o.n++; m.set(key, o);
+  const add = (arr, i) => arr.forEach((b) => { const k = keyFn(b); const o = m.get(k) || [0, 0, 0]; o[i] += Math.abs(b.betrag); if (i === 0) o[2]++; m.set(k, o); });
+  add(cur, 0); if (state.vj) add(prev, 1);
+  return [...m].map(([k, o]) => [nameFn(k), o[0], o[1], o[2]]).sort((a, b) => collator.compare(a[0], b[0]));
+}
+
+// ---- Perioden ---------------------------------------------------------------
+function perioden() {
+  const all = db.buchungenList();
+  const bs = all.filter(inRange), pv = state.vj ? all.filter(prevRange) : [];
+  const ein = sum(bs.filter((b) => b.betrag > 0)), aus = -sum(bs.filter((b) => b.betrag < 0));
+  const pein = sum(pv.filter((b) => b.betrag > 0)), paus = -sum(pv.filter((b) => b.betrag < 0));
+  const catName = (id) => db.data.buchungskategorie.get(id)?.name || '?';
+  const byCat = (art) => groupRows(bs.filter((b) => db.artOf(b) === art), pv.filter((b) => db.artOf(b) === art), (b) => b.kategorieId, catName);
+  const sm = (label, v, p, cls) => h('div', {}, h('span', { class: 'muted' }, label), h('strong', { class: cls }, chf(v)), state.vj ? h('span', { class: 'muted' }, `Vorjahr ${chf(p)}`) : null);
+  const months = new Map();
+  const addM = (arr, vj) => arr.forEach((b) => {
+    const mo = vj ? `${+monthOf(b.datum).slice(0, 4) + 1}${monthOf(b.datum).slice(4)}` : monthOf(b.datum);
+    const o = months.get(mo) || { e: 0, a: 0, pe: 0, pa: 0 };
+    if (b.betrag > 0) o[vj ? 'pe' : 'e'] += b.betrag; else o[vj ? 'pa' : 'a'] -= b.betrag;
+    months.set(mo, o);
   });
-  const rows = [...m].map(([id, o]) => [id ? db.data.kundenkategorie.get(id)?.name : '(ohne Kategorie)', o]).sort((a, b) => collator.compare(a[0], b[0]));
-  const total = sum(bs);
-  return h('div', { class: 'stack' }, periodControl(), h('div', { class: 'card' }, h('h3', {}, 'Einnahmen nach Kundenkategorie'),
-    h('table', { class: 'tbl' }, th('Kategorie', { t: 'Anzahl', num: 1 }, { t: 'Betrag', num: 1 }),
-      h('tbody', {}, ...rows.map(([n, o]) => h('tr', {}, h('td', {}, n), h('td', { class: 'num' }, o.n), h('td', { class: 'num' }, chf(o.sum)))),
-        h('tr', { class: 'total' }, h('td', {}, 'Total'), h('td', { class: 'num' }, bs.length), h('td', { class: 'num in' }, chf(total)))))));
+  addM(bs, false); addM(pv, true);
+  const monthRows = [...months].sort().filter(([, o]) => o.e || o.a || !state.vj).map(([mo, o]) => h('tr', {}, h('td', {}, monthLabel(mo)),
+    h('td', { class: 'num' }, chf(o.e)), h('td', { class: 'num' }, chf(o.a)), h('td', { class: 'num' }, chf(o.e - o.a)),
+    ...(state.vj ? [h('td', { class: 'num' }, chf(o.pe - o.pa))] : [])));
+  return h('div', { class: 'stack' }, periodControl(), compareControl(),
+    h('div', { class: 'summary' }, sm('Einnahmen (Kunden)', ein, pein, 'in'), sm('Ausgaben (Lieferanten)', aus, paus, 'out'), sm('Saldo', ein - aus, pein - paus, '')),
+    compareTable('Einnahmen (Kunden) nach Kategorie', 'Kategorie', byCat('einnahme'), 'in'),
+    compareTable('Ausgaben (Lieferanten) nach Kategorie', 'Kategorie', byCat('ausgabe'), 'out'),
+    h('div', { class: 'card' }, h('h3', {}, 'Nach Monat'),
+      h('table', { class: 'tbl' }, th('Monat', { t: 'Einnahmen', num: 1 }, { t: 'Ausgaben', num: 1 }, { t: 'Saldo', num: 1 }, ...(state.vj ? [{ t: 'Saldo Vorjahr', num: 1 }] : [])), h('tbody', {}, ...monthRows))));
+}
+
+// ---- Kategorien: Kunden (nach Kundenkategorie) und Lieferanten (nach Lieferant) -----------------
+function kategorien() {
+  const all = db.buchungenList();
+  const sel = (arr) => arr.filter((b) => b.betrag > 0);
+  const lie = (arr) => arr.filter((b) => b.betrag < 0);
+  const cur = all.filter(inRange), prev = state.vj ? all.filter(prevRange) : [];
+  const katOf = (b) => db.data.kontakt.get(b.kontaktId)?.kategorieId || '';
+  const kundenRows = groupRows(sel(cur), sel(prev), katOf, (id) => (id ? db.data.kundenkategorie.get(id)?.name || '?' : '(ohne Kategorie)'));
+  const lieferantRows = groupRows(lie(cur), lie(prev), (b) => b.kontaktId, (id) => db.kontaktName(db.data.kontakt.get(id)) || '?');
+  return h('div', { class: 'stack' }, periodControl(), compareControl(),
+    compareTable('Kunden: Einnahmen nach Kundenkategorie', 'Kategorie', kundenRows, 'in', { count: true }),
+    compareTable('Lieferanten: Ausgaben nach Lieferant', 'Lieferant', lieferantRows, 'out', { count: true }));
 }
 
 // ---- Kundenliste (z. B. Seniorenzentrum): Vorname, Name, Betrag, gruppiert nach Tag, Total pro Monat ---------

@@ -6,6 +6,7 @@ import { lockScreen } from './lock.js';
 import { toast } from './ui.js';
 import { startRestore, startBackup } from './backup.js';
 import { kassenbuchScreen } from './kassenbuch.js';
+import { buchungScreen } from './buchung.js';
 import { kontakteScreen } from './kontakte.js';
 import { auswertungenScreen } from './auswertungen.js';
 import { einstellungenScreen, infosScreen } from './einstellungen.js';
@@ -28,13 +29,14 @@ function startScreen() {
         ? 'Auf diesem Gerät sind noch keine Daten vorhanden.\nWenn du bereits eine Datensicherung hast, spiele sie jetzt ein.'
         : `Lokale Daten: ${db.data.buchung.size} Buchungen, ${n} Kontakte\nLetzte Änderung: ${fmtDateTime(db.data.meta.lastChange)}\nLetzte Datensicherung: ${fmtDateTime(db.data.meta.lastBackup)}`),
       !empty && db.hasUnsavedChanges() ? h('p', { class: 'notice' }, 'Es gibt ungesicherte Änderungen.') : null,
-      h('button', { class: `btn big ${empty ? '' : 'primary'}`, onclick: () => nav.go('kassenbuch') }, empty ? 'Ohne Restore starten' : 'Weiter zum Kassenbuch'),
+      h('button', { class: `btn big ${empty ? '' : 'primary'}`, onclick: () => nav.go('buchung') }, empty ? 'Ohne Restore starten' : 'Weiter zur Buchung'),
       h('button', { class: `btn big ${empty ? 'primary' : ''}`, onclick: () => startRestore() }, 'Datensicherung einspielen (Restore)')),
   };
 }
 
 const screens = {
   start: startScreen,
+  buchung: buchungScreen,
   kassenbuch: kassenbuchScreen,
   kunden: () => kontakteScreen('kunde'),
   lieferanten: () => kontakteScreen('lieferant'),

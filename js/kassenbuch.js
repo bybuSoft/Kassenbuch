@@ -1,18 +1,15 @@
 // Kassenbuch: Buchungsliste, Buchungsdialog, Quittung
 import * as db from './db.js';
-import { h, uuid, chf, parseBetrag, today, fmtDate, monthOf, monthLabel, shiftMonth, normalize } from './util.js';
+import { h, uuid, chf, parseBetrag, today, fmtDate, monthOf, shiftMonth, lastDayOfMonth, normalize } from './util.js';
 import { showModal, confirmDlg, field, segmented, toast, printNode } from './ui.js';
 import { editKontakt } from './kontakte.js';
 import { startBackup } from './backup.js';
 import { nav } from './nav.js';
 
-const view = { month: monthOf(today()), lastArt: 'einnahme' };
+const FIRST = () => `${monthOf(today())}-01`;
+const view = { lastArt: 'einnahme', from: FIRST(), to: lastDayOfMonth(monthOf(today())), q: '', kat: '', art: '' };
 
 export function kassenbuchScreen() {
-  const all = db.buchungenList().filter((b) => monthOf(b.datum) === view.month);
-  const ein = all.filter((b) => b.betrag > 0).reduce((s, b) => s + b.betrag, 0);
-  const aus = all.filter((b) => b.betrag < 0).reduce((s, b) => s - b.betrag, 0);
-
   const dot = db.hasUnsavedChanges() ? h('span', { class: 'dot', title: 'Ungesicherte Änderungen', 'aria-label': 'Ungesicherte Änderungen' }) : null;
   const toolbar = h('nav', { class: 'toolbar', 'aria-label': 'Funktionen' },
     h('button', { class: 'btn', onclick: () => nav.go('kunden') }, 'Kunden'),
@@ -22,32 +19,68 @@ export function kassenbuchScreen() {
     h('button', { class: 'btn', onclick: () => nav.go('einstellungen') }, 'Einstellungen'),
     h('button', { class: 'btn', onclick: () => nav.go('infos') }, 'Infos'));
 
-  const monthBar = h('div', { class: 'monthbar' },
-    h('button', { class: 'btn', 'aria-label': 'Vorheriger Monat', onclick: () => { view.month = shiftMonth(view.month, -1); nav.refresh(); } }, '‹'),
-    h('strong', {}, monthLabel(view.month)),
-    h('button', { class: 'btn', 'aria-label': 'Nächster Monat', onclick: () => { view.month = shiftMonth(view.month, 1); nav.refresh(); } }, '›'));
+  // ---- Filter: Periode, Art, Kategorie, Suche
+  const from = h('input', { type: 'date', value: view.from, 'aria-label': 'Von' });
+  const to = h('input', { type: 'date', value: view.to, 'aria-label': 'Bis' });
+  const q = h('input', { type: 'search', placeholder: 'Suchen (Name, Text, Kategorie, Betrag)…', value: view.q, 'aria-label': 'Suchen' });
+  const katSel = h('select', { 'aria-label': 'Buchungskategorie' });
+  const artSel = h('select', { 'aria-label': 'Art' }, h('option', { value: '' }, 'Einnahmen und Ausgaben'), h('option', { value: 'einnahme' }, 'Nur Einnahmen'), h('option', { value: 'ausgabe' }, 'Nur Ausgaben'));
+  artSel.value = view.art;
+  const drawKatOpts = () => {
+    const cats = db.kategorienList('buchungskategorie', view.art || undefined);
+    katSel.replaceChildren(h('option', { value: '' }, 'Alle Kategorien'), ...cats.map((c) => h('option', { value: c.id }, `${c.name}${view.art ? '' : c.art === 'einnahme' ? ' (Einnahme)' : ' (Ausgabe)'}`)));
+    if (!cats.some((c) => c.id === view.kat)) view.kat = '';
+    katSel.value = view.kat;
+  };
+  drawKatOpts();
+  const preset = (label, f, t) => h('button', { type: 'button', class: 'btn small', onclick: () => { view.from = f; view.to = t; nav.refresh(); } }, label);
+  const y = new Date().getFullYear(), m = monthOf(today());
+  const pm = shiftMonth(m, -1);
+  const filters = h('div', { class: 'stack period' },
+    h('div', { class: 'grid2' }, field('Von', from), field('Bis', to)),
+    h('div', { class: 'presets' },
+      preset('Dieser Monat', `${m}-01`, lastDayOfMonth(m)), preset('Letzter Monat', `${pm}-01`, lastDayOfMonth(pm)),
+      preset('Dieses Jahr', `${y}-01-01`, `${y}-12-31`), preset('Letztes Jahr', `${y - 1}-01-01`, `${y - 1}-12-31`),
+      preset('Alles', '0000-01-01', '9999-12-31')),
+    q, h('div', { class: 'grid2' }, artSel, katSel));
 
-  const summary = h('div', { class: 'summary' },
-    h('div', {}, h('span', { class: 'muted' }, 'Einnahmen'), h('strong', { class: 'in' }, chf(ein))),
-    h('div', {}, h('span', { class: 'muted' }, 'Ausgaben'), h('strong', { class: 'out' }, chf(aus))),
-    h('div', {}, h('span', { class: 'muted' }, 'Saldo'), h('strong', {}, chf(ein - aus))));
-
-  const list = h('div', { class: 'list' });
-  if (!all.length) list.append(h('p', { class: 'muted pad' }, 'Keine Buchungen in diesem Monat.'));
-  let lastDay = '';
-  for (const b of all) {
-    if (b.datum !== lastDay) { lastDay = b.datum; list.append(h('div', { class: 'day' }, fmtDate(b.datum))); }
-    const k = db.data.kontakt.get(b.kontaktId);
-    const kat = db.data.buchungskategorie.get(b.kategorieId);
-    list.append(h('button', { type: 'button', class: 'row', onclick: () => openBuchung(b) },
-      h('div', { class: 'row-main' }, h('strong', {}, db.kontaktName(k)), h('span', { class: b.betrag < 0 ? 'out' : 'in' }, chf(b.betrag))),
-      h('div', { class: 'row-sub muted' }, [kat?.name, b.text].filter(Boolean).join(' · '))));
-  }
+  const result = h('div', { class: 'stack' });
+  const draw = () => {
+    view.q = q.value;
+    const terms = normalize(q.value).split(/\s+/).filter(Boolean);
+    const all = db.buchungenList().filter((b) => b.datum >= view.from && b.datum <= view.to
+      && (!view.art || db.artOf(b) === view.art) && (!view.kat || b.kategorieId === view.kat)
+      && (!terms.length || terms.every((t) => normalize(`${db.kontaktName(db.data.kontakt.get(b.kontaktId))} ${b.text} ${db.data.buchungskategorie.get(b.kategorieId)?.name} ${(Math.abs(b.betrag) / 100).toFixed(2)}`).includes(t))));
+    const ein = all.filter((b) => b.betrag > 0).reduce((s, b) => s + b.betrag, 0);
+    const aus = all.filter((b) => b.betrag < 0).reduce((s, b) => s - b.betrag, 0);
+    const summary = h('div', { class: 'summary' },
+      h('div', {}, h('span', { class: 'muted' }, 'Einnahmen'), h('strong', { class: 'in' }, chf(ein))),
+      h('div', {}, h('span', { class: 'muted' }, 'Ausgaben'), h('strong', { class: 'out' }, chf(aus))),
+      h('div', {}, h('span', { class: 'muted' }, 'Saldo'), h('strong', {}, chf(ein - aus))));
+    const list = h('div', { class: 'list' });
+    if (!all.length) list.append(h('p', { class: 'muted pad' }, 'Keine Buchungen gefunden.'));
+    let lastDay = '';
+    for (const b of all) {
+      if (b.datum !== lastDay) { lastDay = b.datum; list.append(h('div', { class: 'day' }, fmtDate(b.datum))); }
+      const k = db.data.kontakt.get(b.kontaktId);
+      const kat = db.data.buchungskategorie.get(b.kategorieId);
+      list.append(h('button', { type: 'button', class: 'row', onclick: () => openBuchung(b) },
+        h('div', { class: 'row-main' }, h('strong', {}, db.kontaktName(k)), h('span', { class: b.betrag < 0 ? 'out' : 'in' }, chf(b.betrag))),
+        h('div', { class: 'row-sub muted' }, [kat?.name, b.text].filter(Boolean).join(' · '))));
+    }
+    result.replaceChildren(summary, h('p', { class: 'muted' }, `${all.length} Buchung${all.length === 1 ? '' : 'en'}`), list);
+  };
+  q.addEventListener('input', draw);
+  katSel.addEventListener('change', () => { view.kat = katSel.value; draw(); });
+  artSel.addEventListener('change', () => { view.art = artSel.value; drawKatOpts(); draw(); });
+  const apply = () => { view.from = from.value || view.from; view.to = to.value || view.to; draw(); };
+  from.addEventListener('change', apply); to.addEventListener('change', apply);
+  draw();
 
   return {
-    title: 'Kassenbuch', back: null,
-    actions: [h('button', { class: 'btn primary', onclick: () => openBuchung(null) }, '+ Buchung')],
-    node: h('div', { class: 'stack' }, toolbar, monthBar, summary, list),
+    title: 'Kassenbuch', back: 'buchung',
+    actions: [h('button', { class: 'btn primary', onclick: () => nav.go('buchung') }, '+ Buchung')],
+    node: h('div', { class: 'stack' }, toolbar, filters, result),
   };
 }
 
@@ -134,7 +167,6 @@ export async function openBuchung(existing) {
     const b = { id: ex ? ex.id : uuid(), datum: datum.value, betrag: art === 'ausgabe' ? -cents : cents, kontaktId, kategorieId: katSel.value, text: text.value.trim(), created: ex ? ex.created : Date.now() };
     await db.put('buchung', b);
     view.lastArt = art;
-    if (monthOf(b.datum) !== view.month) view.month = monthOf(b.datum);
     toast('Buchung gespeichert');
     return again ? 'again' : 'saved';
   };
