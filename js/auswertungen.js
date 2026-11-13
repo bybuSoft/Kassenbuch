@@ -155,8 +155,8 @@ export function treuhaenderRows(from, to) {
   for (const b of bs) {
     const k = db.data.kontakt.get(b.kontaktId);
     const art = db.artOf(b);
-    // Keine Kundendaten im Export: bei Einnahmen wird kein Kontakt ausgegeben.
-    rows.push([{ d: b.datum }, art === 'einnahme' ? 'Einnahme' : 'Ausgabe', db.data.buchungskategorie.get(b.kategorieId)?.name || '', art === 'ausgabe' ? db.kontaktName(k) : '', { n: b.betrag / 100, f: 'money' }, b.text || '']);
+    // Keine Kundendaten im Export: bei Einnahmen wird weder Kontakt noch Buchungstext ausgegeben (nur bei Lieferanten).
+    rows.push([{ d: b.datum }, art === 'einnahme' ? 'Einnahme' : 'Ausgabe', db.data.buchungskategorie.get(b.kategorieId)?.name || '', art === 'ausgabe' ? db.kontaktName(k) : '', { n: b.betrag / 100, f: 'money' }, k?.istLieferant ? b.text || '' : '']);
   }
   const sums = [[{ s: 'Art', b: true }, { s: 'Kategorie', b: true }, { s: 'Total CHF', b: true }]];
   let te = 0, ta = 0;
@@ -178,7 +178,7 @@ function treuhaender() {
   return h('div', { class: 'stack' }, periodControl(),
     h('div', { class: 'card stack' },
       h('h3', {}, 'Export für den Treuhänder (Excel)'),
-      h('p', { class: 'notice' }, 'Hinweis: Es werden keine personenbezogenen Daten exportiert. Einnahmen enthalten keinen Kunden, bei Ausgaben steht der Lieferant.'),
+      h('p', { class: 'notice' }, 'Hinweis: Es werden keine personenbezogenen Daten exportiert. Einnahmen enthalten weder Kunde noch Buchungstext; bei Ausgaben stehen Lieferant und Buchungstext.'),
       h('p', { class: 'muted' }, `${count} Buchungen im Zeitraum ${fmtDate(state.from)} – ${fmtDate(state.to)}.`),
       h('button', { class: 'btn primary', disabled: !count, onclick: async () => {
         const { rows, sums } = treuhaenderRows(state.from, state.to);
