@@ -72,7 +72,7 @@ export function buchungScreen() {
     const drawSugg = () => {
       const terms = normalize(input.value).split(/\s+/).filter(Boolean);
       const pool = [...db.kontakteList(false, false), ...db.kontakteList(true, false)];
-      found = !input.value.trim() ? [] : pool.filter((c) => terms.every((t) => normalize(db.kontaktName(c) + ' ' + c.ort).includes(t))).slice(0, 8);
+      found = !input.value.trim() ? [] : pool.filter((c) => terms.every((t) => normalize(db.kontaktName(c)).includes(t))).slice(0, 8);
       sugg.replaceChildren(...found.map((c) => h('button', { type: 'button', class: 'row', onclick: () => pick(c.id) },
         h('strong', {}, db.kontaktName(c)), h('span', { class: 'muted' }, [c.istLieferant ? 'Lieferant' : '', c.plz, c.ort, c.sys === 'eigene' ? 'eigene Firma' : ''].filter(Boolean).join(' ')))));
       if (!found.length && input.value.trim()) sugg.append(h('p', { class: 'muted pad' }, 'Nicht gefunden.'));

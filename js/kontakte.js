@@ -84,6 +84,12 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
     h('div', { class: 'checks' }, ...HEALTH.map(([key, label]) => checkField(label, health[key]))));
   const kundeBrief = h('fieldset', { class: 'fs' }, h('legend', {}, 'Serienbrief'),
     h('div', { class: 'grid2' }, checkField('Brief erhalten', briefErh), field('Datum letzter Versand', briefDat)));
+  const geschlecht = h('select', { 'aria-label': 'Geschlecht / Firma' }, h('option', { value: '' }, '– keine Angabe –'),
+    h('option', { value: 'w' }, 'weiblich'), h('option', { value: 'm' }, 'männlich'), h('option', { value: 'firma' }, 'Firma'));
+  geschlecht.value = k.geschlecht || '';
+  const anrede = h('select', { 'aria-label': 'Anrede' }, h('option', { value: '' }, '– keine Angabe –'),
+    h('option', { value: 'du' }, 'Du'), h('option', { value: 'sie' }, 'Sie'));
+  anrede.value = k.anrede || '';
   const lieferantBox = h('div', { class: 'grid2' }, field('Name 1', name1), field('Name 2', name2));
   const syncType = () => {
     kundeTop.hidden = kundeHealth.hidden = kundeBrief.hidden = chkLief.checked; lieferantBox.hidden = !chkLief.checked;
@@ -120,6 +126,7 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
     k.sys === 'eigene' ? h('p', { class: 'muted' }, 'Eigene Firma: erscheint auf Quittungen und kann bei Ausgaben als Kontakt gewählt werden.') : null,
     locked ? null : checkField('Lieferant (juristische Person)', chkLief),
     kundeTop, lieferantBox,
+    h('div', { class: 'grid2' }, field('Geschlecht / Firma', geschlecht), field('Anrede', anrede)),
     h('div', { class: 'grid3' }, field('Strasse', strasse, 'span3'), field('PLZ', plz), field('Ort', ort, 'span2')),
     h('fieldset', { class: 'fs' }, h('legend', {}, 'Kommunikation'), commBox),
     kundeHealth,
@@ -142,7 +149,7 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
   buttons.push({ label: 'Abbrechen', value: null });
   buttons.push({ label: 'Speichern', cls: 'primary', onClick: async () => {
     const lief = chkLief.checked;
-    const out = { ...k, istLieferant: lief, strasse: strasse.value.trim(), plz: plz.value.trim(), ort: ort.value.trim(), notizen: notizen.value };
+    const out = { ...k, istLieferant: lief, geschlecht: geschlecht.value, anrede: anrede.value, strasse: strasse.value.trim(), plz: plz.value.trim(), ort: ort.value.trim(), notizen: notizen.value };
     if (lief) {
       out.name1 = name1.value.trim(); out.name2 = name2.value.trim();
       if (!out.name1) { toast('Bitte Name 1 erfassen.', 'err'); name1.focus(); return false; }
