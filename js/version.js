@@ -2,12 +2,13 @@
 // (die Zeichen nach dem letzten "-" im Branch-Namen, z. B. claude/festive-cray-4a3xvr -> 4a3xvr).
 // BRANCH_CODE wird beim Commit automatisch gesetzt (tools/set-version.sh, Hook in .githooks/).
 export const MAJOR = 0;
-export const MINOR = 5;
+export const MINOR = 6;
 export const BRANCH_CODE = 'uc7ksu';
 export const VERSION = `${MAJOR}.${MINOR}.${BRANCH_CODE}`;
 
 // Kurze Beschreibung je Änderung (neueste zuerst)
 export const CHANGES = [
+  { v: '0.6', text: 'Buchung: Einnahme/Ausgabe ersetzt durch Vorzeichenfeld +/− beim Betrag (Gutschriften und Rückzahlungen); Kategorien richten sich nach Kunde/Lieferant.' },
   { v: '0.5', text: 'Kontaktsuche in der Buchung nur über Namen; Kunden/Lieferanten mit Feldern Geschlecht/Firma und Anrede (Du/Sie).' },
   { v: '0.4', text: 'Buchungsseite: Buttons Abbrechen / Speichern & neu / Speichern; Kontaktvorschläge erst nach Eingabe.' },
   { v: '0.3', text: 'Kunde: Adresse/Kommunikation unter Geburtsdatum, Serienbrief zuunterst, nur eine bevorzugte Kommunikation. Kassenbuch mit Suche/Filter statt Monatswahl. Auswertungen mit optionalem Vorjahresvergleich, getrennt nach Kunden/Lieferanten.' },

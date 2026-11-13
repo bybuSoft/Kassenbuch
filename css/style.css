@@ -32,6 +32,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--pri);outline-off
 .check{display:flex;align-items:center;gap:8px;min-height:44px}
 .checks{display:flex;flex-wrap:wrap;gap:4px 16px}
 .fs{border:1px solid var(--line);border-radius:10px;padding:8px 12px 12px;margin:0;min-width:0}.fs legend{padding:0 6px;color:var(--muted);font-size:.85rem}
+.amount-row{display:flex;gap:8px}.amount-row .sign{width:4.5rem;flex:none;font-size:1.2rem;text-align:center}.amount-row input{flex:1;min-width:0}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.grid3{display:grid;grid-template-columns:1fr 2fr;gap:10px}.grid3 .span3{grid-column:1/-1}.grid3 .span2{grid-column:2}
 [hidden]{display:none!important}
 .seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}

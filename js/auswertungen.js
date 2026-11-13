@@ -70,7 +70,7 @@ function compareTable(title, firstCol, rows, cls, { count = false } = {}) {
 /** Gruppiert Buchungen (aktuell/Vorjahr) nach keyFn und liefert [name, summe, vorjahr, anzahl] */
 function groupRows(cur, prev, keyFn, nameFn) {
   const m = new Map();
-  const add = (arr, i) => arr.forEach((b) => { const k = keyFn(b); const o = m.get(k) || [0, 0, 0]; o[i] += Math.abs(b.betrag); if (i === 0) o[2]++; m.set(k, o); });
+  const add = (arr, i) => arr.forEach((b) => { const k = keyFn(b); const o = m.get(k) || [0, 0, 0]; o[i] += db.artOf(b) === 'ausgabe' ? -b.betrag : b.betrag; if (i === 0) o[2]++; m.set(k, o); });
   add(cur, 0); if (state.vj) add(prev, 1);
   return [...m].map(([k, o]) => [nameFn(k), o[0], o[1], o[2]]).sort((a, b) => collator.compare(a[0], b[0]));
 }
@@ -79,8 +79,9 @@ function groupRows(cur, prev, keyFn, nameFn) {
 function perioden() {
   const all = db.buchungenList();
   const bs = all.filter(inRange), pv = state.vj ? all.filter(prevRange) : [];
-  const ein = sum(bs.filter((b) => b.betrag > 0)), aus = -sum(bs.filter((b) => b.betrag < 0));
-  const pein = sum(pv.filter((b) => b.betrag > 0)), paus = -sum(pv.filter((b) => b.betrag < 0));
+  const isE = (b) => db.artOf(b) === 'einnahme', isA = (b) => db.artOf(b) === 'ausgabe';
+  const ein = sum(bs.filter(isE)), aus = -sum(bs.filter(isA));
+  const pein = sum(pv.filter(isE)), paus = -sum(pv.filter(isA));
   const catName = (id) => db.data.buchungskategorie.get(id)?.name || '?';
   const byCat = (art) => groupRows(bs.filter((b) => db.artOf(b) === art), pv.filter((b) => db.artOf(b) === art), (b) => b.kategorieId, catName);
   const sm = (label, v, p, cls) => h('div', {}, h('span', { class: 'muted' }, label), h('strong', { class: cls }, chf(v)), state.vj ? h('span', { class: 'muted' }, `Vorjahr ${chf(p)}`) : null);
@@ -88,7 +89,7 @@ function perioden() {
   const addM = (arr, vj) => arr.forEach((b) => {
     const mo = vj ? `${+monthOf(b.datum).slice(0, 4) + 1}${monthOf(b.datum).slice(4)}` : monthOf(b.datum);
     const o = months.get(mo) || { e: 0, a: 0, pe: 0, pa: 0 };
-    if (b.betrag > 0) o[vj ? 'pe' : 'e'] += b.betrag; else o[vj ? 'pa' : 'a'] -= b.betrag;
+    if (db.artOf(b) === 'einnahme') o[vj ? 'pe' : 'e'] += b.betrag; else o[vj ? 'pa' : 'a'] -= b.betrag;
     months.set(mo, o);
   });
   addM(bs, false); addM(pv, true);
@@ -106,8 +107,8 @@ function perioden() {
 // ---- Kategorien: Kunden (nach Kundenkategorie) und Lieferanten (nach Lieferant) -----------------
 function kategorien() {
   const all = db.buchungenList();
-  const sel = (arr) => arr.filter((b) => b.betrag > 0);
-  const lie = (arr) => arr.filter((b) => b.betrag < 0);
+  const sel = (arr) => arr.filter((b) => db.artOf(b) === 'einnahme');
+  const lie = (arr) => arr.filter((b) => db.artOf(b) === 'ausgabe');
   const cur = all.filter(inRange), prev = state.vj ? all.filter(prevRange) : [];
   const katOf = (b) => db.data.kontakt.get(b.kontaktId)?.kategorieId || '';
   const kundenRows = groupRows(sel(cur), sel(prev), katOf, (id) => (id ? db.data.kundenkategorie.get(id)?.name || '?' : '(ohne Kategorie)'));
@@ -123,7 +124,7 @@ function senioren() {
   if (!state.senKat || !db.data.kundenkategorie.has(state.senKat)) state.senKat = (kats.find((k) => /senior/i.test(k.name)) || kats[0])?.id || '';
   const sel = h('select', { 'aria-label': 'Kundenkategorie', onchange: () => { state.senKat = sel.value; nav.refresh(); } }, ...kats.map((c) => h('option', { value: c.id }, c.name)));
   sel.value = state.senKat;
-  const bs = db.buchungenList().filter(inRange).filter((b) => b.betrag > 0 && db.data.kontakt.get(b.kontaktId)?.kategorieId === state.senKat)
+  const bs = db.buchungenList().filter(inRange).filter((b) => db.artOf(b) === 'einnahme' && db.data.kontakt.get(b.kontaktId)?.kategorieId === state.senKat)
     .sort((a, b) => (a.datum < b.datum ? -1 : a.datum > b.datum ? 1 : 0));
   const out = h('div', { class: 'report' });
   const catName = db.data.kundenkategorie.get(state.senKat)?.name || '';

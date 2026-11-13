@@ -129,7 +129,9 @@ export const kategorienList = (store, art) =>
   [...data[store].values()].filter((c) => !art || c.art === art).sort((a, b) => collator.compare(a.name, b.name));
 export const buchungenList = () =>
   [...data.buchung.values()].sort((a, b) => (a.datum === b.datum ? (b.created || 0) - (a.created || 0) : a.datum < b.datum ? 1 : -1));
-export const artOf = (b) => (b.betrag < 0 ? 'ausgabe' : 'einnahme');
+/** Art einer Buchung (Einnahme/Ausgabe) ergibt sich aus der Buchungskategorie; Vorzeichen des Betrags (Gutschrift/Rückzahlung) ändert sie nicht. */
+export const artOf = (b) => data.buchungskategorie.get(b.kategorieId)?.art || (b.betrag < 0 ? 'ausgabe' : 'einnahme');
+export const artOfKontakt = (k) => (k.istLieferant ? 'ausgabe' : 'einnahme');
 
 export function kategorieInUse(store, id) {
   if (store === 'kundenkategorie') return [...data.kontakt.values()].some((k) => k.kategorieId === id);
