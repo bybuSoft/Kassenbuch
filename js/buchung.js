@@ -1,7 +1,7 @@
 // Buchungsseite: Erfassung (Datum, Kunde, Betrag, Art, Kategorie, Text) und Liste der zuletzt erfassten Buchungen
 import * as db from './db.js';
 import { h, uuid, chf, parseBetrag, today, fmtDate, monthOf, normalize } from './util.js';
-import { field, segmented, toast } from './ui.js';
+import { field, segmented, toast, confirmDlg } from './ui.js';
 import { editKontakt } from './kontakte.js';
 import { startBackup } from './backup.js';
 import { openBuchung } from './kassenbuch.js';
@@ -107,8 +107,10 @@ export function buchungScreen() {
     await db.put('buchung', { id: uuid(), datum: datum.value, betrag: draft.art === 'ausgabe' ? -cents : cents, kontaktId: k.id, kategorieId: katSel.value, text: text.value.trim(), created: Date.now() });
     toast('Buchung gespeichert');
     Object.assign(draft, { kontaktId: null, betrag: '', kategorieId: '', text: '' });
-    if (again) nav.refresh(); else nav.go('kassenbuch');
-    if (!again) await startBackup(); // „Speichern“ startet direkt den Backupdialog
+    if (again) { nav.refresh(); return; }
+    // „Speichern“: erst fragen, ob ein Backup erstellt werden soll, danach ins Kassenbuch
+    if (await confirmDlg('Die Buchung wurde gespeichert.\nSoll jetzt eine Datensicherung erstellt werden?', { title: 'Datensicherung', ok: 'Ja, sichern', cancel: 'Nein' })) await startBackup();
+    nav.go('kassenbuch');
   };
 
   const cancel = () => { Object.assign(draft, { kontaktId: null, betrag: '', kategorieId: '', text: '' }); nav.go('kassenbuch'); };
