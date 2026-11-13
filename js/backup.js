@@ -24,6 +24,25 @@ export function parseBackupFilename(name) {
   return { device: (m[1] || '').replace(/_/g, ' '), date: new Date(+m[2], +m[3] - 1, +m[4], +m[5], +m[6], +m[7]).getTime() };
 }
 
+// ---- Standardordner (File System Access API: Chrome/Edge am Desktop/Android; nicht auf iPhone/iPad) ----
+export const folderSupported = () => typeof window.showDirectoryPicker === 'function';
+export const backupFolder = () => db.data.meta.backupDir || null;
+
+export async function chooseBackupFolder() {
+  const handle = await window.showDirectoryPicker({ id: 'kassenbuch-backup', mode: 'readwrite' });
+  await db.setMeta('backupDir', handle);
+  return handle;
+}
+export const clearBackupFolder = () => db.setMeta('backupDir', null);
+
+async function folderAccess(handle) {
+  try {
+    const opt = { mode: 'readwrite' };
+    if ((await handle.queryPermission(opt)) === 'granted') return true;
+    return (await handle.requestPermission(opt)) === 'granted';
+  } catch { return false; }
+}
+
 export async function makeBackup(pass) {
   const snap = { ...db.snapshot(), appVersion: VERSION };
   const text = await encryptJson(snap, pass);
@@ -38,30 +57,52 @@ export async function startBackup() {
   });
   if (!pass) return;
   const { blob, filename } = await makeBackup(pass);
-  const res = await saveBlob(blob, filename, { share: true });
+  let res;
+  const dir = backupFolder();
+  if (dir && folderSupported() && await folderAccess(dir)) {
+    try {
+      const w = await (await dir.getFileHandle(filename, { create: true })).createWritable();
+      await w.write(blob); await w.close();
+      res = 'folder';
+    } catch (e) { toast(`Standardordner nicht beschreibbar (${e.message}) – Datei wird heruntergeladen`, 'err'); }
+  }
+  if (!res) res = await saveBlob(blob, filename, { share: true });
   if (res === 'cancelled') { toast('Datensicherung abgebrochen'); return; }
   passConfirmedThisSession = true;
   await db.setMeta('lastBackup', Date.now());
-  toast(res === 'shared' ? 'Datensicherung gespeichert' : `Datensicherung heruntergeladen: ${filename}`);
+  toast(res === 'folder' ? `Datensicherung im Ordner „${dir.name}“ gespeichert: ${filename}` : res === 'shared' ? 'Datensicherung gespeichert' : `Datensicherung heruntergeladen: ${filename}`);
   nav.refresh();
+}
+
+/** Auswahlliste mit Gerätename und Zeitpunkt (aus dem Dateinamen). Gibt File, 'other' oder null zurück. */
+async function chooseFromList(files, { other = false } = {}) {
+  const infos = files.map((f) => ({ f, ...parseBackupFilename(f.name) })).sort((a, b) => (b.date || 0) - (a.date || 0));
+  const ctl = showModal({
+    title: 'Welche Sicherung einspielen?',
+    body: h('div', { class: 'list' }, ...(infos.length ? infos.map((i) => h('button', { type: 'button', class: 'row', onclick: () => ctl.close(i.f) },
+      h('div', { class: 'row-main' }, h('strong', {}, i.device || 'Ohne Gerätename'), h('span', { class: 'muted' }, i.date ? fmtDateTime(i.date) : '')),
+      h('div', { class: 'row-sub muted' }, i.f.name))) : [h('p', { class: 'muted pad' }, 'Keine Sicherungen im Standardordner gefunden.')])),
+    buttons: [{ label: 'Abbrechen', value: null }, ...(other ? [{ label: 'Andere Datei…', value: 'other' }] : [])],
+  });
+  return (await ctl.closed) || null;
 }
 
 export async function startRestore() {
   let file = null;
-  const files = await pickFile({ multiple: true });
-  if (!files.length) return;
-  if (files.length === 1) file = files[0];
-  else {
-    // mehrere mögliche Restore-Dateien: mit Gerätename und Zeitpunkt zur Auswahl anzeigen
-    const infos = files.map((f) => ({ f, ...parseBackupFilename(f.name) })).sort((a, b) => (b.date || 0) - (a.date || 0));
-    const ctl = showModal({
-      title: 'Welche Sicherung einspielen?',
-      body: h('div', { class: 'list' }, ...infos.map((i) => h('button', { type: 'button', class: 'row', onclick: () => ctl.close(i.f) },
-        h('div', { class: 'row-main' }, h('strong', {}, i.device || 'Ohne Gerätename'), h('span', { class: 'muted' }, i.date ? fmtDateTime(i.date) : '')),
-        h('div', { class: 'row-sub muted' }, i.f.name)))),
-      buttons: [{ label: 'Abbrechen', value: null }],
-    });
-    file = (await ctl.closed) || null;
+  const dir = backupFolder();
+  if (dir && folderSupported() && await folderAccess(dir)) {
+    try {
+      const found = [];
+      for await (const [name, entry] of dir.entries()) if (entry.kind === 'file' && /\.enc$/i.test(name)) found.push(await entry.getFile());
+      const r = await chooseFromList(found, { other: true });
+      if (!r) return;
+      if (r !== 'other') file = r;
+    } catch (e) { toast(`Standardordner nicht lesbar (${e.message})`, 'err'); }
+  }
+  if (!file) {
+    const files = await pickFile({ multiple: true });
+    if (!files.length) return;
+    file = files.length === 1 ? files[0] : await chooseFromList(files);
     if (!file) return;
   }
   const fileInfo = parseBackupFilename(file.name);
