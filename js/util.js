@@ -88,12 +88,13 @@ export async function saveBlob(blob, filename, { share = false } = {}) {
   return 'downloaded';
 }
 
-/** Öffnet den Dateiauswahldialog; null bei Abbruch. */
-export function pickFile() {
+/** Öffnet den Dateiauswahldialog; null bei Abbruch (mit multiple: Array, leer bei Abbruch). */
+export function pickFile({ multiple = false } = {}) {
   return new Promise((resolve) => {
-    const input = h('input', { type: 'file', style: 'display:none' });
-    input.addEventListener('change', () => { resolve(input.files[0] || null); input.remove(); });
-    input.addEventListener('cancel', () => { resolve(null); input.remove(); });
+    const input = h('input', { type: 'file', style: 'display:none', multiple });
+    const empty = () => (multiple ? [] : null);
+    input.addEventListener('change', () => { resolve(multiple ? [...input.files] : (input.files[0] || null)); input.remove(); });
+    input.addEventListener('cancel', () => { resolve(empty()); input.remove(); });
     document.body.append(input);
     input.click();
   });

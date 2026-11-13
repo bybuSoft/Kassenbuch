@@ -1,7 +1,7 @@
 // Einstellungen und Infos
 import * as db from './db.js';
 import { h, uuid, fmtDateTime } from './util.js';
-import { confirmDlg, promptDlg, passwordDlg, showModal, field, toast, alertDlg } from './ui.js';
+import { confirmDlg, promptDlg, passwordDlg, showModal, field, checkField, toast, alertDlg } from './ui.js';
 import { editKontakt } from './kontakte.js';
 import { changePin } from './lock.js';
 import { createTestData, removeTestData, hasTestData } from './testdata.js';
@@ -43,6 +43,10 @@ export function einstellungenScreen() {
       kategorieCard('Kundenkategorien', 'kundenkategorie'),
       kategorieCard('Buchungskategorien – Einnahmen', 'buchungskategorie', 'einnahme'),
       kategorieCard('Buchungskategorien – Ausgaben', 'buchungskategorie', 'ausgabe'),
+      h('div', { class: 'card stack' }, h('h3', {}, 'Gerät'),
+        field('Gerätename', h('input', { type: 'text', value: db.deviceName(), placeholder: 'z. B. iPhone-Marlene', autocomplete: 'off',
+          onchange: async (e) => { await db.setMeta('deviceName', e.target.value.trim()); toast('Gerätename gespeichert'); } })),
+        h('p', { class: 'muted' }, 'Wird Teil des Dateinamens der Datensicherung und beim Restore angezeigt. Er wird nicht in der Sicherung gespeichert.')),
       h('div', { class: 'card stack' }, h('h3', {}, 'Datensicherung'),
         h('p', { class: 'muted' }, `Letzte Änderung der Daten: ${fmtDateTime(db.data.meta.lastChange)}\nLetzte Datensicherung: ${fmtDateTime(db.data.meta.lastBackup)}`),
         h('div', { class: 'presets' }, h('button', { class: 'btn', onclick: () => startBackup() }, 'Sicherung erstellen'), h('button', { class: 'btn', onclick: () => startRestore() }, 'Restore aus Datei'))),
@@ -53,6 +57,9 @@ export function einstellungenScreen() {
           await ctl.closed;
         } }, 'PIN ändern')),
       h('div', { class: 'card stack' }, h('h3', {}, 'Testdaten'),
+        checkField('Testdaten: neue Daten als Test markieren', h('input', { type: 'checkbox', checked: !!db.data.meta.testMode,
+          onchange: async (e) => { await db.setMeta('testMode', e.target.checked); toast(e.target.checked ? 'Neue Daten werden als Test markiert' : 'Neue Daten werden normal gespeichert'); nav.refresh(); } })),
+        db.data.meta.testMode ? h('p', { class: 'notice' }, 'Testmodus aktiv: Neue Kontakte und Buchungen sind als Test markiert und können mit „Testdaten entfernen“ gelöscht werden.') : null,
         h('p', { class: 'muted' }, 'Erzeugt 10 Kunden, 2 Lieferanten und Buchungen für jeden Fall (alle Kategorien, mit/ohne Text, eigene Firma, Dublette, Kunde ohne Buchungen).'),
         h('div', { class: 'presets' },
           h('button', { class: 'btn', disabled: test, onclick: async () => {
@@ -60,8 +67,8 @@ export function einstellungenScreen() {
             const r = await createTestData(); toast(`Testdaten erzeugt: ${r.kunden} Kunden, ${r.lieferanten} Lieferanten, ${r.buchungen} Buchungen`); nav.refresh();
           } }, 'Testdaten erzeugen'),
           h('button', { class: 'btn danger', disabled: !test, onclick: async () => {
-            if (!(await confirmDlg('Alle Testdaten (Kunden, Lieferanten und deren Buchungen) entfernen?', { ok: 'Entfernen', danger: true }))) return;
-            const n = await removeTestData(); toast(`${n} Testkontakte entfernt`); nav.refresh();
+            if (!(await confirmDlg('Alle Testdaten (als Test markierte Kunden, Lieferanten, Buchungen) entfernen?', { ok: 'Entfernen', danger: true }))) return;
+            const n = await removeTestData(); toast(`Testdaten entfernt (${n} Kontakte)`); nav.refresh();
           } }, 'Testdaten entfernen'))),
     ),
   };

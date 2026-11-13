@@ -4,7 +4,7 @@ import { uuid, isoDate } from './util.js';
 
 const daysAgo = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return isoDate(d); };
 
-export const hasTestData = () => [...db.data.kontakt.values()].some((k) => k.test);
+export const hasTestData = () => [...db.data.kontakt.values(), ...db.data.buchung.values()].some((k) => k.test);
 
 export async function createTestData() {
   const katId = (store, name, art) => [...db.data[store].values()].find((c) => c.name === name && (!art || c.art === art))?.id;

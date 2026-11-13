@@ -45,8 +45,8 @@ export function kassenbuchScreen() {
   }
 
   return {
-    title: 'Kassenbuch', back: null,
-    actions: [h('button', { class: 'btn primary', onclick: () => openBuchung(null) }, '+ Buchung')],
+    title: 'Kassenbuch', back: 'buchung',
+    actions: [h('button', { class: 'btn primary', onclick: () => nav.go('buchung') }, '+ Buchung')],
     node: h('div', { class: 'stack' }, toolbar, monthBar, summary, list),
   };
 }

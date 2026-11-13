@@ -6,6 +6,7 @@ const DB_NAME = 'kassenbuch';
 const DB_VERSION = 1;
 export const STORES = ['kontakt', 'kommunikation', 'kundenkategorie', 'buchungskategorie', 'buchung'];
 const ALL_STORES = [...STORES, 'meta'];
+const TEST_STORES = ['kontakt', 'kommunikation', 'buchung'];
 
 /** Cache: je Tabelle eine Map id -> Objekt; meta ist ein einfaches Objekt key -> value */
 export const data = {
@@ -48,6 +49,12 @@ async function loadAll() {
 
 /** Mehrere Schreiboperationen atomar. ops: {op:'put'|'del', store, obj|id}. touch: lastChange setzen. */
 export async function batch(ops, touch = true) {
+  // Testmodus: neu angelegte Daten werden als Test markiert (lassen sich später entfernen)
+  if (data.meta.testMode) {
+    for (const o of ops) {
+      if (o.op === 'put' && TEST_STORES.includes(o.store) && !data[o.store].has(o.obj.id) && !o.obj.sys && o.obj.test === undefined) o.obj = { ...o.obj, test: true };
+    }
+  }
   const stores = new Set(ops.map((o) => o.store));
   if (touch) stores.add('meta');
   const tx = idb.transaction([...stores], 'readwrite');
@@ -70,6 +77,7 @@ export async function batch(ops, touch = true) {
 
 export const put = (store, obj, touch = true) => batch([{ op: 'put', store, obj }], touch);
 export const del = (store, id, touch = true) => batch([{ op: 'del', store, id }], touch);
+export const deviceName = () => data.meta.deviceName || '';
 export const setMeta = (key, value, touch = false) => put('meta', { key, value }, touch);
 
 // ---- Stammdaten / Seed --------------------------------------------------
