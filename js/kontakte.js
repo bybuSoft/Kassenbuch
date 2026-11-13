@@ -164,8 +164,8 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
     let seenPref = false; cl.forEach((c) => { if (c.bevorzugt) { if (seenPref) c.bevorzugt = false; seenPref = true; } });
     const dups = db.findDuplicates(out, cl);
     if (dups.length) {
-      const d = dups[0];
-      const ok = await confirmDlg(`Möglicher Doppeleintrag:\n${db.kontaktName(d)}${d.plz || d.ort ? `, ${[d.plz, d.ort].filter(Boolean).join(' ')}` : ''}\n\nTrotzdem speichern?`, { title: 'Dublettenprüfung', ok: 'Trotzdem speichern' });
+      const lines = dups.map((d) => `• ${db.kontaktName(d)}${d.plz || d.ort ? `, ${[d.plz, d.ort].filter(Boolean).join(' ')}` : ''}`).join('\n');
+      const ok = await confirmDlg(`Mögliche Doppeleinträge (${dups.length}):\n${lines}\n\nTrotzdem speichern?`, { title: 'Dublettenprüfung', ok: 'Trotzdem speichern' });
       if (!ok) return false;
     }
     const ops = [{ op: 'put', store: 'kontakt', obj: out }];
