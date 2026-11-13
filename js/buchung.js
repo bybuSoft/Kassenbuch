@@ -72,7 +72,7 @@ export function buchungScreen() {
     const drawSugg = () => {
       const terms = normalize(input.value).split(/\s+/).filter(Boolean);
       const pool = [...db.kontakteList(false, false), ...db.kontakteList(true, false)];
-      found = pool.filter((c) => terms.every((t) => normalize(db.kontaktName(c) + ' ' + c.ort).includes(t))).slice(0, 8);
+      found = !input.value.trim() ? [] : pool.filter((c) => terms.every((t) => normalize(db.kontaktName(c) + ' ' + c.ort).includes(t))).slice(0, 8);
       sugg.replaceChildren(...found.map((c) => h('button', { type: 'button', class: 'row', onclick: () => pick(c.id) },
         h('strong', {}, db.kontaktName(c)), h('span', { class: 'muted' }, [c.istLieferant ? 'Lieferant' : '', c.plz, c.ort, c.sys === 'eigene' ? 'eigene Firma' : ''].filter(Boolean).join(' ')))));
       if (!found.length && input.value.trim()) sugg.append(h('p', { class: 'muted pad' }, 'Nicht gefunden.'));
@@ -85,7 +85,10 @@ export function buchungScreen() {
       const id = await editKontakt({ prefill, lockType: lief ? 'lieferant' : 'kunde' });
       if (id) pick(id);
     } }, lief ? '+ Neuer Lieferant' : '+ Neuer Kunde');
-    kBox.replaceChildren(h('span', { class: 'lbl' }, label), h('div', { class: 'kp-row' }, input), h('div', { class: 'kp-row' }, newBtn(false), newBtn(true)), sugg);
+    const newRow = h('div', { class: 'kp-row' }, newBtn(false), newBtn(true));
+    kBox.replaceChildren(h('span', { class: 'lbl' }, label), h('div', { class: 'kp-row' }, input), newRow, sugg);
+    const syncNew = () => { newRow.hidden = !input.value.trim(); };
+    input.addEventListener('input', syncNew); syncNew();
     drawSugg();
     if (focus) input.focus();
     kBox.firstFocus = () => input.focus();
@@ -93,7 +96,7 @@ export function buchungScreen() {
 
   drawArt(); drawKat(); drawKontakt(false);
 
-  const save = async () => {
+  const save = async (again) => {
     const cents = parseBetrag(betrag.value);
     if (!datum.value) { toast('Bitte ein Datum wählen.', 'err'); return; }
     const k = db.data.kontakt.get(draft.kontaktId);
@@ -104,9 +107,13 @@ export function buchungScreen() {
     await db.put('buchung', { id: uuid(), datum: datum.value, betrag: draft.art === 'ausgabe' ? -cents : cents, kontaktId: k.id, kategorieId: katSel.value, text: text.value.trim(), created: Date.now() });
     toast('Buchung gespeichert');
     Object.assign(draft, { kontaktId: null, betrag: '', kategorieId: '', text: '' });
-    nav.refresh();
-    if (await confirmDlg('Die Buchung wurde gespeichert.\nJetzt eine Datensicherung erstellen?', { title: 'Datensicherung', ok: 'Sichern', cancel: 'Später' })) await startBackup();
+    if (again) { nav.refresh(); return; }
+    // „Speichern“: erst fragen, ob ein Backup erstellt werden soll, danach ins Kassenbuch
+    if (await confirmDlg('Die Buchung wurde gespeichert.\nSoll jetzt eine Datensicherung erstellt werden?', { title: 'Datensicherung', ok: 'Ja, sichern', cancel: 'Nein' })) await startBackup();
+    nav.go('kassenbuch');
   };
+
+  const cancel = () => { Object.assign(draft, { kontaktId: null, betrag: '', kategorieId: '', text: '' }); nav.go('kassenbuch'); };
 
   // ---- Liste der zuletzt erfassten Buchungen (nach Erfassungszeitpunkt absteigend)
   const recent = [...db.data.buchung.values()].sort((a, b) => (b.created || 0) - (a.created || 0)).slice(0, 25);
@@ -129,7 +136,10 @@ export function buchungScreen() {
       h('div', { class: 'card stack' },
         field('Datum', datum), kBox, field('Betrag (CHF)', betrag), artSeg,
         field('Buchungskategorie', katSel), field('Buchungstext', text),
-        h('button', { type: 'button', class: 'btn primary big', onclick: save }, 'Speichern')),
+        h('div', { class: 'presets' },
+          h('button', { type: 'button', class: 'btn big', onclick: cancel }, 'Abbrechen'),
+          h('button', { type: 'button', class: 'btn big', onclick: () => save(true) }, 'Speichern & neu'),
+          h('button', { type: 'button', class: 'btn primary big', onclick: () => save(false) }, 'Speichern'))),
       h('h3', {}, 'Zuletzt erfasst'), list),
   };
 }
