@@ -125,7 +125,7 @@ export async function openBuchung(existing) {
     const sugg = h('div', { class: 'sugg' });
     const drawSugg = () => {
       const terms = normalize(input.value).split(/\s+/).filter(Boolean);
-      const found = db.kontakteList(art === 'ausgabe', false).filter((c) => terms.every((t) => normalize(db.kontaktName(c) + ' ' + c.ort).includes(t))).slice(0, 8);
+      const found = db.kontakteList(art === 'ausgabe', false).filter((c) => terms.every((t) => normalize(db.kontaktName(c)).includes(t))).slice(0, 8);
       sugg.replaceChildren(...found.map((c) => h('button', { type: 'button', class: 'row', onclick: () => { kontaktId = c.id; drawKontakt(); } },
         h('strong', {}, db.kontaktName(c)), h('span', { class: 'muted' }, [c.plz, c.ort, c.sys === 'eigene' ? 'eigene Firma' : ''].filter(Boolean).join(' ')))));
       if (!found.length && input.value.trim()) sugg.append(h('p', { class: 'muted pad' }, 'Nicht gefunden.'));

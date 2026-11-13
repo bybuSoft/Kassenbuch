@@ -87,7 +87,7 @@ export const DEFAULT_AUSGABEN = ['Waren/Material', 'Miete Lokal', 'Miete Parkpla
   'IT', 'Beiträge/Spenden', 'Treuhand/Beratung', 'Werbung', 'Verpflegung', 'Spesen'];
 
 const blankKontakt = () => ({
-  id: uuid(), istLieferant: false, vorname: '', name: '', name1: '', name2: '', geburtsdatum: '',
+  id: uuid(), istLieferant: false, geschlecht: '', anrede: '', vorname: '', name: '', name1: '', name2: '', geburtsdatum: '',
   strasse: '', plz: '', ort: '', kategorieId: null, diabetes: false, antikoaguliert: false, allergien: false,
   hiv: false, haemophilie: false, notizen: '', briefErhalten: false, briefDatum: '', sys: null,
 });
