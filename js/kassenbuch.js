@@ -1,13 +1,13 @@
 // Kassenbuch: Buchungsliste, Buchungsdialog, Quittung
 import * as db from './db.js';
 import { h, uuid, chf, parseBetrag, today, fmtDate, monthOf, shiftMonth, lastDayOfMonth, normalize } from './util.js';
-import { showModal, confirmDlg, field, segmented, toast, printNode } from './ui.js';
-import { editKontakt } from './kontakte.js';
+import { showModal, confirmDlg, field, toast, printNode } from './ui.js';
+import { kontaktPicker, betragFields, kategorienFor } from './kontaktpick.js';
 import { startBackup } from './backup.js';
 import { nav } from './nav.js';
 
 const FIRST = () => `${monthOf(today())}-01`;
-const view = { lastArt: 'einnahme', from: FIRST(), to: lastDayOfMonth(monthOf(today())), q: '', kat: '', art: '' };
+const view = { from: FIRST(), to: lastDayOfMonth(monthOf(today())), q: '', kat: '', art: '' };
 
 export function kassenbuchScreen() {
   const dot = db.hasUnsavedChanges() ? h('span', { class: 'dot', title: 'Ungesicherte Änderungen', 'aria-label': 'Ungesicherte Änderungen' }) : null;
@@ -51,8 +51,8 @@ export function kassenbuchScreen() {
     const all = db.buchungenList().filter((b) => b.datum >= view.from && b.datum <= view.to
       && (!view.art || db.artOf(b) === view.art) && (!view.kat || b.kategorieId === view.kat)
       && (!terms.length || terms.every((t) => normalize(`${db.kontaktName(db.data.kontakt.get(b.kontaktId))} ${b.text} ${db.data.buchungskategorie.get(b.kategorieId)?.name} ${(Math.abs(b.betrag) / 100).toFixed(2)}`).includes(t))));
-    const ein = all.filter((b) => b.betrag > 0).reduce((s, b) => s + b.betrag, 0);
-    const aus = all.filter((b) => b.betrag < 0).reduce((s, b) => s - b.betrag, 0);
+    const ein = all.filter((b) => db.artOf(b) === 'einnahme').reduce((s, b) => s + b.betrag, 0);
+    const aus = all.filter((b) => db.artOf(b) === 'ausgabe').reduce((s, b) => s - b.betrag, 0);
     const summary = h('div', { class: 'summary' },
       h('div', {}, h('span', { class: 'muted' }, 'Einnahmen'), h('strong', { class: 'in' }, chf(ein))),
       h('div', {}, h('span', { class: 'muted' }, 'Ausgaben'), h('strong', { class: 'out' }, chf(aus))),
@@ -87,65 +87,38 @@ export function kassenbuchScreen() {
 /** Buchungsdialog (neu oder bearbeiten) */
 export async function openBuchung(existing) {
   const ex = existing ? { ...existing } : null;
-  let art = ex ? db.artOf(ex) : view.lastArt;
   let kontaktId = ex ? ex.kontaktId : null;
 
   const datum = h('input', { type: 'date', value: ex ? ex.datum : today(), required: true });
-  const betrag = h('input', { type: 'text', inputmode: 'decimal', placeholder: '0.00', value: ex ? (Math.abs(ex.betrag) / 100).toFixed(2) : '', autocomplete: 'off', 'aria-label': 'Betrag in CHF' });
+  const bf = betragFields(ex && ex.betrag < 0 ? '-' : '+', ex ? (Math.abs(ex.betrag) / 100).toFixed(2) : '');
   const katSel = h('select', { 'aria-label': 'Buchungskategorie' });
   const text = h('input', { type: 'text', value: ex ? ex.text || '' : '', placeholder: 'optional', autocomplete: 'off' });
 
-  const artSeg = segmented([{ value: 'einnahme', label: 'Einnahme', cls: 'in' }, { value: 'ausgabe', label: 'Ausgabe', cls: 'out' }], art, (v) => {
-    art = v;
-    const k = db.data.kontakt.get(kontaktId);
-    if (k && k.istLieferant !== (art === 'ausgabe')) kontaktId = null;
-    drawKat(); drawKontakt();
-  });
-
   const drawKat = () => {
-    const keep = katSel.value;
-    const cats = db.kategorienList('buchungskategorie', art);
-    katSel.replaceChildren(h('option', { value: '' }, '– wählen –'), ...cats.map((c) => h('option', { value: c.id }, c.name)));
-    katSel.value = cats.some((c) => c.id === keep) ? keep : (ex && db.data.buchungskategorie.get(ex.kategorieId)?.art === art ? ex.kategorieId : '');
-  };
-
-  // ---- Kontaktwahl mit Suche
-  const kBox = h('div', { class: 'kontaktpick' });
-  const drawKontakt = () => {
+    const keep = katSel.value || (ex ? ex.kategorieId : '');
     const k = db.data.kontakt.get(kontaktId);
-    const label = art === 'ausgabe' ? 'Lieferant' : 'Kunde';
-    if (k) {
-      kBox.replaceChildren(h('span', { class: 'lbl' }, label),
-        h('div', { class: 'chip' }, h('strong', {}, db.kontaktName(k)),
-          h('button', { type: 'button', class: 'btn small', onclick: () => { kontaktId = null; drawKontakt(); } }, 'Ändern'),
-          k.sys === 'dummyKunde' || k.sys === 'dummyLieferant' ? null : h('button', { type: 'button', class: 'btn small', onclick: async () => { await editKontakt({ id: k.id, lockType: art === 'ausgabe' ? 'lieferant' : 'kunde' }); drawKontakt(); } }, 'Bearbeiten')));
-      return;
-    }
-    const input = h('input', { type: 'text', placeholder: `${label} suchen…`, autocomplete: 'off', 'aria-label': `${label} suchen` });
-    const sugg = h('div', { class: 'sugg' });
-    const drawSugg = () => {
-      const terms = normalize(input.value).split(/\s+/).filter(Boolean);
-      const found = db.kontakteList(art === 'ausgabe', false).filter((c) => terms.every((t) => normalize(db.kontaktName(c)).includes(t))).slice(0, 8);
-      sugg.replaceChildren(...found.map((c) => h('button', { type: 'button', class: 'row', onclick: () => { kontaktId = c.id; drawKontakt(); } },
-        h('strong', {}, db.kontaktName(c)), h('span', { class: 'muted' }, [c.plz, c.ort, c.sys === 'eigene' ? 'eigene Firma' : ''].filter(Boolean).join(' ')))));
-      if (!found.length && input.value.trim()) sugg.append(h('p', { class: 'muted pad' }, 'Nicht gefunden.'));
-    };
-    input.addEventListener('input', drawSugg);
-    const newBtn = h('button', { type: 'button', class: 'btn small', onclick: async () => {
-      const t = input.value.trim(); const parts = t.split(/\s+/).filter(Boolean);
-      const prefill = art === 'ausgabe' ? { name1: t } : { vorname: parts.slice(0, -1).join(' '), name: parts.slice(-1)[0] || '' };
-      const id = await editKontakt({ prefill, lockType: art === 'ausgabe' ? 'lieferant' : 'kunde' });
-      if (id) { kontaktId = id; drawKontakt(); }
-    } }, `+ Neuer ${label}`);
-    kBox.replaceChildren(h('span', { class: 'lbl' }, label), h('div', { class: 'kp-row' }, input, newBtn), sugg);
-    drawSugg();
+    const cats = kategorienFor(k);
+    katSel.replaceChildren(h('option', { value: '' }, k ? '– wählen –' : '– zuerst Kontakt wählen –'), ...cats.map((c) => h('option', { value: c.id }, c.name)));
+    katSel.value = cats.some((c) => c.id === keep) ? keep : '';
   };
+  const picker = kontaktPicker({
+    getId: () => kontaktId,
+    onSelect: (id) => {
+      kontaktId = id;
+      const k = db.data.kontakt.get(id);
+      const last = db.buchungenOf(id).filter((b) => !ex || b.id !== ex.id).sort((a, b) => (b.created || 0) - (a.created || 0))[0];
+      bf.signSel.value = last ? (last.betrag < 0 ? '-' : '+') : (k.istLieferant ? '-' : '+');
+      if (last && !bf.input.value) bf.input.value = (Math.abs(last.betrag) / 100).toFixed(2);
+      katSel.value = '';
+      if (last && db.data.buchungskategorie.get(last.kategorieId)?.art === db.artOfKontakt(k)) katSel.value = last.kategorieId;
+      drawKat(); picker.draw();
+      bf.input.focus(); bf.input.select();
+    },
+    onClear: () => { kontaktId = null; drawKat(); },
+  });
+  picker.draw(); drawKat();
 
-  drawKat(); drawKontakt();
-
-  const body = h('div', { class: 'stack' },
-    field('Datum', datum), artSeg, field('Betrag (CHF)', betrag), kBox,
-    field('Buchungskategorie', katSel), field('Buchungstext', text));
+  const body = h('div', { class: 'stack' }, field('Datum', datum), picker.el, bf.el, field('Buchungskategorie', katSel), field('Buchungstext', text));
 
   const buttons = [];
   if (ex) {
@@ -153,20 +126,19 @@ export async function openBuchung(existing) {
       if (!(await confirmDlg('Diese Buchung wirklich löschen?', { title: 'Buchung löschen', ok: 'Löschen', danger: true }))) return false;
       await db.del('buchung', ex.id); toast('Buchung gelöscht'); ctl.close('deleted'); return false;
     } });
-    if (db.artOf(ex) === 'einnahme') buttons.push({ label: 'Quittung', onClick: () => { printQuittung(ex); return false; } });
+    if (db.artOf(ex) === 'einnahme' && ex.betrag > 0) buttons.push({ label: 'Quittung', onClick: () => { printQuittung(ex); return false; } });
   }
   buttons.push({ label: 'Abbrechen', value: null });
   const save = async (again) => {
-    const cents = parseBetrag(betrag.value);
+    const cents = parseBetrag(bf.input.value);
     if (!datum.value) { toast('Bitte ein Datum wählen.', 'err'); return false; }
-    if (!cents) { toast('Bitte einen Betrag grösser als 0 erfassen (z. B. 65.00).', 'err'); betrag.focus(); return false; }
     const k = db.data.kontakt.get(kontaktId);
-    if (!k) { toast(art === 'ausgabe' ? 'Bitte einen Lieferanten wählen (oder die eigene Firma).' : 'Bitte einen Kunden aus der Liste wählen.', 'err'); return false; }
-    if (k.istLieferant !== (art === 'ausgabe')) { toast('Der Kontakt passt nicht zur Art der Buchung.', 'err'); return false; }
+    if (!k) { toast('Bitte einen Kunden oder Lieferanten wählen.', 'err'); return false; }
+    if (!cents) { toast('Bitte einen Betrag grösser als 0 erfassen (z. B. 65.00).', 'err'); bf.input.focus(); return false; }
     if (!katSel.value) { toast('Bitte eine Buchungskategorie wählen.', 'err'); return false; }
-    const b = { id: ex ? ex.id : uuid(), datum: datum.value, betrag: art === 'ausgabe' ? -cents : cents, kontaktId, kategorieId: katSel.value, text: text.value.trim(), created: ex ? ex.created : Date.now() };
+    const b = { id: ex ? ex.id : uuid(), datum: datum.value, betrag: bf.signSel.value === '-' ? -cents : cents, kontaktId, kategorieId: katSel.value, text: text.value.trim(), created: ex ? ex.created : Date.now() };
+    if (ex && ex.test) b.test = true;
     await db.put('buchung', b);
-    view.lastArt = art;
     toast('Buchung gespeichert');
     return again ? 'again' : 'saved';
   };
