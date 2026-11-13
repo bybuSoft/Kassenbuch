@@ -60,6 +60,9 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--pri);outline-off
 .tbl{width:100%;border-collapse:collapse}.tbl th,.tbl td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
 .tbl .num{text-align:right;font-variant-numeric:tabular-nums}.tbl .total td{font-weight:700;border-top:2px solid var(--fg)}.tbl .daytr td{background:var(--bg);color:var(--muted);font-weight:600}
 .card{overflow-x:auto}
+/* Betragstabellen: feste Zahlenspalten, damit die Spalten in allen Bereichen untereinander stehen */
+.tbl.amt{table-layout:fixed}.tbl.amt .num{width:6.4rem;white-space:nowrap}.tbl.amt td:first-child,.tbl.amt th:first-child{overflow-wrap:anywhere}
+@media(max-width:600px){.tbl.amt th,.tbl.amt td{padding:6px 4px;font-size:.85rem}.tbl.amt .num{width:4.9rem}.tbl.amt th{font-size:.78rem}}
 /* Dialoge */
 .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;display:flex;align-items:flex-end;justify-content:center}
 .dialog{background:var(--card);width:100%;max-width:520px;max-height:94dvh;max-height:94vh;display:flex;flex-direction:column;border-radius:16px 16px 0 0;box-shadow:0 -4px 24px rgba(0,0,0,.3)}
