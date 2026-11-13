@@ -1,6 +1,6 @@
 // Auswertungen: Perioden, Kundenkategorien, Seniorenzentrum-Liste, Treuhänder-Export (Excel), Serienbrief
 import * as db from './db.js';
-import { h, chf, today, isoDate, fmtDate, monthOf, monthLabel, lastDayOfMonth, saveBlob, collator } from './util.js';
+import { h, chf, today, isoDate, fmtDate, monthOf, monthLabel, monthShort, lastDayOfMonth, saveBlob, collator } from './util.js';
 import { field, segmented, toast, printNode, checkField } from './ui.js';
 import { buildXlsx, XLSX_MIME } from './xlsx.js';
 import { nav } from './nav.js';
@@ -57,9 +57,9 @@ function compareControl() {
 function compareTable(title, firstCol, rows, cls, { count = false } = {}) {
   const vj = state.vj;
   const tot = rows.reduce((t, r) => [t[0] + r[1], t[1] + r[2]], [0, 0]);
-  const diff = (a, b) => h('td', { class: `num ${a - b >= 0 ? 'in' : 'out'}` }, `${a - b > 0 ? '+' : ''}${chf(a - b)}`);
+  const diff = (a, b) => h('td', { class: `num ${(a - b >= 0) === (cls !== 'out') ? 'in' : 'out'}` }, `${a - b > 0 ? '+' : ''}${chf(a - b)}`);
   return h('div', { class: 'card' }, h('h3', {}, title),
-    h('table', { class: 'tbl' },
+    h('table', { class: 'tbl amt' },
       th(firstCol, ...(count ? [{ t: 'Anzahl', num: 1 }] : []), { t: 'Betrag', num: 1 }, ...(vj ? [{ t: 'Vorjahr', num: 1 }, { t: 'Diff.', num: 1 }] : [])),
       h('tbody', {}, ...rows.map(([n, v, p, c]) => h('tr', {}, h('td', {}, n), ...(count ? [h('td', { class: 'num' }, c ?? '')] : []), h('td', { class: 'num' }, chf(v)),
         ...(vj ? [h('td', { class: 'num' }, chf(p)), diff(v, p)] : []))),
@@ -93,7 +93,7 @@ function perioden() {
     months.set(mo, o);
   });
   addM(bs, false); addM(pv, true);
-  const monthRows = [...months].sort().filter(([, o]) => o.e || o.a || !state.vj).map(([mo, o]) => h('tr', {}, h('td', {}, monthLabel(mo)),
+  const monthRows = [...months].sort().filter(([, o]) => o.e || o.a || !state.vj).map(([mo, o]) => h('tr', {}, h('td', {}, monthShort(mo)),
     h('td', { class: 'num' }, chf(o.e)), h('td', { class: 'num' }, chf(o.a)), h('td', { class: 'num' }, chf(o.e - o.a)),
     ...(state.vj ? [h('td', { class: 'num' }, chf(o.pe - o.pa))] : [])));
   return h('div', { class: 'stack' }, periodControl(), compareControl(),
@@ -101,7 +101,7 @@ function perioden() {
     compareTable('Einnahmen (Kunden) nach Kategorie', 'Kategorie', byCat('einnahme'), 'in'),
     compareTable('Ausgaben (Lieferanten) nach Kategorie', 'Kategorie', byCat('ausgabe'), 'out'),
     h('div', { class: 'card' }, h('h3', {}, 'Nach Monat'),
-      h('table', { class: 'tbl' }, th('Monat', { t: 'Einnahmen', num: 1 }, { t: 'Ausgaben', num: 1 }, { t: 'Saldo', num: 1 }, ...(state.vj ? [{ t: 'Saldo Vorjahr', num: 1 }] : [])), h('tbody', {}, ...monthRows))));
+      h('table', { class: 'tbl amt' }, th('Monat', { t: 'Einnahmen', num: 1 }, { t: 'Ausgaben', num: 1 }, { t: 'Saldo', num: 1 }, ...(state.vj ? [{ t: 'Saldo Vorjahr', num: 1 }] : [])), h('tbody', {}, ...monthRows))));
 }
 
 // ---- Kategorien: Kunden (nach Kundenkategorie) und Lieferanten (nach Lieferant) -----------------
@@ -141,7 +141,7 @@ function senioren() {
       rows.push(h('tr', {}, h('td', {}, k.vorname), h('td', {}, k.name), h('td', { class: 'num' }, chf(b.betrag))));
     }
     rows.push(h('tr', { class: 'total' }, h('td', { colspan: 2 }, `Total ${monthLabel(mo)}`), h('td', { class: 'num' }, chf(sum(bs.filter((x) => monthOf(x.datum) === mo))))));
-    out.append(h('table', { class: 'tbl' }, th('Vorname', 'Name', { t: 'Betrag (CHF)', num: 1 }), h('tbody', {}, ...rows)));
+    out.append(h('table', { class: 'tbl amt' }, th('Vorname', 'Name', { t: 'Betrag (CHF)', num: 1 }), h('tbody', {}, ...rows)));
   }
   return h('div', { class: 'stack' }, periodControl(), field('Kundenkategorie', sel),
     h('div', { class: 'card' }, out),

@@ -32,7 +32,7 @@ export function h(tag, attrs, ...kids) {
 
 // ---- Formatierung -------------------------------------------------------
 /** Rappen (Integer) -> "1’234.50" */
-export const chf = (rappen) => (rappen / 100).toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+export const chf = (rappen) => ((rappen === 0 ? 0 : rappen) / 100).toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /** "12.5" / "12,50" / "1'234.50" -> Rappen, sonst null */
 export function parseBetrag(s) {
@@ -50,6 +50,10 @@ export const monthOf = (iso) => iso.slice(0, 7);
 export const monthLabel = (ym) => {
   const [y, m] = ym.split('-').map(Number);
   return new Date(y, m - 1, 1).toLocaleDateString('de-CH', { month: 'long', year: 'numeric' });
+};
+export const monthShort = (ym) => {
+  const [y, m] = ym.split('-').map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString('de-CH', { month: 'short', year: 'numeric' });
 };
 export const shiftMonth = (ym, delta) => {
   const [y, m] = ym.split('-').map(Number);
