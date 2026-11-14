@@ -2,22 +2,21 @@
 import * as db from './db.js';
 import { h, uuid, chf, parseBetrag, today, fmtDate } from './util.js';
 import { field, toast, confirmDlg } from './ui.js';
-import { kontaktPicker, betragFields, kategorienFor } from './kontaktpick.js';
+import { kontaktPicker, betragFields, kategorienFor, prefillFor } from './kontaktpick.js';
 import { startBackup, beenden } from './backup.js';
 import { openBuchung } from './kassenbuch.js';
 import { nav } from './nav.js';
 
 // Entwurf bleibt über Neuzeichnen erhalten
-const draft = { datum: today(), kontaktId: null, sign: '+', betrag: '', kategorieId: '', text: '' };
+const draft = { datum: today(), datumGeaendert: false, kontaktId: null, sign: '+', betrag: '', kategorieId: '', text: '' };
 const resetDraft = () => Object.assign(draft, { kontaktId: null, sign: '+', betrag: '', kategorieId: '', text: '' });
 
-const lastBuchungOf = (kontaktId) => db.buchungenOf(kontaktId).sort((a, b) => (b.created || 0) - (a.created || 0))[0];
-
 export function buchungScreen() {
+  if (!draft.datumGeaendert) draft.datum = today(); // App kann über Nacht offen bleiben: Vorgabe immer der heutige Tag
   if (!db.data.kontakt.has(draft.kontaktId)) draft.kontaktId = null;
   if (draft.kategorieId && !db.data.buchungskategorie.has(draft.kategorieId)) draft.kategorieId = '';
 
-  const datum = h('input', { type: 'date', value: draft.datum, required: true, onchange: (e) => { draft.datum = e.target.value; } });
+  const datum = h('input', { type: 'date', value: draft.datum, required: true, onchange: (e) => { draft.datum = e.target.value; draft.datumGeaendert = true; } });
   const bf = betragFields(draft.sign, draft.betrag);
   bf.input.addEventListener('input', () => { draft.betrag = bf.input.value; });
   bf.signSel.addEventListener('change', () => { draft.sign = bf.signSel.value; });
@@ -38,16 +37,8 @@ export function buchungScreen() {
     onSelect: (id) => {
       draft.kontaktId = id;
       const k = db.data.kontakt.get(id);
-      const last = lastBuchungOf(id);
-      if (last) {
-        draft.sign = last.betrag < 0 ? '-' : '+';
-        draft.betrag = (Math.abs(last.betrag) / 100).toFixed(2);
-        draft.kategorieId = last.kategorieId;
-      } else {
-        draft.sign = k.istLieferant ? '-' : '+';
-        draft.betrag = '';
-        draft.kategorieId = '';
-      }
+      const p = prefillFor(k);
+      draft.sign = p.sign; draft.betrag = p.betrag; draft.kategorieId = p.kategorieId;
       bf.signSel.value = draft.sign; bf.input.value = draft.betrag;
       drawKat(); picker.draw();
       bf.input.focus(); bf.input.select();

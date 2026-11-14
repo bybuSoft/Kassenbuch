@@ -1,15 +1,14 @@
 // Auswertungen: Perioden, Kundenkategorien, Seniorenzentrum-Liste, Treuhänder-Export (Excel)
 import * as db from './db.js';
 import { h, chf, today, isoDate, fmtDate, monthOf, monthLabel, monthShort, lastDayOfMonth, saveBlob, collator } from './util.js';
-import { field, segmented, toast, printNode, checkField } from './ui.js';
+import { field, segmented, toast, printNode } from './ui.js';
 import { buildXlsx, XLSX_MIME } from './xlsx.js';
 import { periodBar } from './periodbar.js';
 import { nav } from './nav.js';
 
-const now = new Date();
 const state = {
   tab: 'perioden',
-  from: `${monthOf(today())}-01`, to: lastDayOfMonth(monthOf(today())),
+  custom: false, from: '', to: '',
   senKat: '', vj: false,
 };
 const REPORTS = [
@@ -21,12 +20,13 @@ const sum = (arr) => arr.reduce((s, b) => s + b.betrag, 0);
 const th = (...c) => h('thead', {}, h('tr', {}, ...c.map((x, i) => h('th', { class: x.num ? 'num' : '' }, x.t ?? x))));
 
 export function auswertungenScreen() {
+  if (!state.custom) { state.from = `${monthOf(today())}-01`; state.to = lastDayOfMonth(monthOf(today())); } // nach Monatswechsel wieder der aktuelle Monat
   const tabs = segmented(REPORTS.map(([value, label]) => ({ value, label })), state.tab, (v) => { state.tab = v; nav.refresh(); });
   tabs.classList.add('compact');
   const body = { perioden, kategorien, senioren, treuhaender }[state.tab]();
   const vjBtn = state.tab === 'perioden' || state.tab === 'kategorien'
     ? h('button', { type: 'button', class: `btn small toggle${state.vj ? ' on' : ''}`, 'aria-pressed': String(state.vj), title: 'Vorjahresvergleich', onclick: () => { state.vj = !state.vj; nav.refresh(); } }, 'VJ-Vergleich') : null;
-  const bar = periodBar({ from: state.from, to: state.to, extra: vjBtn, onSet: (f, t) => { state.from = f; state.to = t; nav.refresh(); } });
+  const bar = periodBar({ from: state.from, to: state.to, extra: vjBtn, onSet: (f, t) => { state.from = f; state.to = t; state.custom = true; nav.refresh(); } });
   // Kopfbereich (Reiter + Periode) bleibt beim Scrollen stehen
   return {
     title: 'Auswertungen', back: 'menu',
@@ -138,14 +138,19 @@ function senioren() {
 }
 
 // ---- Treuhänder-Export ---------------------------------------------------------------
+/** Anzahl Buchungen, bei denen die Kategorie nicht zum Kontakttyp passt (Kunde: Einnahme, Lieferant: Ausgabe) */
+export const unstimmigeBuchungen = (bs) => bs.filter((b) => { const k = db.data.kontakt.get(b.kontaktId); return k && db.artOf(b) !== db.artOfKontakt(k); }).length;
+
 export function treuhaenderRows(from, to) {
   const bs = db.buchungenList().filter((b) => b.datum >= from && b.datum <= to).sort((a, b) => (a.datum < b.datum ? -1 : a.datum > b.datum ? 1 : (a.created || 0) - (b.created || 0)));
   const rows = [[{ s: 'Datum', b: true }, { s: 'Art', b: true }, { s: 'Kategorie', b: true }, { s: 'Lieferant', b: true }, { s: 'Betrag CHF', b: true }, { s: 'Buchungstext', b: true }]];
   for (const b of bs) {
     const k = db.data.kontakt.get(b.kontaktId);
     const art = db.artOf(b);
-    // Keine Kundendaten im Export: bei Einnahmen wird weder Kontakt noch Buchungstext ausgegeben (nur bei Lieferanten).
-    rows.push([{ d: b.datum }, art === 'einnahme' ? 'Einnahme' : 'Ausgabe', db.data.buchungskategorie.get(b.kategorieId)?.name || '', art === 'ausgabe' ? db.kontaktName(k) : '', { n: b.betrag / 100, f: 'money' }, k?.istLieferant ? b.text || '' : '']);
+    // Eine Regel für den Personenbezug: Name und Buchungstext nur, wenn der KONTAKT ein Lieferant ist (nie bei Kunden, unabhängig von der Kategorie).
+    const lief = !!k?.istLieferant;
+    const artText = art === 'einnahme' ? (b.betrag < 0 ? 'Einnahme (Rückzahlung)' : 'Einnahme') : (b.betrag > 0 ? 'Ausgabe (Gutschrift)' : 'Ausgabe');
+    rows.push([{ d: b.datum }, artText, db.data.buchungskategorie.get(b.kategorieId)?.name || '', lief ? db.kontaktName(k) : '', { n: b.betrag / 100, f: 'money' }, lief ? b.text || '' : '']);
   }
   const sums = [[{ s: 'Art', b: true }, { s: 'Kategorie', b: true }, { s: 'Total CHF', b: true }]];
   let te = 0, ta = 0;
@@ -158,16 +163,17 @@ export function treuhaenderRows(from, to) {
     }
   }
   sums.push([{ s: 'Total Einnahmen', b: true }, '', { n: te / 100, f: 'money', b: true }], [{ s: 'Total Ausgaben', b: true }, '', { n: ta / 100, f: 'money', b: true }], [{ s: 'Ergebnis', b: true }, '', { n: (te + ta) / 100, f: 'money', b: true }]);
-  return { rows, sums, count: bs.length };
+  return { rows, sums, count: bs.length, unstimmig: unstimmigeBuchungen(bs) };
 }
 
 function treuhaender() {
-  const { count } = treuhaenderRows(state.from, state.to);
+  const { count, unstimmig } = treuhaenderRows(state.from, state.to);
   const eig = db.eigene();
   return h('div', { class: 'stack' },
     h('div', { class: 'card stack' },
       h('h3', {}, 'Export für den Treuhänder (Excel)'),
       h('p', { class: 'notice' }, 'Hinweis: Es werden keine personenbezogenen Daten exportiert. Einnahmen enthalten weder Kunde noch Buchungstext; bei Ausgaben stehen Lieferant und Buchungstext.'),
+      unstimmig ? h('p', { class: 'notice' }, `Hinweis: ${unstimmig} Buchung${unstimmig === 1 ? '' : 'en'} mit unstimmiger Zuordnung (Kategorie passt nicht zum Kontakttyp, z. B. nach Typwechsel eines Kontakts). Bitte vor dem Versand prüfen. Namen und Texte von Kunden werden in jedem Fall nicht exportiert.`) : null,
       h('p', { class: 'muted' }, `${count} Buchungen im Zeitraum ${fmtDate(state.from)} – ${fmtDate(state.to)}.`),
       h('button', { class: 'btn primary', disabled: !count, onclick: async () => {
         const { rows, sums } = treuhaenderRows(state.from, state.to);

@@ -33,6 +33,8 @@ export async function decryptJson(text, pass) {
   let f;
   try { f = JSON.parse(text); } catch { throw new Error('Die Datei ist keine Kassenbuch-Datensicherung.'); }
   if (!f || f.format !== 'kassenbuch-backup' || f.v !== 1) throw new Error('Die Datei ist keine Kassenbuch-Datensicherung.');
+  // Plausibilitätsprüfung der Kopfdaten (verhindert manipulierte Dateien mit extrem vielen Durchläufen)
+  if (!Number.isInteger(f.it) || f.it < 10000 || f.it > 1000000 || typeof f.salt !== 'string' || typeof f.iv !== 'string' || typeof f.ct !== 'string') throw new Error('Die Datei ist keine gültige Kassenbuch-Datensicherung.');
   const key = await deriveKey(pass, fromB64(f.salt), f.it);
   try {
     const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromB64(f.iv) }, key, fromB64(f.ct));
