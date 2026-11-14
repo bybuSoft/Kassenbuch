@@ -41,14 +41,13 @@ export const clearBackupFolder = () => db.setMeta('backupDir', null);
 
 export const pruneSettings = () => ({ on: !!db.data.meta.pruneOld, keep: Math.max(1, Number(db.data.meta.pruneKeep) || 5) });
 
-/** Löscht ältere Sicherungen dieses Geräts im Standardordner; die jüngsten `keep` bleiben. Fremde Geräte und fremde Dateien bleiben unberührt. */
+/** Löscht ältere Sicherungsdateien (.enc im Namensschema der App, unabhängig vom Gerät) im Standardordner; die jüngsten `keep` bleiben. Andere Dateien (Excel usw.) bleiben unberührt. */
 export async function pruneBackups(dir, keep, justWritten) {
-  const mine = safeDevice(db.deviceName()).replace(/_/g, ' ');
   const files = [];
   for await (const [name, entry] of dir.entries()) {
     if (entry.kind !== 'file' || !/\.enc$/i.test(name)) continue;
     const info = parseBackupFilename(name);
-    if (info.date && info.device === mine) files.push({ name, date: info.date });
+    if (info.date) files.push({ name, date: info.date });
   }
   files.sort((a, b) => b.date - a.date);
   let n = 0;
@@ -129,7 +128,7 @@ export function compareWithLocal(info) {
   const hasData = !db.isEmpty();
   const sec = (t) => Math.floor(t / 1000);
   if (info.none) {
-    return hasData ? { level: 'red', text: 'ACHTUNG: Es wurde keine Sicherung gefunden, die lokalen Daten sind nicht gesichert. Bitte jetzt sichern.' }
+    return hasData ? { level: 'red', noBackup: true, text: 'ACHTUNG: Es wurde keine Sicherung gefunden, die lokalen Daten sind nicht gesichert. Bitte jetzt sichern.' }
       : { level: 'none', text: 'Es wurde keine Sicherung gefunden und es sind keine lokalen Daten vorhanden.' };
   }
   const newer = sec(info.date) > sec(synced);
