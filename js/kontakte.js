@@ -41,7 +41,7 @@ export function kontakteScreen(typ) {
   draw();
 
   return {
-    title: lief ? 'Lieferanten' : 'Kunden', back: 'kassenbuch',
+    title: lief ? 'Lieferanten' : 'Kunden', back: 'menu',
     actions: [h('button', { class: 'btn primary', onclick: async () => { await editKontakt({ prefill: { istLieferant: lief } }); nav.refresh(); } }, '+ Neu')],
     node: h('div', { class: 'stack' }, h('div', { class: 'filters' }, q, katSel), list),
   };

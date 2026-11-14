@@ -91,3 +91,8 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--pri);outline-off
 .status{border-radius:10px;padding:10px 12px;font-weight:500;margin:0}
 .status.ok{background:#dff5e5;color:#12602a}.status.warn{background:#fff3c4;color:#5c4500}.status.red{background:#ffe0e0;color:#8a1111}.status.none{background:var(--bg);color:var(--muted)}
 @media(prefers-color-scheme:dark){.status.ok{background:#12351d;color:#8fe3a8}.status.warn{background:#3a3320;color:#f5d56b}.status.red{background:#4a1c1c;color:#ffb3b3}}
+
+/* Navigationsseite */
+.menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.menu-btn{position:relative;appearance:none;border:1px solid var(--line);background:var(--card);color:var(--fg);font:inherit;font-size:1.05rem;font-weight:600;min-height:88px;border-radius:var(--r);padding:12px;cursor:pointer;box-shadow:var(--shadow);overflow-wrap:anywhere}
+.menu-btn:active{background:var(--bg)}.menu-btn .dot{position:absolute;top:10px;right:10px}

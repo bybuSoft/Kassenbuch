@@ -39,7 +39,7 @@ export function auswertungenScreen() {
   const tabs = segmented(REPORTS.map(([value, label]) => ({ value, label })), state.tab, (v) => { state.tab = v; nav.refresh(); });
   tabs.classList.add('scroll');
   const body = { perioden, kategorien, senioren, treuhaender }[state.tab]();
-  return { title: 'Auswertungen', back: 'kassenbuch', actions: [], node: h('div', { class: 'stack' }, tabs, body) };
+  return { title: 'Auswertungen', back: 'menu', actions: [], node: h('div', { class: 'stack' }, tabs, body) };
 }
 
 // ---- Vorjahresvergleich (optional) -------------------------------------------------------
