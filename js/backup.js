@@ -15,13 +15,13 @@ const safeDevice = (s) => String(s || '').trim().replace(/[^A-Za-z0-9äöüÄÖ�
 export function backupFilename(d = new Date(), device = db.deviceName()) {
   const dev = safeDevice(device);
   // Reihenfolge: Datum-Zeit (inkl. Sekunden) / Gerät / Version
-  return `kassenbuch-${d.getFullYear()}${p2(d.getMonth() + 1)}${p2(d.getDate())}-${p2(d.getHours())}${p2(d.getMinutes())}${p2(d.getSeconds())}${dev ? '-' + dev : ''}-v${VERSION}.enc`;
+  return `${d.getFullYear()}${p2(d.getMonth() + 1)}${p2(d.getDate())}-${p2(d.getHours())}${p2(d.getMinutes())}${p2(d.getSeconds())}${dev ? '-' + dev : ''}-v${VERSION}.enc`;
 }
 
 /** Gerätename und Zeitpunkt aus dem Dateinamen einer Sicherung lesen (neues und altes Namensschema) */
 export function parseBackupFilename(name) {
   const mk = (y, mo, d, h, mi, s, dev) => ({ device: (dev || '').replace(/_/g, ' '), date: new Date(+y, +mo - 1, +d, +h, +mi, +s).getTime() });
-  let m = /^kassenbuch-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})(?:-(?!v\d)([^-]+))?(?:-v.*)?\.enc$/i.exec(name || '');
+  let m = /^(?:kassenbuch-)?(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})(?:-(?!v\d)([^-]+))?(?:-v.*)?\.enc$/i.exec(name || '');
   if (m) return mk(m[1], m[2], m[3], m[4], m[5], m[6], m[7]);
   m = /^kassenbuch-(?:(.+?)-)?(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})(?:-v.*)?\.enc$/i.exec(name || ''); // älteres Schema: Gerät vor dem Datum
   if (m) return mk(m[2], m[3], m[4], m[5], m[6], m[7], m[1]);
@@ -59,7 +59,7 @@ export async function startBackup() {
     hint: 'Die Sicherung wird mit diesem Passwort verschlüsselt. Das Passwort wird nirgends gespeichert – ohne Passwort kann die Sicherung nicht mehr gelesen werden.',
     confirmField: !passConfirmedThisSession, ok: 'Sichern',
   });
-  if (!pass) return;
+  if (!pass) return false;
   const { blob, filename } = await makeBackup(pass);
   let res;
   const dir = backupFolder();
@@ -71,11 +71,24 @@ export async function startBackup() {
     } catch (e) { toast(`Standardordner nicht beschreibbar (${e.message}) – Datei wird heruntergeladen`, 'err'); }
   }
   if (!res) res = await saveBlob(blob, filename, { share: true });
-  if (res === 'cancelled') { toast('Datensicherung abgebrochen'); return; }
+  if (res === 'cancelled') { toast('Datensicherung abgebrochen'); return false; }
   passConfirmedThisSession = true;
   await db.setMeta('lastBackup', Date.now());
   toast(res === 'folder' ? `Datensicherung im Ordner „${dir.name}“ gespeichert: ${filename}` : res === 'shared' ? 'Datensicherung gespeichert' : `Datensicherung heruntergeladen: ${filename}`);
   nav.refresh();
+  return true;
+}
+
+/** „Beenden“: Backupdialog mit Abbruchmöglichkeit; nach erfolgreicher Sicherung wird die App beendet. */
+export async function beenden() {
+  const ctl = showModal({
+    title: 'Beenden',
+    body: h('p', { class: 'pre' }, `${db.hasUnsavedChanges() ? 'Es gibt ungesicherte Änderungen.' : 'Alle Änderungen sind gesichert.'}\n\nVor dem Beenden eine Datensicherung erstellen?`),
+    buttons: [{ label: 'Abbrechen', value: 'cancel' }, { label: 'Ohne Sicherung beenden', value: 'quit' }, { label: 'Sichern & beenden', cls: 'primary', value: 'backup' }],
+  });
+  const r = await ctl.closed;
+  if (r === 'quit') nav.exit();
+  else if (r === 'backup' && await startBackup()) nav.exit();
 }
 
 /** Auswahlliste mit Gerätename und Zeitpunkt (aus dem Dateinamen). Gibt File, 'other' oder null zurück. */

@@ -3,7 +3,7 @@ import * as db from './db.js';
 import { h, uuid, chf, parseBetrag, today, fmtDate, monthOf, shiftMonth, lastDayOfMonth, normalize } from './util.js';
 import { showModal, confirmDlg, field, toast, printNode } from './ui.js';
 import { kontaktPicker, betragFields, kategorienFor } from './kontaktpick.js';
-import { startBackup } from './backup.js';
+import { startBackup, beenden } from './backup.js';
 import { nav } from './nav.js';
 
 const FIRST = () => `${monthOf(today())}-01`;
@@ -79,7 +79,7 @@ export function kassenbuchScreen() {
 
   return {
     title: 'Kassenbuch', back: 'buchung',
-    actions: [h('button', { class: 'btn primary', onclick: () => nav.go('buchung') }, '+ Buchung')],
+    actions: [h('button', { class: 'btn', onclick: () => beenden() }, 'Beenden'), h('button', { class: 'btn primary', onclick: () => nav.go('buchung') }, '+ Buchung')],
     node: h('div', { class: 'stack' }, toolbar, filters, result),
   };
 }

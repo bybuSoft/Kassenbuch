@@ -62,6 +62,15 @@ function showLock() {
 }
 
 nav.go = (name, params) => { current = { name, params }; render(); };
+nav.exit = () => {
+  unlocked = false;
+  document.getElementById('modal-root').replaceChildren();
+  document.body.classList.remove('modal-open');
+  window.close(); // klappt nur, wenn der Browser es erlaubt (nicht in iOS-Web-Apps)
+  app.replaceChildren(h('main', { class: 'center' }, h('div', { class: 'card stack' },
+    h('h1', {}, 'Kassenbuch beendet'), h('p', { class: 'muted' }, 'Die App ist gesperrt und kann jetzt geschlossen werden (iPhone/iPad: nach oben wischen).'),
+    h('button', { class: 'btn primary', onclick: () => render() }, 'Wieder öffnen'))));
+};
 nav.refresh = () => { current.keepScroll = true; render(); };
 
 document.addEventListener('visibilitychange', () => {

@@ -3,7 +3,7 @@ import * as db from './db.js';
 import { h, uuid, chf, parseBetrag, today, fmtDate } from './util.js';
 import { field, toast, confirmDlg } from './ui.js';
 import { kontaktPicker, betragFields, kategorienFor } from './kontaktpick.js';
-import { startBackup } from './backup.js';
+import { startBackup, beenden } from './backup.js';
 import { openBuchung } from './kassenbuch.js';
 import { nav } from './nav.js';
 
@@ -88,7 +88,7 @@ export function buchungScreen() {
 
   return {
     title: 'Buchung', back: null,
-    actions: [h('button', { class: 'btn', onclick: () => nav.go('kassenbuch') }, 'Kassenbuch')],
+    actions: [h('button', { class: 'btn', onclick: () => nav.go('kassenbuch') }, 'Kassenbuch'), h('button', { class: 'btn', onclick: () => beenden() }, 'Beenden')],
     node: h('div', { class: 'stack' },
       h('div', { class: 'card stack' },
         field('Datum', datum), picker.el, bf.el,
