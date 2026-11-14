@@ -6,7 +6,6 @@ const DB_NAME = 'kassenbuch';
 const DB_VERSION = 1;
 export const STORES = ['kontakt', 'kommunikation', 'kundenkategorie', 'buchungskategorie', 'buchung'];
 const ALL_STORES = [...STORES, 'meta'];
-const TEST_STORES = ['kontakt', 'kommunikation', 'buchung'];
 
 /** Cache: je Tabelle eine Map id -> Objekt; meta ist ein einfaches Objekt key -> value */
 export const data = {
@@ -50,10 +49,17 @@ async function loadAll() {
 /** Mehrere Schreiboperationen atomar. ops: {op:'put'|'del', store, obj|id}. touch: lastChange setzen. */
 export async function batch(ops, touch = true) {
   // Testmodus: neu angelegte Daten werden als Test markiert (lassen sich später entfernen)
+  const isNew = (o) => o.op === 'put' && !data[o.store].has(o.obj.id) && !o.obj.sys && o.obj.test === undefined;
+  const testKontakte = new Set([...data.kontakt.values()].filter((k) => k.test).map((k) => k.id));
   if (data.meta.testMode) {
+    // neue Kontakte und Buchungen werden als Test markiert
     for (const o of ops) {
-      if (o.op === 'put' && TEST_STORES.includes(o.store) && !data[o.store].has(o.obj.id) && !o.obj.sys && o.obj.test === undefined) o.obj = { ...o.obj, test: true };
+      if ((o.store === 'kontakt' || o.store === 'buchung') && isNew(o)) { o.obj = { ...o.obj, test: true }; if (o.store === 'kontakt') testKontakte.add(o.obj.id); }
     }
+  }
+  // Kommunikation ist nur dann Test, wenn der zugehörige Kontakt ein Test-Kontakt ist (nie bei echten Kontakten)
+  for (const o of ops) {
+    if (o.store === 'kommunikation' && isNew(o) && testKontakte.has(o.obj.kontaktId)) o.obj = { ...o.obj, test: true };
   }
   const stores = new Set(ops.map((o) => o.store));
   if (touch) stores.add('meta');
