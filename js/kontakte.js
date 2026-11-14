@@ -3,6 +3,7 @@ import * as db from './db.js';
 import { h, uuid, normalize } from './util.js';
 import { showModal, confirmDlg, field, checkField, toast } from './ui.js';
 import { nav } from './nav.js';
+import { fmtDate, chf } from './util.js';
 
 const HEALTH = [['diabetes', 'Diabetes'], ['antikoaguliert', 'Antikoaguliert'], ['allergien', 'Allergien'], ['hiv', 'HIV-positiv'], ['haemophilie', 'Hämophilie']];
 const listState = { kunde: { q: '', kat: '' }, lieferant: { q: '' } };
@@ -43,8 +44,22 @@ export function kontakteScreen(typ) {
   return {
     title: lief ? 'Lieferanten' : 'Kunden', back: 'menu',
     actions: [h('button', { class: 'btn primary', onclick: async () => { await editKontakt({ prefill: { istLieferant: lief } }); nav.refresh(); } }, '+ Neu')],
-    node: h('div', { class: 'stack' }, h('div', { class: 'filters' }, q, katSel), list),
+    node: h('div', { class: 'stack' }, h('div', { class: `filters${lief ? ' one' : ''}` }, q, katSel), list),
   };
+}
+
+/** Alle Buchungen eines Kunden/Lieferanten, nach Datum absteigend */
+function showKontaktBuchungen(k) {
+  const bs = db.buchungenOf(k.id).sort((a, b) => (a.datum === b.datum ? (b.created || 0) - (a.created || 0) : a.datum < b.datum ? 1 : -1));
+  const total = bs.reduce((s, b) => s + b.betrag, 0);
+  const list = h('div', { class: 'list' }, ...(bs.length ? bs.map((b) => h('div', { class: 'row static' },
+    h('div', { class: 'row-main' }, h('strong', {}, fmtDate(b.datum)), h('span', { class: b.betrag < 0 ? 'out' : 'in' }, chf(b.betrag))),
+    h('div', { class: 'row-sub muted' }, [db.data.buchungskategorie.get(b.kategorieId)?.name, b.text].filter(Boolean).join(' · ')))) : [h('p', { class: 'muted pad' }, 'Keine Buchungen vorhanden.')]));
+  return showModal({
+    title: `Buchungen: ${db.kontaktName(k)}`, wide: true,
+    body: [h('p', { class: 'muted small' }, `${bs.length} Buchung${bs.length === 1 ? '' : 'en'} · Total ${chf(total)}`), list],
+    buttons: [{ label: 'Schliessen', cls: 'primary' }],
+  }).closed;
 }
 
 /**
@@ -141,6 +156,7 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
       return false;
     } });
   }
+  if (ex) buttons.push({ label: 'Buchungen', onClick: async () => { await showKontaktBuchungen(ex); return false; } });
   buttons.push({ label: 'Abbrechen', value: null });
   buttons.push({ label: 'Speichern', cls: 'primary', onClick: async () => {
     const lief = chkLief.checked;

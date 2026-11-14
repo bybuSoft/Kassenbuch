@@ -8,7 +8,7 @@ export function menuScreen() {
   const dot = db.hasUnsavedChanges() ? h('span', { class: 'dot', title: 'Ungesicherte Änderungen', 'aria-label': 'Ungesicherte Änderungen' }) : null;
   const btn = (label, onclick, extra) => h('button', { type: 'button', class: 'menu-btn', onclick }, label, extra);
   return {
-    title: 'Kassenbuch', back: null,
+    title: 'Menü', back: null,
     actions: [h('button', { class: 'btn', onclick: () => beenden() }, 'Beenden')],
     node: h('nav', { class: 'menu-grid', 'aria-label': 'Navigation' },
       btn('Buchung', () => nav.go('buchung')), btn('Kassenbuch', () => nav.go('kassenbuch')),

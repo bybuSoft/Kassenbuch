@@ -31,11 +31,42 @@ function kategorieCard(title, store, art) {
 }
 const dupName = (store, art, name, exceptId) => db.kategorienList(store, art).some((c) => c.id !== exceptId && c.name.toLowerCase() === name.toLowerCase());
 
+const removeTest = async () => {
+  if (!(await confirmDlg('Alle Testdaten (als Test markierte Kunden, Lieferanten, Buchungen) entfernen?', { ok: 'Entfernen', danger: true }))) return;
+  const n = await removeTestData(); toast(`Testdaten entfernt (${n} Kontakte)`); nav.refresh();
+};
+
+/** Ohne Freischaltung: nur Aufräumen, solange noch Testdaten vorhanden sind */
+const testRemoveCard = () => h('div', { class: 'card stack' }, h('h3', {}, 'Testdaten'),
+  h('p', { class: 'muted' }, 'Es sind noch Testdaten vorhanden.'),
+  h('button', { class: 'btn danger', onclick: removeTest }, 'Testdaten entfernen'));
+
+/** Freigeschaltet (Entwicklermodus): Testmodus, Erzeugen, Entfernen */
+const testCard = (test) => h('div', { class: 'card stack' }, h('h3', {}, 'Testdaten (Entwicklermodus)'),
+  checkField('Testdaten: neue Daten als Test markieren', h('input', { type: 'checkbox', checked: !!db.data.meta.testMode,
+    onchange: async (e) => { await db.setMeta('testMode', e.target.checked); toast(e.target.checked ? 'Neue Daten werden als Test markiert' : 'Neue Daten werden normal gespeichert'); nav.refresh(); } })),
+  db.data.meta.testMode ? h('p', { class: 'notice' }, 'Testmodus aktiv: Neue Kontakte und Buchungen sind als Test markiert und können mit „Testdaten entfernen“ gelöscht werden.') : null,
+  h('p', { class: 'muted' }, 'Erzeugt 10 Kunden, 2 Lieferanten und Buchungen für jeden Fall (alle Kategorien, mit/ohne Text, eigene Firma, Dublette, Kunde ohne Buchungen).'),
+  h('div', { class: 'presets' },
+    h('button', { class: 'btn', disabled: test, onclick: async () => {
+      if (!db.isEmpty() && !(await confirmDlg('Es sind bereits echte Daten vorhanden. Die Testdaten werden zusätzlich angelegt und sind als Test markiert. Vorher eine Datensicherung erstellen!\n\nTestdaten trotzdem erzeugen?', { title: 'Testdaten erzeugen', ok: 'Erzeugen' }))) return;
+      const r = await createTestData(); toast(`Testdaten erzeugt: ${r.kunden} Kunden, ${r.lieferanten} Lieferanten, ${r.buchungen} Buchungen`); nav.refresh();
+    } }, 'Testdaten erzeugen'),
+    h('button', { class: 'btn danger', disabled: !test, onclick: removeTest }, 'Testdaten entfernen')),
+  h('button', { class: 'btn', onclick: () => { db.devMode.unlocked = false; toast('Entwicklermodus beendet'); nav.refresh(); } }, 'Entwicklermodus beenden'));
+
+// 7x auf den Titel „Einstellungen“ tippen schaltet den Entwicklermodus frei (bis zum Sperren/Beenden der App)
+let taps = 0, lastTap = 0;
+const titleTap = () => {
+  const t = Date.now(); taps = t - lastTap < 1500 ? taps + 1 : 1; lastTap = t;
+  if (taps >= 7) { taps = 0; if (!db.devMode.unlocked) { db.devMode.unlocked = true; toast('Entwicklermodus aktiv (bis zum Schliessen der App)'); nav.refresh(); } }
+};
+
 export function einstellungenScreen() {
   const test = hasTestData();
   const eig = db.eigene();
   return {
-    title: 'Einstellungen', back: 'menu', actions: [],
+    title: 'Einstellungen', back: 'menu', actions: [], onTitleTap: titleTap,
     node: h('div', { class: 'stack' },
       h('div', { class: 'card stack' }, h('h3', {}, 'Eigene Firma'),
         h('p', {}, h('strong', {}, db.kontaktName(eig)), h('br'), [eig.strasse, [eig.plz, eig.ort].filter(Boolean).join(' ')].filter(Boolean).join(', ')),
@@ -68,20 +99,7 @@ export function einstellungenScreen() {
           const ctl = showModal({ title: 'PIN ändern', body: [field('Aktuelle PIN', o), field('Neue PIN (4–12 Ziffern)', n)], buttons: [{ label: 'Abbrechen' }, { label: 'Ändern', cls: 'primary', onClick: async () => { await changePin(o.value, n.value); toast('PIN geändert'); } }] });
           await ctl.closed;
         } }, 'PIN ändern')),
-      h('div', { class: 'card stack' }, h('h3', {}, 'Testdaten'),
-        checkField('Testdaten: neue Daten als Test markieren', h('input', { type: 'checkbox', checked: !!db.data.meta.testMode,
-          onchange: async (e) => { await db.setMeta('testMode', e.target.checked); toast(e.target.checked ? 'Neue Daten werden als Test markiert' : 'Neue Daten werden normal gespeichert'); nav.refresh(); } })),
-        db.data.meta.testMode ? h('p', { class: 'notice' }, 'Testmodus aktiv: Neue Kontakte und Buchungen sind als Test markiert und können mit „Testdaten entfernen“ gelöscht werden.') : null,
-        h('p', { class: 'muted' }, 'Erzeugt 10 Kunden, 2 Lieferanten und Buchungen für jeden Fall (alle Kategorien, mit/ohne Text, eigene Firma, Dublette, Kunde ohne Buchungen).'),
-        h('div', { class: 'presets' },
-          h('button', { class: 'btn', disabled: test, onclick: async () => {
-            if (!db.isEmpty() && !(await confirmDlg('Es sind bereits echte Daten vorhanden. Die Testdaten werden zusätzlich angelegt und sind als Test markiert. Vorher eine Datensicherung erstellen!\n\nTestdaten trotzdem erzeugen?', { title: 'Testdaten erzeugen', ok: 'Erzeugen' }))) return;
-            const r = await createTestData(); toast(`Testdaten erzeugt: ${r.kunden} Kunden, ${r.lieferanten} Lieferanten, ${r.buchungen} Buchungen`); nav.refresh();
-          } }, 'Testdaten erzeugen'),
-          h('button', { class: 'btn danger', disabled: !test, onclick: async () => {
-            if (!(await confirmDlg('Alle Testdaten (als Test markierte Kunden, Lieferanten, Buchungen) entfernen?', { ok: 'Entfernen', danger: true }))) return;
-            const n = await removeTestData(); toast(`Testdaten entfernt (${n} Kontakte)`); nav.refresh();
-          } }, 'Testdaten entfernen'))),
+      db.devMode.unlocked ? testCard(test) : (test ? testRemoveCard() : null),
     ),
   };
 }

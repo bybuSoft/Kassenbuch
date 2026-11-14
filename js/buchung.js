@@ -93,10 +93,10 @@ export function buchungScreen() {
       h('div', { class: 'card stack' },
         field('Datum', datum), picker.el, bf.el,
         field('Buchungskategorie', katSel), field('Buchungstext', text),
-        h('div', { class: 'presets' },
-          h('button', { type: 'button', class: 'btn big', onclick: cancel }, 'Abbrechen'),
-          h('button', { type: 'button', class: 'btn big', onclick: () => save(true) }, 'Speichern & neu'),
-          h('button', { type: 'button', class: 'btn primary big', onclick: () => save(false) }, 'Speichern'))),
-      h('h3', {}, 'Zuletzt erfasst'), list),
+        h('div', { class: 'btnrow' },
+          h('button', { type: 'button', class: 'btn', onclick: cancel }, 'Abbrechen'),
+          h('button', { type: 'button', class: 'btn', onclick: () => save(true) }, 'Speichern & neu'),
+          h('button', { type: 'button', class: 'btn primary', onclick: () => save(false) }, 'Speichern'))),
+      h('h4', { class: 'sect' }, 'Zuletzt erfasst'), list),
   };
 }

@@ -2,17 +2,16 @@
 import * as db from './db.js';
 import { h, uuid, chf, parseBetrag, today, fmtDate, monthOf, shiftMonth, lastDayOfMonth, normalize } from './util.js';
 import { showModal, confirmDlg, field, toast, printNode } from './ui.js';
+import { periodBar } from './periodbar.js';
 import { kontaktPicker, betragFields, kategorienFor } from './kontaktpick.js';
 import { beenden } from './backup.js';
 import { nav } from './nav.js';
 
 const FIRST = () => `${monthOf(today())}-01`;
-const view = { from: FIRST(), to: lastDayOfMonth(monthOf(today())), q: '', kat: '', art: '' };
+const view = { open: false, from: FIRST(), to: lastDayOfMonth(monthOf(today())), q: '', kat: '', art: '' };
 
 export function kassenbuchScreen() {
-  // ---- Filter: Periode, Art, Kategorie, Suche
-  const from = h('input', { type: 'date', value: view.from, 'aria-label': 'Von' });
-  const to = h('input', { type: 'date', value: view.to, 'aria-label': 'Bis' });
+  // ---- Filter (aufklappbar): Suche bleibt sichtbar
   const q = h('input', { type: 'search', placeholder: 'Suchen (Name, Text, Kategorie, Betrag)…', value: view.q, 'aria-label': 'Suchen' });
   const katSel = h('select', { 'aria-label': 'Buchungskategorie' });
   const artSel = h('select', { 'aria-label': 'Art' }, h('option', { value: '' }, 'Einnahmen und Ausgaben'), h('option', { value: 'einnahme' }, 'Nur Einnahmen'), h('option', { value: 'ausgabe' }, 'Nur Ausgaben'));
@@ -24,16 +23,13 @@ export function kassenbuchScreen() {
     katSel.value = view.kat;
   };
   drawKatOpts();
-  const preset = (label, f, t) => h('button', { type: 'button', class: 'btn small', onclick: () => { view.from = f; view.to = t; nav.refresh(); } }, label);
-  const y = new Date().getFullYear(), m = monthOf(today());
-  const pm = shiftMonth(m, -1);
-  const filters = h('div', { class: 'stack period' },
-    h('div', { class: 'grid2' }, field('Von', from), field('Bis', to)),
-    h('div', { class: 'presets' },
-      preset('Dieser Monat', `${m}-01`, lastDayOfMonth(m)), preset('Letzter Monat', `${pm}-01`, lastDayOfMonth(pm)),
-      preset('Dieses Jahr', `${y}-01-01`, `${y}-12-31`), preset('Letztes Jahr', `${y - 1}-01-01`, `${y - 1}-12-31`),
-      preset('Alles', '0000-01-01', '9999-12-31')),
-    q, h('div', { class: 'grid2' }, artSel, katSel));
+  const bar = periodBar({ from: view.from, to: view.to, all: true, onSet: (a, b) => { view.from = a; view.to = b; nav.refresh(); } });
+  const panel = h('div', { class: 'stack filterpanel' }, bar, h('div', { class: 'grid2' }, artSel, katSel));
+  panel.hidden = !view.open;
+  const active = () => !!(view.art || view.kat) || view.from !== FIRST() || view.to !== lastDayOfMonth(monthOf(today()));
+  const toggle = h('button', { type: 'button', class: 'btn', 'aria-expanded': String(!!view.open), onclick: () => { view.open = !view.open; panel.hidden = !view.open; toggle.setAttribute('aria-expanded', String(view.open)); } },
+    'Filter ', view.open ? '▴' : '▾', active() ? h('span', { class: 'dot' }) : null);
+  const filters = h('div', { class: 'stack' }, h('div', { class: 'searchrow' }, q, toggle), panel);
 
   const result = h('div', { class: 'stack' });
   const draw = () => {
@@ -59,18 +55,16 @@ export function kassenbuchScreen() {
         h('div', { class: 'row-main' }, h('strong', {}, db.kontaktName(k)), h('span', { class: b.betrag < 0 ? 'out' : 'in' }, chf(b.betrag))),
         h('div', { class: 'row-sub muted' }, [kat?.name, b.text].filter(Boolean).join(' · '))));
     }
-    result.replaceChildren(summary, h('p', { class: 'muted' }, `${all.length} Buchung${all.length === 1 ? '' : 'en'}`), list);
+    result.replaceChildren(summary, h('p', { class: 'muted small' }, `${all.length} Buchung${all.length === 1 ? '' : 'en'} · ${fmtDate(view.from)} – ${fmtDate(view.to)}`), list);
   };
   q.addEventListener('input', draw);
   katSel.addEventListener('change', () => { view.kat = katSel.value; draw(); });
   artSel.addEventListener('change', () => { view.art = artSel.value; drawKatOpts(); draw(); });
-  const apply = () => { view.from = from.value || view.from; view.to = to.value || view.to; draw(); };
-  from.addEventListener('change', apply); to.addEventListener('change', apply);
   draw();
 
   return {
     title: 'Kassenbuch', back: 'menu',
-    actions: [h('button', { class: 'btn', onclick: () => beenden() }, 'Beenden'), h('button', { class: 'btn primary', onclick: () => nav.go('buchung') }, '+ Buchung')],
+    actions: [h('button', { class: 'btn', onclick: () => beenden() }, 'Beenden'), h('button', { class: 'btn primary', 'aria-label': 'Neue Buchung', title: 'Neue Buchung', onclick: () => nav.go('buchung') }, '+')],
     node: h('div', { class: 'stack' }, filters, result),
   };
 }

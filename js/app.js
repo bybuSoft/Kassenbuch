@@ -70,9 +70,10 @@ function render() {
   const s = screens[current.name](current.params);
   const top = h('header', { class: 'top' },
     s.back ? h('button', { class: 'btn', onclick: () => nav.go(s.back) }, '‹ Zurück') : null,
-    h('h1', {}, s.title), h('div', { class: 'top-actions' }, ...s.actions));
+    h('h1', { onclick: s.onTitleTap }, s.title), h('div', { class: 'top-actions' }, ...s.actions));
   const scrollY = current.keepScroll ? window.scrollY : 0;
   app.replaceChildren(top, h('main', {}, s.node), h('footer', { class: 'foot muted' }, `Kassenbuch v${VERSION}`));
+  document.documentElement.style.setProperty('--top-h', `${top.offsetHeight}px`);
   window.scrollTo(0, scrollY);
   current.keepScroll = false;
 }
@@ -83,7 +84,7 @@ function showLock() {
 
 nav.go = (name, params) => { current = { name, params }; render(); };
 nav.exit = () => {
-  unlocked = false;
+  unlocked = false; db.devMode.unlocked = false;
   document.getElementById('modal-root').replaceChildren();
   document.body.classList.remove('modal-open');
   window.close(); // klappt nur, wenn der Browser es erlaubt (nicht in iOS-Web-Apps)
@@ -93,10 +94,23 @@ nav.exit = () => {
 };
 nav.refresh = () => { current.keepScroll = true; render(); };
 
+// Bildschirmtastatur (iOS überlagert die Seite): Platz unten schaffen und fokussiertes Feld sichtbar halten
+const setKb = () => {
+  const vv = window.visualViewport;
+  if (!vv) return;
+  document.documentElement.style.setProperty('--kb', `${Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop))}px`);
+};
+window.visualViewport?.addEventListener('resize', setKb);
+window.visualViewport?.addEventListener('scroll', setKb);
+document.addEventListener('focusin', (e) => {
+  if (!e.target.matches?.('input:not([type=checkbox]):not([type=date]),textarea,select')) return;
+  setTimeout(() => { setKb(); e.target.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 300);
+});
+
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) hiddenAt = Date.now();
   else if (unlocked && hiddenAt && Date.now() - hiddenAt > LOCK_AFTER_MS) {
-    unlocked = false;
+    unlocked = false; db.devMode.unlocked = false;
     document.getElementById('modal-root').replaceChildren();
     document.body.classList.remove('modal-open');
     render();

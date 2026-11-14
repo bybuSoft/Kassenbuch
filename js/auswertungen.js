@@ -3,6 +3,7 @@ import * as db from './db.js';
 import { h, chf, today, isoDate, fmtDate, monthOf, monthLabel, monthShort, lastDayOfMonth, saveBlob, collator } from './util.js';
 import { field, segmented, toast, printNode, checkField } from './ui.js';
 import { buildXlsx, XLSX_MIME } from './xlsx.js';
+import { periodBar } from './periodbar.js';
 import { nav } from './nav.js';
 
 const now = new Date();
@@ -12,34 +13,26 @@ const state = {
   senKat: '', vj: false,
 };
 const REPORTS = [
-  ['perioden', 'Perioden'], ['kategorien', 'Kundenkategorien'], ['senioren', 'Kundenliste'],
-  ['treuhaender', 'Treuhänder-Export'],
+  ['perioden', 'Perioden'], ['kategorien', 'Kategorien'], ['senioren', 'Kundenliste'], ['treuhaender', 'Treuhänder'],
 ];
 
 const inRange = (b) => b.datum >= state.from && b.datum <= state.to;
 const sum = (arr) => arr.reduce((s, b) => s + b.betrag, 0);
 const th = (...c) => h('thead', {}, h('tr', {}, ...c.map((x, i) => h('th', { class: x.num ? 'num' : '' }, x.t ?? x))));
 
-function periodControl() {
-  const from = h('input', { type: 'date', value: state.from, 'aria-label': 'Von' });
-  const to = h('input', { type: 'date', value: state.to, 'aria-label': 'Bis' });
-  const apply = () => { state.from = from.value || state.from; state.to = to.value || state.to; nav.refresh(); };
-  from.addEventListener('change', apply); to.addEventListener('change', apply);
-  const preset = (label, f, t) => h('button', { type: 'button', class: 'btn small', onclick: () => { state.from = f; state.to = t; nav.refresh(); } }, label);
-  const y = now.getFullYear(), m = monthOf(today());
-  const pm = monthOf(isoDate(new Date(now.getFullYear(), now.getMonth() - 1, 1)));
-  return h('div', { class: 'stack period' },
-    h('div', { class: 'grid2' }, field('Von', from), field('Bis', to)),
-    h('div', { class: 'presets' },
-      preset('Dieser Monat', `${m}-01`, lastDayOfMonth(m)), preset('Letzter Monat', `${pm}-01`, lastDayOfMonth(pm)),
-      preset('Dieses Jahr', `${y}-01-01`, `${y}-12-31`), preset('Letztes Jahr', `${y - 1}-01-01`, `${y - 1}-12-31`)));
-}
-
 export function auswertungenScreen() {
   const tabs = segmented(REPORTS.map(([value, label]) => ({ value, label })), state.tab, (v) => { state.tab = v; nav.refresh(); });
-  tabs.classList.add('scroll');
+  tabs.classList.add('compact');
   const body = { perioden, kategorien, senioren, treuhaender }[state.tab]();
-  return { title: 'Auswertungen', back: 'menu', actions: [], node: h('div', { class: 'stack' }, tabs, body) };
+  const vjBtn = state.tab === 'perioden' || state.tab === 'kategorien'
+    ? h('button', { type: 'button', class: `btn small toggle${state.vj ? ' on' : ''}`, 'aria-pressed': String(state.vj), title: 'Vorjahresvergleich', onclick: () => { state.vj = !state.vj; nav.refresh(); } }, 'VJ-Vergleich') : null;
+  const bar = periodBar({ from: state.from, to: state.to, extra: vjBtn, onSet: (f, t) => { state.from = f; state.to = t; nav.refresh(); } });
+  // Kopfbereich (Reiter + Periode) bleibt beim Scrollen stehen
+  return {
+    title: 'Auswertungen', back: 'menu',
+    actions: body._print ? [h('button', { class: 'btn', onclick: body._print }, 'Drucken / PDF')] : [],
+    node: h('div', { class: 'stack' }, h('div', { class: 'sticky-head' }, tabs, bar), body),
+  };
 }
 
 // ---- Vorjahresvergleich (optional) -------------------------------------------------------
@@ -48,10 +41,6 @@ const shiftYear = (iso) => {
   return isoDate(new Date(y - 1, m - 1, Math.min(d, new Date(y - 1, m, 0).getDate())));
 };
 const prevRange = (b) => b.datum >= shiftYear(state.from) && b.datum <= shiftYear(state.to);
-
-function compareControl() {
-  return checkField('Vorjahresvergleich anzeigen', h('input', { type: 'checkbox', checked: state.vj, onchange: (e) => { state.vj = e.target.checked; nav.refresh(); } }));
-}
 
 /** Tabelle mit optionaler Vorjahresspalte. rows: [name, aktuell, vorjahr, [anzahl]] */
 function compareTable(title, firstCol, rows, cls, { count = false } = {}) {
@@ -96,7 +85,7 @@ function perioden() {
   const monthRows = [...months].sort().filter(([, o]) => o.e || o.a || !state.vj).map(([mo, o]) => h('tr', {}, h('td', {}, monthShort(mo)),
     h('td', { class: 'num' }, chf(o.e)), h('td', { class: 'num' }, chf(o.a)), h('td', { class: 'num' }, chf(o.e - o.a)),
     ...(state.vj ? [h('td', { class: 'num' }, chf(o.pe - o.pa))] : [])));
-  return h('div', { class: 'stack' }, periodControl(), compareControl(),
+  return h('div', { class: 'stack' },
     h('div', { class: 'summary' }, sm('Einnahmen (Kunden)', ein, pein, 'in'), sm('Ausgaben (Lieferanten)', aus, paus, 'out'), sm('Saldo', ein - aus, pein - paus, '')),
     compareTable('Einnahmen (Kunden) nach Kategorie', 'Kategorie', byCat('einnahme'), 'in'),
     compareTable('Ausgaben (Lieferanten) nach Kategorie', 'Kategorie', byCat('ausgabe'), 'out'),
@@ -113,7 +102,7 @@ function kategorien() {
   const katOf = (b) => db.data.kontakt.get(b.kontaktId)?.kategorieId || '';
   const kundenRows = groupRows(sel(cur), sel(prev), katOf, (id) => (id ? db.data.kundenkategorie.get(id)?.name || '?' : '(ohne Kategorie)'));
   const lieferantRows = groupRows(lie(cur), lie(prev), (b) => b.kontaktId, (id) => db.kontaktName(db.data.kontakt.get(id)) || '?');
-  return h('div', { class: 'stack' }, periodControl(), compareControl(),
+  return h('div', { class: 'stack' },
     compareTable('Kunden: Einnahmen nach Kundenkategorie', 'Kategorie', kundenRows, 'in', { count: true }),
     compareTable('Lieferanten: Ausgaben nach Lieferant', 'Lieferant', lieferantRows, 'out', { count: true }));
 }
@@ -143,9 +132,9 @@ function senioren() {
     rows.push(h('tr', { class: 'total' }, h('td', { colspan: 2 }, `Total ${monthLabel(mo)}`), h('td', { class: 'num' }, chf(sum(bs.filter((x) => monthOf(x.datum) === mo))))));
     out.append(h('table', { class: 'tbl amt' }, th('Vorname', 'Name', { t: 'Betrag (CHF)', num: 1 }), h('tbody', {}, ...rows)));
   }
-  return h('div', { class: 'stack' }, periodControl(), field('Kundenkategorie', sel),
-    h('div', { class: 'card' }, out),
-    h('button', { class: 'btn', onclick: () => printNode(out.cloneNode(true)) }, 'Drucken / als PDF'));
+  const node = h('div', { class: 'stack' }, field('Kundenkategorie', sel), h('div', { class: 'card' }, out));
+  node._print = () => printNode(out.cloneNode(true));
+  return node;
 }
 
 // ---- Treuhänder-Export ---------------------------------------------------------------
@@ -175,7 +164,7 @@ export function treuhaenderRows(from, to) {
 function treuhaender() {
   const { count } = treuhaenderRows(state.from, state.to);
   const eig = db.eigene();
-  return h('div', { class: 'stack' }, periodControl(),
+  return h('div', { class: 'stack' },
     h('div', { class: 'card stack' },
       h('h3', {}, 'Export für den Treuhänder (Excel)'),
       h('p', { class: 'notice' }, 'Hinweis: Es werden keine personenbezogenen Daten exportiert. Einnahmen enthalten weder Kunde noch Buchungstext; bei Ausgaben stehen Lieferant und Buchungstext.'),
