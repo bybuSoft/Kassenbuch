@@ -2,12 +2,13 @@
 // (die Zeichen nach dem letzten "-" im Branch-Namen, z. B. claude/festive-cray-4a3xvr -> 4a3xvr).
 // BRANCH_CODE wird beim Commit automatisch gesetzt (tools/set-version.sh, Hook in .githooks/).
 export const MAJOR = 0;
-export const MINOR = 13;
+export const MINOR = 14;
 export const BRANCH_CODE = 'uc7ksu';
 export const VERSION = `${MAJOR}.${MINOR}.${BRANCH_CODE}`;
 
 // Kurze Beschreibung je Änderung (neueste zuerst)
 export const CHANGES = [
+  { v: '0.14', text: 'Willkommensscreen: Button „Überspringen“ (mit Warnung und Bestätigung); Daten prüfen liest den Ordner automatisch; ungesicherte Änderungen gelb.' },
   { v: '0.13', text: 'Alte Sicherungen werden geräteunabhängig bis zur eingestellten Anzahl gelöscht (andere Dateien bleiben). Willkommensscreen zeigt beim Einstieg nur „Daten prüfen“.' },
   { v: '0.12', text: 'Optional: ältere Sicherungen im Standardordner automatisch löschen (nur dieses Gerät, einstellbare Anzahl).' },
   { v: '0.11', text: 'Willkommensscreen: „Daten prüfen“ vergleicht die jüngste Sicherung mit dem lokalen Stand (grün/gelb/rot).' },
