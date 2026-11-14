@@ -107,7 +107,11 @@ export async function startBackup() {
 /** Jüngste Sicherung im Standardordner bzw. aus der gewählten Dateiauswahl. null = abgebrochen, {none:true} = keine gefunden. */
 export async function latestBackupInfo() {
   let names = [];
-  const dir = backupFolder();
+  let dir = backupFolder();
+  if (!dir && folderSupported()) {
+    // noch kein Standardordner: einmal Ordner wählen und merken, danach werden die Dateinamen automatisch gelesen
+    try { dir = await chooseBackupFolder(); toast(`Ordner „${dir.name}“ als Standardordner gemerkt`); } catch (e) { if (e.name !== 'AbortError') toast(e.message, 'err'); return null; }
+  }
   if (dir && folderSupported() && await folderAccess(dir)) {
     try { for await (const [name, entry] of dir.entries()) if (entry.kind === 'file' && /\.enc$/i.test(name)) names.push(name); }
     catch (e) { toast(`Standardordner nicht lesbar (${e.message})`, 'err'); return null; }
@@ -128,14 +132,14 @@ export function compareWithLocal(info) {
   const hasData = !db.isEmpty();
   const sec = (t) => Math.floor(t / 1000);
   if (info.none) {
-    return hasData ? { level: 'red', noBackup: true, text: 'ACHTUNG: Es wurde keine Sicherung gefunden, die lokalen Daten sind nicht gesichert. Bitte jetzt sichern.' }
+    return hasData ? { level: 'red', noBackup: true, dirty: true, text: 'ACHTUNG: Es wurde keine Sicherung gefunden, die lokalen Daten sind nicht gesichert. Bitte jetzt sichern.' }
       : { level: 'none', text: 'Es wurde keine Sicherung gefunden und es sind keine lokalen Daten vorhanden.' };
   }
   const newer = sec(info.date) > sec(synced);
   const from = `${info.device ? `Gerät „${info.device}“` : 'unbekanntes Gerät'}, ${fmtDateTime(info.date)}`;
   const same = info.device && info.device === db.deviceName() ? ' (dieses Gerät)' : '';
-  if (dirty && newer) return { level: 'red', text: `ACHTUNG: Es gibt eine neuere Sicherung (${from}${same}) UND lokale Änderungen, die noch nicht gesichert sind. Ein Restore würde die lokalen Änderungen überschreiben.` };
-  if (dirty) return { level: 'red', text: `ACHTUNG: Die lokalen Änderungen sind noch nicht gesichert (letzte Änderung ${fmtDateTime(last)}, letzte Sicherung ${from}${same}). Ein Restore ist nicht nötig und würde Daten überschreiben. Bitte zuerst sichern.` };
+  if (dirty && newer) return { level: 'red', dirty: true, text: `ACHTUNG: Es gibt eine neuere Sicherung (${from}${same}) UND lokale Änderungen, die noch nicht gesichert sind. Ein Restore würde die lokalen Änderungen überschreiben.` };
+  if (dirty) return { level: 'warn', dirty: true, text: `Die lokalen Änderungen sind noch nicht gesichert (letzte Änderung ${fmtDateTime(last)}, letzte Sicherung ${from}${same}). Bitte sichern.` };
   if (newer) return { level: 'warn', text: `Es gibt eine neuere Sicherung (${from}${same}) als den lokalen Stand. Lokal wurde nichts geändert – ein Restore wird empfohlen.` };
   return { level: 'ok', text: `Die lokalen Daten sind aktuell (jüngste Sicherung: ${from}${same}). Es ist kein Restore nötig.` };
 }

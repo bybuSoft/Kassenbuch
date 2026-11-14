@@ -26,7 +26,7 @@ function startScreen() {
   const lvl = startCheck?.level;
   // Beim Einstieg nur „Daten prüfen“. Danach: grün = aktuell, gelb = neuere Sicherung, rot = ungesicherte lokale Änderungen
   const weiterCls = { ok: 'ok', warn: 'warn', red: 'danger' }[lvl] ?? '';
-  const restoreCls = { warn: 'ok', red: 'danger' }[lvl] ?? '';
+  const restoreCls = lvl === 'red' || startCheck?.dirty ? 'danger' : lvl === 'warn' ? 'ok' : '';
   const showRestore = (lvl === 'warn' || lvl === 'red') && !startCheck.noBackup;
   return {
     title: 'Kassenbuch', back: null, actions: [],
@@ -44,7 +44,7 @@ function startScreen() {
       } }, startCheck ? 'Erneut prüfen' : 'Daten prüfen'),
       startCheck ? h('button', { class: `btn big ${weiterCls}`, onclick: () => nav.go('buchung') }, lvl === 'none' ? 'Ohne Restore starten' : 'Weiter zur Buchung') : null,
       showRestore ? h('button', { class: `btn big ${restoreCls}`, onclick: () => startRestore() }, 'Datensicherung einspielen (Restore)') : null,
-      lvl === 'red' && !empty ? h('button', { class: 'btn big primary', onclick: async () => { if (await startBackup()) { startCheck = null; nav.refresh(); } } }, 'Jetzt sichern') : null),
+      startCheck?.dirty && !empty ? h('button', { class: 'btn big ok', onclick: async () => { if (await startBackup()) { startCheck = null; nav.refresh(); } } }, 'Jetzt sichern') : null),
   };
 }
 
