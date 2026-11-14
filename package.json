@@ -1,0 +1,8 @@
+{
+  "name": "kassenbuch",
+  "private": true,
+  "type": "module",
+  "description": "Kassenbuch-PWA (ohne Build). package.json dient nur den Tests: npm install && npm test",
+  "scripts": { "test": "node --test tests/*.test.js" },
+  "devDependencies": { "fake-indexeddb": "^6.0.0" }
+}

@@ -1,16 +1,18 @@
 // Kassenbuch: Buchungsliste, Buchungsdialog, Quittung
 import * as db from './db.js';
-import { h, uuid, chf, parseBetrag, today, fmtDate, monthOf, shiftMonth, lastDayOfMonth, normalize } from './util.js';
+import { h, uuid, chf, parseBetrag, today, fmtDate, monthOf, lastDayOfMonth, normalize } from './util.js';
 import { showModal, confirmDlg, field, toast, printNode } from './ui.js';
 import { periodBar } from './periodbar.js';
-import { kontaktPicker, betragFields, kategorienFor } from './kontaktpick.js';
+import { kontaktPicker, betragFields, kategorienFor, prefillFor } from './kontaktpick.js';
 import { beenden } from './backup.js';
 import { nav } from './nav.js';
 
 const FIRST = () => `${monthOf(today())}-01`;
-const view = { open: false, from: FIRST(), to: lastDayOfMonth(monthOf(today())), q: '', kat: '', art: '' };
+const monthRange = () => ({ from: FIRST(), to: lastDayOfMonth(monthOf(today())) });
+const view = { open: false, custom: false, ...monthRange(), q: '', kat: '', art: '' };
 
 export function kassenbuchScreen() {
+  if (!view.custom) Object.assign(view, monthRange()); // nach Monatswechsel wieder der aktuelle Monat
   // ---- Filter (aufklappbar): Suche bleibt sichtbar
   const q = h('input', { type: 'search', placeholder: 'Suchen (Name, Text, Kategorie, Betrag)…', value: view.q, 'aria-label': 'Suchen' });
   const katSel = h('select', { 'aria-label': 'Buchungskategorie' });
@@ -23,10 +25,10 @@ export function kassenbuchScreen() {
     katSel.value = view.kat;
   };
   drawKatOpts();
-  const bar = periodBar({ from: view.from, to: view.to, all: true, onSet: (a, b) => { view.from = a; view.to = b; nav.refresh(); } });
+  const bar = periodBar({ from: view.from, to: view.to, all: true, onSet: (a, b) => { view.from = a; view.to = b; view.custom = true; nav.refresh(); } });
   const panel = h('div', { class: 'stack filterpanel' }, bar, h('div', { class: 'grid2' }, artSel, katSel));
   panel.hidden = !view.open;
-  const active = () => !!(view.art || view.kat) || view.from !== FIRST() || view.to !== lastDayOfMonth(monthOf(today()));
+  const active = () => !!(view.art || view.kat) || view.custom;
   const toggle = h('button', { type: 'button', class: 'btn', 'aria-expanded': String(!!view.open), onclick: () => { view.open = !view.open; panel.hidden = !view.open; toggle.setAttribute('aria-expanded', String(view.open)); } },
     'Filter ', view.open ? '▴' : '▾', active() ? h('span', { class: 'dot' }) : null);
   const filters = h('div', { class: 'stack' }, h('div', { class: 'searchrow' }, q, toggle), panel);
@@ -91,11 +93,10 @@ export async function openBuchung(existing) {
     onSelect: (id) => {
       kontaktId = id;
       const k = db.data.kontakt.get(id);
-      const last = db.buchungenOf(id).filter((b) => !ex || b.id !== ex.id).sort((a, b) => (b.created || 0) - (a.created || 0))[0];
-      bf.signSel.value = last ? (last.betrag < 0 ? '-' : '+') : (k.istLieferant ? '-' : '+');
-      if (last && !bf.input.value) bf.input.value = (Math.abs(last.betrag) / 100).toFixed(2);
-      katSel.value = '';
-      if (last && db.data.buchungskategorie.get(last.kategorieId)?.art === db.artOfKontakt(k)) katSel.value = last.kategorieId;
+      const p = prefillFor(k, ex ? ex.id : null);
+      bf.signSel.value = p.sign;
+      if (!bf.input.value) bf.input.value = p.betrag;
+      katSel.value = p.kategorieId;
       drawKat(); picker.draw();
       bf.input.focus(); bf.input.select();
     },

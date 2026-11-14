@@ -1,5 +1,5 @@
 // Kompakte Periodenwahl: Von/Bis und Schnellwahl auf je einer Zeile (für Kassenbuch und Auswertungen)
-import { h, today, isoDate, monthOf, lastDayOfMonth, shiftMonth } from './util.js';
+import { h, today, monthOf, lastDayOfMonth, shiftMonth } from './util.js';
 
 /** from/to: aktuelle Werte (ISO). onSet(from, to) wird bei jeder Änderung gerufen. extra: zusätzliches Element in der Datumszeile. all: Schnellwahl „Alles“. */
 export function periodBar({ from, to, onSet, extra = null, all = false }) {

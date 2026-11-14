@@ -25,6 +25,9 @@ const txP = (tx) => new Promise((res, rej) => {
   tx.onabort = () => rej(tx.error || new Error('Transaktion abgebrochen'));
 });
 
+/** Schliesst die Datenbankverbindung (für Tests, damit die Datenbank neu angelegt werden kann). */
+export function closeDb() { if (idb) { idb.close(); idb = null; } }
+
 export async function init() {
   idb = await new Promise((resolve, reject) => {
     const r = indexedDB.open(DB_NAME, DB_VERSION);

@@ -55,3 +55,11 @@ export function betragFields(sign = '+', value = '') {
 
 /** Buchungskategorien passend zum Kontakt (Kunde: Einnahmen, Lieferant: Ausgaben) */
 export const kategorienFor = (k) => (k ? db.kategorienList('buchungskategorie', db.artOfKontakt(k)) : []);
+
+/** Vorbelegung nach der Kontaktwahl aus der letzten Buchung dieses Kontakts (ohne excludeId); ohne Buchung: Standard je Kontakttyp. */
+export function prefillFor(kontakt, excludeId = null) {
+  const last = db.buchungenOf(kontakt.id).filter((b) => b.id !== excludeId).sort((a, b) => (b.created || 0) - (a.created || 0))[0];
+  if (!last) return { sign: kontakt.istLieferant ? '-' : '+', betrag: '', kategorieId: '' };
+  const kat = db.data.buchungskategorie.get(last.kategorieId);
+  return { sign: last.betrag < 0 ? '-' : '+', betrag: (Math.abs(last.betrag) / 100).toFixed(2), kategorieId: kat && kat.art === db.artOfKontakt(kontakt) ? kat.id : '' };
+}

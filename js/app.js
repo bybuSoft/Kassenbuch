@@ -124,6 +124,7 @@ window.addEventListener('unhandledrejection', (e) => { console.error(e.reason); 
     if (!window.indexedDB) throw new Error('Dieser Browser unterstützt keine lokale Datenspeicherung (IndexedDB).');
     if (!crypto.subtle) throw new Error('Bitte die App über eine https://-Adresse öffnen (Verschlüsselung nicht verfügbar).');
     await db.init();
+    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js').catch((e) => console.warn('Service Worker:', e));
     if (navigator.storage?.persist) navigator.storage.persist().catch(() => {});
     window.__kassenbuch = { db, nav, startBackup }; // für Tests/Debugging
     showLock();

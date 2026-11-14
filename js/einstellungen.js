@@ -1,7 +1,7 @@
 // Einstellungen und Infos
 import * as db from './db.js';
 import { h, uuid, fmtDateTime } from './util.js';
-import { confirmDlg, promptDlg, passwordDlg, showModal, field, checkField, toast, alertDlg } from './ui.js';
+import { confirmDlg, promptDlg, showModal, field, checkField, toast, alertDlg } from './ui.js';
 import { editKontakt } from './kontakte.js';
 import { changePin } from './lock.js';
 import { createTestData, removeTestData, hasTestData } from './testdata.js';

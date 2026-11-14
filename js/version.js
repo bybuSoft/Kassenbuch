@@ -2,12 +2,13 @@
 // (die Zeichen nach dem letzten "-" im Branch-Namen, z. B. claude/festive-cray-4a3xvr -> 4a3xvr).
 // BRANCH_CODE wird beim Commit automatisch gesetzt (tools/set-version.sh, Hook in .githooks/).
 export const MAJOR = 0;
-export const MINOR = 20;
+export const MINOR = 21;
 export const BRANCH_CODE = 'uc7ksu';
 export const VERSION = `${MAJOR}.${MINOR}.${BRANCH_CODE}`;
 
 // Kurze Beschreibung je Änderung (neueste zuerst)
 export const CHANGES = [
+  { v: '0.21', text: 'Offlinefähig (Service Worker), Datumsvorgaben aktuell bei offener App, Treuhänder-Export mit einheitlicher Datenschutzregel und Hinweis, Schutz vor manipulierten Backup-Dateien, Tests, README.' },
   { v: '0.20', text: 'PIN-Dialog nach oben (Tastatur überdeckt nichts); Testdaten-Bereich nur im Entwicklermodus; Beenden ohne Rückfrage nach Sicherung, wenn alles gesichert ist.' },
   { v: '0.19', text: 'Kompaktere Bildschirme fürs Handy, Tastatur verdeckt Felder nicht mehr; Buchung: 3 Buttons in einer Zeile; Menü; Kassenbuch mit aufklappbarem Filter; Kunden/Lieferanten: Buchungen anzeigen; Auswertungen mit festem Kopfbereich und Drucken oben rechts.' },
   { v: '0.18', text: 'Testdaten nur im Entwicklermodus (7x auf den Titel „Einstellungen“ tippen, gilt bis zum Schliessen der App); „Testdaten entfernen“ bleibt sichtbar, solange Testdaten vorhanden sind.' },
