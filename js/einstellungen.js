@@ -36,11 +36,6 @@ const removeTest = async () => {
   const n = await removeTestData(); toast(`Testdaten entfernt (${n} Kontakte)`); nav.refresh();
 };
 
-/** Ohne Freischaltung: nur Aufräumen, solange noch Testdaten vorhanden sind */
-const testRemoveCard = () => h('div', { class: 'card stack' }, h('h3', {}, 'Testdaten'),
-  h('p', { class: 'muted' }, 'Es sind noch Testdaten vorhanden.'),
-  h('button', { class: 'btn danger', onclick: removeTest }, 'Testdaten entfernen'));
-
 /** Freigeschaltet (Entwicklermodus): Testmodus, Erzeugen, Entfernen */
 const testCard = (test) => h('div', { class: 'card stack' }, h('h3', {}, 'Testdaten (Entwicklermodus)'),
   checkField('Testdaten: neue Daten als Test markieren', h('input', { type: 'checkbox', checked: !!db.data.meta.testMode,
@@ -99,7 +94,7 @@ export function einstellungenScreen() {
           const ctl = showModal({ title: 'PIN ändern', body: [field('Aktuelle PIN', o), field('Neue PIN (4–12 Ziffern)', n)], buttons: [{ label: 'Abbrechen' }, { label: 'Ändern', cls: 'primary', onClick: async () => { await changePin(o.value, n.value); toast('PIN geändert'); } }] });
           await ctl.closed;
         } }, 'PIN ändern')),
-      db.devMode.unlocked ? testCard(test) : (test ? testRemoveCard() : null),
+      db.devMode.unlocked ? testCard(test) : null, // Testdaten nur im Entwicklermodus sichtbar
     ),
   };
 }

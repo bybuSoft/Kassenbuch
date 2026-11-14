@@ -127,3 +127,6 @@ input,select,textarea{min-height:40px}textarea{padding:8px 12px}
 .filterpanel{background:var(--card);border-radius:var(--r);padding:8px}
 .filters{grid-template-columns:2fr 1fr;gap:6px}.filters.one{grid-template-columns:1fr}
 .btnrow .btn:nth-child(2){flex:1.6}.btnrow .btn{font-size:.88rem}
+
+/* Sperr-Screen: nach oben, damit die Tastatur den Button nicht überdeckt */
+main.lockpos{align-items:flex-start;min-height:0;padding-top:max(24px,8vh)}

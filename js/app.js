@@ -79,7 +79,7 @@ function render() {
 }
 
 function showLock() {
-  app.replaceChildren(h('main', { class: 'center' }, lockScreen(() => { unlocked = true; startCheck = null; nav.go('start'); })));
+  app.replaceChildren(h('main', { class: 'center lockpos' }, lockScreen(() => { unlocked = true; startCheck = null; nav.go('start'); })));
 }
 
 nav.go = (name, params) => { current = { name, params }; render(); };
