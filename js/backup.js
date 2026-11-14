@@ -39,6 +39,25 @@ export async function chooseBackupFolder() {
 }
 export const clearBackupFolder = () => db.setMeta('backupDir', null);
 
+export const pruneSettings = () => ({ on: !!db.data.meta.pruneOld, keep: Math.max(1, Number(db.data.meta.pruneKeep) || 5) });
+
+/** Löscht ältere Sicherungsdateien (.enc im Namensschema der App, unabhängig vom Gerät) im Standardordner; die jüngsten `keep` bleiben. Andere Dateien (Excel usw.) bleiben unberührt. */
+export async function pruneBackups(dir, keep, justWritten) {
+  const files = [];
+  for await (const [name, entry] of dir.entries()) {
+    if (entry.kind !== 'file' || !/\.enc$/i.test(name)) continue;
+    const info = parseBackupFilename(name);
+    if (info.date) files.push({ name, date: info.date });
+  }
+  files.sort((a, b) => b.date - a.date);
+  let n = 0;
+  for (const f of files.slice(keep)) {
+    if (f.name === justWritten) continue;
+    try { await dir.removeEntry(f.name); n++; } catch (e) { console.error(e); }
+  }
+  return n;
+}
+
 async function folderAccess(handle) {
   try {
     const opt = { mode: 'readwrite' };
@@ -68,6 +87,10 @@ export async function startBackup() {
       const w = await (await dir.getFileHandle(filename, { create: true })).createWritable();
       await w.write(blob); await w.close();
       res = 'folder';
+      const ps = pruneSettings();
+      if (ps.on) {
+        try { const n = await pruneBackups(dir, ps.keep, filename); if (n) toast(`Sicherung gespeichert, ${n} ältere Sicherung${n === 1 ? '' : 'en'} gelöscht`); } catch (e) { console.error(e); }
+      }
     } catch (e) { toast(`Standardordner nicht beschreibbar (${e.message}) – Datei wird heruntergeladen`, 'err'); }
   }
   if (!res) res = await saveBlob(blob, filename, { share: true });
@@ -105,7 +128,7 @@ export function compareWithLocal(info) {
   const hasData = !db.isEmpty();
   const sec = (t) => Math.floor(t / 1000);
   if (info.none) {
-    return hasData ? { level: 'red', text: 'ACHTUNG: Es wurde keine Sicherung gefunden, die lokalen Daten sind nicht gesichert. Bitte jetzt sichern.' }
+    return hasData ? { level: 'red', noBackup: true, text: 'ACHTUNG: Es wurde keine Sicherung gefunden, die lokalen Daten sind nicht gesichert. Bitte jetzt sichern.' }
       : { level: 'none', text: 'Es wurde keine Sicherung gefunden und es sind keine lokalen Daten vorhanden.' };
   }
   const newer = sec(info.date) > sec(synced);

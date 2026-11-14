@@ -6,7 +6,7 @@ import { editKontakt } from './kontakte.js';
 import { changePin } from './lock.js';
 import { createTestData, removeTestData, hasTestData } from './testdata.js';
 import { VERSION, CHANGES } from './version.js';
-import { startBackup, startRestore, folderSupported, backupFolder, chooseBackupFolder, clearBackupFolder } from './backup.js';
+import { startBackup, startRestore, folderSupported, backupFolder, chooseBackupFolder, clearBackupFolder, pruneSettings } from './backup.js';
 import { nav } from './nav.js';
 
 /** Liste der Kategorien mit Neu/Ändern/Löschen (nur wenn nirgends verwendet) */
@@ -53,7 +53,13 @@ export function einstellungenScreen() {
           ? h('div', { class: 'stack' }, h('p', {}, h('strong', {}, 'Standardordner: '), backupFolder() ? backupFolder().name : 'nicht festgelegt (Auswahl bei jeder Sicherung)'),
             h('div', { class: 'presets' },
               h('button', { class: 'btn', onclick: async () => { try { await chooseBackupFolder(); toast('Standardordner festgelegt'); nav.refresh(); } catch (err) { if (err.name !== 'AbortError') toast(err.message, 'err'); } } }, 'Ordner wählen'),
-              backupFolder() ? h('button', { class: 'btn', onclick: async () => { await clearBackupFolder(); nav.refresh(); } }, 'Ordner entfernen') : null))
+              backupFolder() ? h('button', { class: 'btn', onclick: async () => { await clearBackupFolder(); nav.refresh(); } }, 'Ordner entfernen') : null),
+            backupFolder() ? h('div', { class: 'stack' },
+              checkField('Ältere Sicherungen im Ordner automatisch löschen', h('input', { type: 'checkbox', checked: pruneSettings().on, onchange: async (e) => {
+                if (e.target.checked && !(await confirmDlg(`Nach jeder Sicherung in den Standardordner werden ältere Sicherungsdateien (.enc) im Ordner gelöscht, unabhängig vom Gerät. Es bleiben die jüngsten ${pruneSettings().keep}. Andere Dateien (z. B. Excel) bleiben unberührt.\n\nGelöschte Dateien lassen sich nicht wiederherstellen. Aktivieren?`, { title: 'Alte Sicherungen löschen', ok: 'Aktivieren', danger: true }))) { e.target.checked = false; return; }
+                await db.setMeta('pruneOld', e.target.checked); nav.refresh();
+              } })),
+              pruneSettings().on ? field('Anzahl der jüngsten Sicherungen, die bleiben', h('input', { type: 'number', min: 1, max: 99, value: pruneSettings().keep, onchange: async (e) => { await db.setMeta('pruneKeep', Math.max(1, Math.round(Number(e.target.value) || 5))); nav.refresh(); } })) : null) : null)
           : h('p', { class: 'muted' }, 'Ein fester Standardordner kann auf iPhone/iPad nicht eingestellt werden (Einschränkung von Safari). Beim Sichern „In Dateien sichern“ wählen – iOS merkt sich meist den zuletzt benutzten Ordner. Auf Desktop-Chrome/Edge ist die Einstellung möglich.'),
         h('div', { class: 'presets' }, h('button', { class: 'btn', onclick: () => startBackup() }, 'Sicherung erstellen'), h('button', { class: 'btn', onclick: () => startRestore() }, 'Restore aus Datei'))),
       h('div', { class: 'card stack' }, h('h3', {}, 'PIN'),

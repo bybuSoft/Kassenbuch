@@ -24,26 +24,26 @@ function startScreen() {
   const n = [...db.data.kontakt.values()].filter((k) => !k.sys).length;
   const empty = db.isEmpty();
   const lvl = startCheck?.level;
-  // Weiter-Button: grün = aktuell, gelb = neuere Sicherung, rot = ungesicherte lokale Änderungen
-  const weiterCls = { ok: 'ok', warn: 'warn', red: 'danger' }[lvl] ?? (empty ? '' : 'primary');
-  const restoreCls = { ok: '', warn: 'ok', red: 'danger' }[lvl] ?? (empty ? 'primary' : '');
+  // Beim Einstieg nur „Daten prüfen“. Danach: grün = aktuell, gelb = neuere Sicherung, rot = ungesicherte lokale Änderungen
+  const weiterCls = { ok: 'ok', warn: 'warn', red: 'danger' }[lvl] ?? '';
+  const restoreCls = { warn: 'ok', red: 'danger' }[lvl] ?? '';
+  const showRestore = (lvl === 'warn' || lvl === 'red') && !startCheck.noBackup;
   return {
     title: 'Kassenbuch', back: null, actions: [],
     node: h('div', { class: 'card stack start' },
       h('h2', {}, 'Willkommen'),
       h('p', { class: 'muted pre' }, empty
-        ? 'Auf diesem Gerät sind noch keine Daten vorhanden.\nWenn du bereits eine Datensicherung hast, spiele sie jetzt ein.'
+        ? 'Auf diesem Gerät sind noch keine Daten vorhanden.\nPrüfe, ob eine Datensicherung vorhanden ist.'
         : `Lokale Daten: ${db.data.buchung.size} Buchungen, ${n} Kontakte\nLetzte Änderung: ${fmtDateTime(db.data.meta.lastChange)}\nLetzte Datensicherung: ${fmtDateTime(db.data.meta.lastBackup)}`),
-      !empty && db.hasUnsavedChanges() && !startCheck ? h('p', { class: 'notice' }, 'Es gibt ungesicherte Änderungen.') : null,
       startCheck ? h('p', { class: `status ${lvl}` }, startCheck.text) : null,
-      h('button', { class: 'btn big', onclick: async () => {
-        const info = await latestBackupInfo();
-        if (!info) return;
+      h('button', { class: `btn big ${startCheck ? '' : 'primary'}`, onclick: async () => {
+        let info = await latestBackupInfo();
+        if (!info) { if (!db.isEmpty()) return; info = { none: true }; } // Abbruch bei leerer App: ohne Restore starten möglich
         startCheck = compareWithLocal(info);
         nav.refresh();
-      } }, 'Daten prüfen'),
-      h('button', { class: `btn big ${weiterCls}`, onclick: () => nav.go('buchung') }, empty ? 'Ohne Restore starten' : 'Weiter zur Buchung'),
-      h('button', { class: `btn big ${restoreCls}`, onclick: () => startRestore() }, 'Datensicherung einspielen (Restore)'),
+      } }, startCheck ? 'Erneut prüfen' : 'Daten prüfen'),
+      startCheck ? h('button', { class: `btn big ${weiterCls}`, onclick: () => nav.go('buchung') }, lvl === 'none' ? 'Ohne Restore starten' : 'Weiter zur Buchung') : null,
+      showRestore ? h('button', { class: `btn big ${restoreCls}`, onclick: () => startRestore() }, 'Datensicherung einspielen (Restore)') : null,
       lvl === 'red' && !empty ? h('button', { class: 'btn big primary', onclick: async () => { if (await startBackup()) { startCheck = null; nav.refresh(); } } }, 'Jetzt sichern') : null),
   };
 }
