@@ -85,3 +85,9 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--pri);outline-off
 .quittung{max-width:170mm;margin:0 auto;font-size:12pt;color:#000}.quittung h1{font-size:24pt;margin:24mm 0 8mm}.quittung table{border-collapse:collapse;width:100%}.quittung th{text-align:left;width:35%;padding:3mm 0;vertical-align:top;font-weight:600}.quittung td{padding:3mm 0}
 .q-sign{margin-top:30mm;display:flex;justify-content:space-between;gap:20mm}.q-sign .line{border-top:1px solid #000;min-width:70mm;padding-top:2mm;text-align:left}
 @media print{body>*:not(#print-area){display:none!important}#print-area{display:block;color:#000;background:#fff}body{background:#fff;padding:0}.tbl th,.tbl td{border-bottom:1px solid #999}@page{margin:15mm}}
+
+/* Ampel für „Daten prüfen“ */
+.btn.ok{background:#1f9d47;border-color:#1f9d47;color:#fff}.btn.warn{background:#f5c542;border-color:#f5c542;color:#2b2100}
+.status{border-radius:10px;padding:10px 12px;font-weight:500;margin:0}
+.status.ok{background:#dff5e5;color:#12602a}.status.warn{background:#fff3c4;color:#5c4500}.status.red{background:#ffe0e0;color:#8a1111}.status.none{background:var(--bg);color:var(--muted)}
+@media(prefers-color-scheme:dark){.status.ok{background:#12351d;color:#8fe3a8}.status.warn{background:#3a3320;color:#f5d56b}.status.red{background:#4a1c1c;color:#ffb3b3}}

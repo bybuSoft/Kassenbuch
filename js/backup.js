@@ -50,7 +50,7 @@ async function folderAccess(handle) {
 export async function makeBackup(pass) {
   const snap = { ...db.snapshot(), appVersion: VERSION };
   const text = await encryptJson(snap, pass);
-  return { blob: new Blob([text], { type: 'application/octet-stream' }), filename: backupFilename(new Date(snap.createdAt)) };
+  return { blob: new Blob([text], { type: 'application/octet-stream' }), filename: backupFilename(new Date(snap.createdAt)), createdAt: snap.createdAt };
 }
 
 export async function startBackup() {
@@ -60,7 +60,7 @@ export async function startBackup() {
     confirmField: !passConfirmedThisSession, ok: 'Sichern',
   });
   if (!pass) return false;
-  const { blob, filename } = await makeBackup(pass);
+  const { blob, filename, createdAt } = await makeBackup(pass);
   let res;
   const dir = backupFolder();
   if (dir && folderSupported() && await folderAccess(dir)) {
@@ -74,9 +74,47 @@ export async function startBackup() {
   if (res === 'cancelled') { toast('Datensicherung abgebrochen'); return false; }
   passConfirmedThisSession = true;
   await db.setMeta('lastBackup', Date.now());
+  await db.setMeta('syncedTo', createdAt); // Stand der Daten = Zeitpunkt dieser Sicherung
   toast(res === 'folder' ? `Datensicherung im Ordner „${dir.name}“ gespeichert: ${filename}` : res === 'shared' ? 'Datensicherung gespeichert' : `Datensicherung heruntergeladen: ${filename}`);
   nav.refresh();
   return true;
+}
+
+// ---- Daten prüfen: jüngste Sicherung (nur Dateiname) mit dem lokalen Stand vergleichen ----------------
+/** Jüngste Sicherung im Standardordner bzw. aus der gewählten Dateiauswahl. null = abgebrochen, {none:true} = keine gefunden. */
+export async function latestBackupInfo() {
+  let names = [];
+  const dir = backupFolder();
+  if (dir && folderSupported() && await folderAccess(dir)) {
+    try { for await (const [name, entry] of dir.entries()) if (entry.kind === 'file' && /\.enc$/i.test(name)) names.push(name); }
+    catch (e) { toast(`Standardordner nicht lesbar (${e.message})`, 'err'); return null; }
+  } else {
+    const picked = await pickFile({ multiple: true });
+    if (!picked.length) return null;
+    names = picked.map((f) => f.name);
+  }
+  const infos = names.map((name) => ({ name, ...parseBackupFilename(name) })).filter((i) => i.date).sort((a, b) => b.date - a.date);
+  return infos[0] || { none: true };
+}
+
+/** Bewertung: level 'ok' (grün), 'warn' (gelb), 'red' (rot) oder 'none' (keine Sicherung gefunden, keine Daten) */
+export function compareWithLocal(info) {
+  const last = db.data.meta.lastChange || 0;
+  const synced = db.data.meta.syncedTo ?? db.data.meta.lastBackup ?? 0; // letzter gesicherter/wiederhergestellter Stand
+  const dirty = last > synced;                                          // lokale Änderungen seit diesem Stand
+  const hasData = !db.isEmpty();
+  const sec = (t) => Math.floor(t / 1000);
+  if (info.none) {
+    return hasData ? { level: 'red', text: 'ACHTUNG: Es wurde keine Sicherung gefunden, die lokalen Daten sind nicht gesichert. Bitte jetzt sichern.' }
+      : { level: 'none', text: 'Es wurde keine Sicherung gefunden und es sind keine lokalen Daten vorhanden.' };
+  }
+  const newer = sec(info.date) > sec(synced);
+  const from = `${info.device ? `Gerät „${info.device}“` : 'unbekanntes Gerät'}, ${fmtDateTime(info.date)}`;
+  const same = info.device && info.device === db.deviceName() ? ' (dieses Gerät)' : '';
+  if (dirty && newer) return { level: 'red', text: `ACHTUNG: Es gibt eine neuere Sicherung (${from}${same}) UND lokale Änderungen, die noch nicht gesichert sind. Ein Restore würde die lokalen Änderungen überschreiben.` };
+  if (dirty) return { level: 'red', text: `ACHTUNG: Die lokalen Änderungen sind noch nicht gesichert (letzte Änderung ${fmtDateTime(last)}, letzte Sicherung ${from}${same}). Ein Restore ist nicht nötig und würde Daten überschreiben. Bitte zuerst sichern.` };
+  if (newer) return { level: 'warn', text: `Es gibt eine neuere Sicherung (${from}${same}) als den lokalen Stand. Lokal wurde nichts geändert – ein Restore wird empfohlen.` };
+  return { level: 'ok', text: `Die lokalen Daten sind aktuell (jüngste Sicherung: ${from}${same}). Es ist kein Restore nötig.` };
 }
 
 /** „Beenden“: Backupdialog mit Abbruchmöglichkeit; nach erfolgreicher Sicherung wird die App beendet. */
@@ -149,6 +187,7 @@ export async function startRestore() {
   });
   if (!ok) return;
   await db.replaceAll(snap);
+  await db.setMeta('syncedTo', snap.createdAt);
   passConfirmedThisSession = true;
   toast('Datensicherung wurde eingespielt');
   nav.go('buchung');
