@@ -2,12 +2,13 @@
 // (die Zeichen nach dem letzten "-" im Branch-Namen, z. B. claude/festive-cray-4a3xvr -> 4a3xvr).
 // BRANCH_CODE wird beim Commit automatisch gesetzt (tools/set-version.sh, Hook in .githooks/).
 export const MAJOR = 0;
-export const MINOR = 8;
+export const MINOR = 9;
 export const BRANCH_CODE = 'uc7ksu';
 export const VERSION = `${MAJOR}.${MINOR}.${BRANCH_CODE}`;
 
 // Kurze Beschreibung je Änderung (neueste zuerst)
 export const CHANGES = [
+  { v: '0.9', text: 'Backup-Dateiname: Datum/Zeit (mit Sekunden)/Gerät/Version. Serienbrieffelder aus dem Kunden-/Lieferantenstamm entfernt (Pflege im Auswertungs-Tab Serienbrief).' },
   { v: '0.8', text: 'Standardordner für Datensicherung/Restore einstellbar (nur Browser mit Ordnerzugriff, nicht iPhone/iPad).' },
   { v: '0.7', text: 'Treuhänder-Export: Buchungstexte nur bei Lieferanten; Auswertungen mit festen Betragsspalten; Dublettenprüfung zeigt alle Treffer.' },
   { v: '0.6', text: 'Buchung: Einnahme/Ausgabe ersetzt durch Vorzeichenfeld +/− beim Betrag (Gutschriften und Rückzahlungen); Kategorien richten sich nach Kunde/Lieferant.' },

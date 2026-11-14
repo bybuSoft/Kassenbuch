@@ -74,16 +74,12 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
   const ort = h('input', { value: k.ort, autocomplete: 'off' });
   const notizen = h('textarea', { rows: 4, placeholder: 'Freitext, z. B. Hinweise zur Behandlung' }, k.notizen);
   notizen.value = k.notizen;
-  const briefErh = h('input', { type: 'checkbox', checked: !!k.briefErhalten });
-  const briefDat = h('input', { type: 'date', value: k.briefDatum });
 
   const kundeTop = h('div', { class: 'stack' },
     h('div', { class: 'grid2' }, field('Vorname', vorname), field('Name', name)),
     h('div', { class: 'grid2' }, field('Geburtsdatum', geb), field('Kundenkategorie', kat)));
   const kundeHealth = h('fieldset', { class: 'fs' }, h('legend', {}, 'Gesundheit'),
     h('div', { class: 'checks' }, ...HEALTH.map(([key, label]) => checkField(label, health[key]))));
-  const kundeBrief = h('fieldset', { class: 'fs' }, h('legend', {}, 'Serienbrief'),
-    h('div', { class: 'grid2' }, checkField('Brief erhalten', briefErh), field('Datum letzter Versand', briefDat)));
   const geschlecht = h('select', { 'aria-label': 'Geschlecht / Firma' }, h('option', { value: '' }, '– keine Angabe –'),
     h('option', { value: 'w' }, 'weiblich'), h('option', { value: 'm' }, 'männlich'), h('option', { value: 'firma' }, 'Firma'));
   geschlecht.value = k.geschlecht || '';
@@ -92,7 +88,7 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
   anrede.value = k.anrede || '';
   const lieferantBox = h('div', { class: 'grid2' }, field('Name 1', name1), field('Name 2', name2));
   const syncType = () => {
-    kundeTop.hidden = kundeHealth.hidden = kundeBrief.hidden = chkLief.checked; lieferantBox.hidden = !chkLief.checked;
+    kundeTop.hidden = kundeHealth.hidden = chkLief.checked; lieferantBox.hidden = !chkLief.checked;
   };
   chkLief.addEventListener('change', syncType);
   syncType();
@@ -130,8 +126,7 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
     h('div', { class: 'grid3' }, field('Strasse', strasse, 'span3'), field('PLZ', plz), field('Ort', ort, 'span2')),
     h('fieldset', { class: 'fs' }, h('legend', {}, 'Kommunikation'), commBox),
     kundeHealth,
-    h('fieldset', { class: 'fs' }, h('legend', {}, 'Notizen'), notizen, marker),
-    kundeBrief);
+    h('fieldset', { class: 'fs' }, h('legend', {}, 'Notizen'), notizen, marker));
 
   const buttons = [];
   if (ex && !ex.sys) {
@@ -158,7 +153,6 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
       if (!out.name) { toast('Bitte einen Namen erfassen.', 'err'); name.focus(); return false; }
       out.geburtsdatum = geb.value; out.kategorieId = kat.value || null;
       HEALTH.forEach(([key]) => { out[key] = health[key].checked; });
-      out.briefErhalten = briefErh.checked; out.briefDatum = briefDat.value;
     }
     const cl = comms.filter((c) => c.wert.trim()).map((c) => ({ ...c, wert: c.wert.trim() }));
     let seenPref = false; cl.forEach((c) => { if (c.bevorzugt) { if (seenPref) c.bevorzugt = false; seenPref = true; } });

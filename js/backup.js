@@ -14,14 +14,18 @@ const safeDevice = (s) => String(s || '').trim().replace(/[^A-Za-z0-9äöüÄÖ�
 
 export function backupFilename(d = new Date(), device = db.deviceName()) {
   const dev = safeDevice(device);
-  return `kassenbuch-${dev ? dev + '-' : ''}${d.getFullYear()}${p2(d.getMonth() + 1)}${p2(d.getDate())}-${p2(d.getHours())}${p2(d.getMinutes())}${p2(d.getSeconds())}-v${VERSION}.enc`;
+  // Reihenfolge: Datum-Zeit (inkl. Sekunden) / Gerät / Version
+  return `kassenbuch-${d.getFullYear()}${p2(d.getMonth() + 1)}${p2(d.getDate())}-${p2(d.getHours())}${p2(d.getMinutes())}${p2(d.getSeconds())}${dev ? '-' + dev : ''}-v${VERSION}.enc`;
 }
 
-/** Gerätename und Zeitpunkt aus dem Dateinamen einer Sicherung lesen */
+/** Gerätename und Zeitpunkt aus dem Dateinamen einer Sicherung lesen (neues und altes Namensschema) */
 export function parseBackupFilename(name) {
-  const m = /^kassenbuch-(?:(.+?)-)?(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})(?:-v.*)?\.enc$/i.exec(name || '');
-  if (!m) return { device: '', date: null };
-  return { device: (m[1] || '').replace(/_/g, ' '), date: new Date(+m[2], +m[3] - 1, +m[4], +m[5], +m[6], +m[7]).getTime() };
+  const mk = (y, mo, d, h, mi, s, dev) => ({ device: (dev || '').replace(/_/g, ' '), date: new Date(+y, +mo - 1, +d, +h, +mi, +s).getTime() });
+  let m = /^kassenbuch-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})(?:-(?!v\d)([^-]+))?(?:-v.*)?\.enc$/i.exec(name || '');
+  if (m) return mk(m[1], m[2], m[3], m[4], m[5], m[6], m[7]);
+  m = /^kassenbuch-(?:(.+?)-)?(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})(?:-v.*)?\.enc$/i.exec(name || ''); // älteres Schema: Gerät vor dem Datum
+  if (m) return mk(m[2], m[3], m[4], m[5], m[6], m[7], m[1]);
+  return { device: '', date: null };
 }
 
 // ---- Standardordner (File System Access API: Chrome/Edge am Desktop/Android; nicht auf iPhone/iPad) ----
