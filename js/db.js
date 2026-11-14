@@ -7,6 +7,9 @@ const DB_VERSION = 1;
 export const STORES = ['kontakt', 'kommunikation', 'kundenkategorie', 'buchungskategorie', 'buchung'];
 const ALL_STORES = [...STORES, 'meta'];
 
+/** Entwicklermodus (Testdaten): nur im Arbeitsspeicher, gilt bis zum Sperren/Beenden/Schliessen der App. */
+export const devMode = { unlocked: false };
+
 /** Cache: je Tabelle eine Map id -> Objekt; meta ist ein einfaches Objekt key -> value */
 export const data = {
   kontakt: new Map(), kommunikation: new Map(), kundenkategorie: new Map(),
@@ -51,7 +54,7 @@ export async function batch(ops, touch = true) {
   // Testmodus: neu angelegte Daten werden als Test markiert (lassen sich später entfernen)
   const isNew = (o) => o.op === 'put' && !data[o.store].has(o.obj.id) && !o.obj.sys && o.obj.test === undefined;
   const testKontakte = new Set([...data.kontakt.values()].filter((k) => k.test).map((k) => k.id));
-  if (data.meta.testMode) {
+  if (data.meta.testMode && devMode.unlocked) {
     // neue Kontakte und Buchungen werden als Test markiert
     for (const o of ops) {
       if ((o.store === 'kontakt' || o.store === 'buchung') && isNew(o)) { o.obj = { ...o.obj, test: true }; if (o.store === 'kontakt') testKontakte.add(o.obj.id); }

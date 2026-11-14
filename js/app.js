@@ -70,7 +70,7 @@ function render() {
   const s = screens[current.name](current.params);
   const top = h('header', { class: 'top' },
     s.back ? h('button', { class: 'btn', onclick: () => nav.go(s.back) }, '‹ Zurück') : null,
-    h('h1', {}, s.title), h('div', { class: 'top-actions' }, ...s.actions));
+    h('h1', { onclick: s.onTitleTap }, s.title), h('div', { class: 'top-actions' }, ...s.actions));
   const scrollY = current.keepScroll ? window.scrollY : 0;
   app.replaceChildren(top, h('main', {}, s.node), h('footer', { class: 'foot muted' }, `Kassenbuch v${VERSION}`));
   window.scrollTo(0, scrollY);
@@ -83,7 +83,7 @@ function showLock() {
 
 nav.go = (name, params) => { current = { name, params }; render(); };
 nav.exit = () => {
-  unlocked = false;
+  unlocked = false; db.devMode.unlocked = false;
   document.getElementById('modal-root').replaceChildren();
   document.body.classList.remove('modal-open');
   window.close(); // klappt nur, wenn der Browser es erlaubt (nicht in iOS-Web-Apps)
@@ -96,7 +96,7 @@ nav.refresh = () => { current.keepScroll = true; render(); };
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) hiddenAt = Date.now();
   else if (unlocked && hiddenAt && Date.now() - hiddenAt > LOCK_AFTER_MS) {
-    unlocked = false;
+    unlocked = false; db.devMode.unlocked = false;
     document.getElementById('modal-root').replaceChildren();
     document.body.classList.remove('modal-open');
     render();
