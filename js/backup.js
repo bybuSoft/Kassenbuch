@@ -6,7 +6,10 @@ import { VERSION } from './version.js';
 import { passwordDlg, confirmDlg, alertDlg, toast, showModal } from './ui.js';
 import { nav } from './nav.js';
 
-let passConfirmedThisSession = false;
+// Prüfwert (SHA-256) des in dieser Sitzung verwendeten Backup-Passworts – nur im Arbeitsspeicher, nie gespeichert.
+// Damit wird ab dem zweiten Backup (und nach einem Restore) ein Tippfehler erkannt, ohne das Passwort erneut bestätigen zu müssen.
+let sessionPassHash = null;
+const sha256 = async (s) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)))].map((x) => x.toString(16).padStart(2, '0')).join('');
 const p2 = (n) => String(n).padStart(2, '0');
 
 /** Gerätename für den Dateinamen: nur Buchstaben/Ziffern/_ (Rest wird zu _) */
@@ -73,12 +76,20 @@ export async function makeBackup(pass) {
 }
 
 export async function startBackup() {
-  const pass = await passwordDlg({
-    title: 'Datensicherung',
-    hint: 'Die Sicherung wird mit diesem Passwort verschlüsselt. Das Passwort wird nirgends gespeichert – ohne Passwort kann die Sicherung nicht mehr gelesen werden.',
-    confirmField: !passConfirmedThisSession, ok: 'Sichern',
-  });
-  if (!pass) return false;
+  const hint = 'Die Sicherung wird mit diesem Passwort verschlüsselt. Das Passwort wird nirgends gespeichert – ohne Passwort kann die Sicherung nicht mehr gelesen werden.';
+  let pass;
+  for (;;) {
+    // Erste Sicherung der Sitzung: Passwort zweimal eingeben. Danach einmal, Vergleich mit dem bisherigen Passwort.
+    pass = await passwordDlg({ title: 'Datensicherung', hint, confirmField: !sessionPassHash, ok: 'Sichern' });
+    if (!pass) return false;
+    if (!sessionPassHash || (await sha256(pass)) === sessionPassHash) break;
+    const useNew = await confirmDlg('Das Passwort stimmt nicht mit dem Passwort überein, das du in dieser Sitzung bisher verwendet hast (Tippfehler?).\n\nWenn du ein neues Passwort verwenden willst, musst du es zweimal eingeben.', {
+      title: 'Anderes Passwort', ok: 'Neues Passwort verwenden', cancel: 'Nochmal eingeben', danger: true });
+    if (!useNew) continue;
+    pass = await passwordDlg({ title: 'Neues Passwort', hint, confirmField: true, ok: 'Sichern' });
+    if (!pass) return false;
+    break;
+  }
   const { blob, filename, createdAt } = await makeBackup(pass);
   let res;
   const dir = backupFolder();
@@ -95,7 +106,7 @@ export async function startBackup() {
   }
   if (!res) res = await saveBlob(blob, filename, { share: true });
   if (res === 'cancelled') { toast('Datensicherung abgebrochen'); return false; }
-  passConfirmedThisSession = true;
+  sessionPassHash = await sha256(pass);
   await db.setMeta('lastBackup', Date.now());
   await db.setMeta('syncedTo', createdAt); // Stand der Daten = Zeitpunkt dieser Sicherung
   toast(res === 'folder' ? `Datensicherung im Ordner „${dir.name}“ gespeichert: ${filename}` : res === 'shared' ? 'Datensicherung gespeichert' : `Datensicherung heruntergeladen: ${filename}`);
@@ -215,7 +226,7 @@ export async function startRestore() {
   if (!ok) return;
   await db.replaceAll(snap);
   await db.setMeta('syncedTo', snap.createdAt);
-  passConfirmedThisSession = true;
+  sessionPassHash = await sha256(pass);
   toast('Datensicherung wurde eingespielt');
   nav.go('buchung');
 }
