@@ -8,6 +8,7 @@ import { startRestore, startBackup, latestBackupInfo, compareWithLocal } from '.
 import { kassenbuchScreen } from './kassenbuch.js';
 import { buchungScreen } from './buchung.js';
 import { menuScreen } from './menu.js';
+import { hilfeScreen } from './hilfe.js';
 import { kontakteScreen } from './kontakte.js';
 import { auswertungenScreen } from './auswertungen.js';
 import { einstellungenScreen, infosScreen } from './einstellungen.js';
@@ -63,6 +64,7 @@ const screens = {
   auswertungen: auswertungenScreen,
   einstellungen: einstellungenScreen,
   infos: infosScreen,
+  hilfe: hilfeScreen,
 };
 
 function render() {

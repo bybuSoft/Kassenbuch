@@ -130,3 +130,8 @@ input,select,textarea{min-height:40px}textarea{padding:8px 12px}
 
 /* Sperr-Screen: nach oben, damit die Tastatur den Button nicht überdeckt */
 main.lockpos{align-items:flex-start;min-height:0;padding-top:max(24px,8vh)}
+
+/* Hilfe */
+.help h2{margin-bottom:2px}.help-sec{margin-top:14px;break-inside:avoid}.help-sec h3{margin:0 0 4px;border-bottom:1px solid var(--line);padding-bottom:2px}
+.help ul{margin:4px 0;padding-left:1.2rem}.help li{margin:3px 0}.help p{margin:4px 0}
+@media print{.help{font-size:11pt;color:#000}.help .muted{color:#444}.help-sec h3{border-color:#999}}
