@@ -28,6 +28,7 @@ Auf dem iPad/iPhone: in Safari öffnen, *Teilen → Zum Home-Bildschirm*.
   - **Daten prüfen** (Willkommensscreen): liest die Dateinamen der Sicherungen und vergleicht die jüngste mit dem lokalen Stand. **Grün** = aktuell, **gelb** = neuere Sicherung vorhanden oder ungesicherte lokale Änderungen, **rot** = neuere Sicherung *und* ungesicherte lokale Änderungen (Restore würde überschreiben). Mit „Überspringen“ (nach Warnung) lässt sich die Prüfung auslassen.
   - Restore: mit Hinweis auf Sicherungs-/Änderungsdatum, Gerät und Warnung, wenn die lokalen Daten neuer sind.
 - **PIN** als Zugriffsschutz (pro Gerät; sperrt nach 5 Minuten im Hintergrund). Die PIN ist eine Sperre, **keine Verschlüsselung** der lokalen Daten – die Sicherungsdateien sind verschlüsselt.
+- **Hilfe**: Infos → „Hilfe“ (oben rechts) zeigt die Benutzerhilfe, „Drucken / PDF“ druckt sie.
 - **Offline**: Ein Service Worker (`sw.js`) hält die App offlinefähig („Netz zuerst, Cache als Rückfall“, d. h. online ist immer die aktuelle Fassung aktiv).
 - **Testdaten** (nur im Entwicklermodus: 7× auf den Titel „Einstellungen“ tippen, gilt bis zum Schliessen der App): Testmodus (neue Kontakte/Buchungen werden als Test markiert), Testdaten erzeugen/entfernen.
 - **Versionierung**: `js/version.js` – MAJOR.MINOR manuell in `js/version.js` ändern (`MAJOR`, `MINOR`), dritte Stelle = Branch-Code (z. B. 4a3xvr), der bei jedem Commit automatisch aus dem Git-Branch gesetzt wird (`tools/set-version.sh`, Hook in `.githooks/`). In Claude-Code-Sessions aktiviert `.claude/hooks/session-start.sh` den Hook automatisch. In einer eigenen Arbeitskopie einmalig: `git config core.hooksPath .githooks`. Auf master/main bleibt der Code des gemergten Branches stehen. Änderungsbeschreibung auf dem Infos-Screen.
@@ -51,6 +52,7 @@ Abgedeckt: Dateinamen und „Daten prüfen“, Löschen alter Sicherungen, Versc
 index.html, sw.js, manifest.webmanifest, css/style.css, icons/, tests/
 js/app.js          Start, Navigation, Sperre, Startseite „Daten prüfen“
 js/menu.js         Menü (Navigationsseite)
+js/hilfe.js        Benutzerhilfe (druckbar, Infos → Hilfe)
 js/buchung.js      Buchungsseite (Erfassung + zuletzt erfasst)
 js/kassenbuch.js   Buchungsliste mit Filter, Buchungsdialog, Quittung
 js/kontaktpick.js  Kontaktwahl (Smartsuche), Betrag/Vorzeichen, Vorbelegung

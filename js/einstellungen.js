@@ -101,7 +101,7 @@ export function einstellungenScreen() {
 
 export function infosScreen() {
   return {
-    title: 'Infos', back: 'menu', actions: [],
+    title: 'Infos', back: 'menu', actions: [h('button', { class: 'btn primary', onclick: () => nav.go('hilfe') }, 'Hilfe')],
     node: h('div', { class: 'stack' }, h('div', { class: 'card stack' }, h('h3', {}, `Kassenbuch Version ${VERSION}`),
       h('p', { class: 'muted' }, 'Die dritte Stelle der Versionsnummer ist der Branch-Code, die ersten beiden werden manuell vergeben.'),
       h('h4', {}, 'Versionsverlauf'),
