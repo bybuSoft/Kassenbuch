@@ -157,9 +157,18 @@ export function compareWithLocal(info) {
 
 /** „Beenden“: Backupdialog mit Abbruchmöglichkeit; nach erfolgreicher Sicherung wird die App beendet. */
 export async function beenden() {
+  if (!db.hasUnsavedChanges()) {
+    // Alles gesichert: keine Frage nach nochmaliger Sicherung, nur Abbrechen oder OK
+    const ctl = showModal({
+      title: 'Beenden', body: h('p', { class: 'pre' }, 'Alle Änderungen sind gesichert.'),
+      buttons: [{ label: 'Abbrechen', value: 'cancel' }, { label: 'OK', cls: 'primary', value: 'quit' }],
+    });
+    if ((await ctl.closed) === 'quit') nav.exit();
+    return;
+  }
   const ctl = showModal({
     title: 'Beenden',
-    body: h('p', { class: 'pre' }, `${db.hasUnsavedChanges() ? 'Es gibt ungesicherte Änderungen.' : 'Alle Änderungen sind gesichert.'}\n\nVor dem Beenden eine Datensicherung erstellen?`),
+    body: h('p', { class: 'pre' }, 'Es gibt ungesicherte Änderungen.\n\nVor dem Beenden eine Datensicherung erstellen?'),
     buttons: [{ label: 'Abbrechen', value: 'cancel' }, { label: 'Ohne Sicherung beenden', value: 'quit' }, { label: 'Sichern & beenden', cls: 'primary', value: 'backup' }],
   });
   const r = await ctl.closed;
