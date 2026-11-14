@@ -2,12 +2,13 @@
 // (die Zeichen nach dem letzten "-" im Branch-Namen, z. B. claude/festive-cray-4a3xvr -> 4a3xvr).
 // BRANCH_CODE wird beim Commit automatisch gesetzt (tools/set-version.sh, Hook in .githooks/).
 export const MAJOR = 0;
-export const MINOR = 11;
+export const MINOR = 12;
 export const BRANCH_CODE = 'uc7ksu';
 export const VERSION = `${MAJOR}.${MINOR}.${BRANCH_CODE}`;
 
 // Kurze Beschreibung je Änderung (neueste zuerst)
 export const CHANGES = [
+  { v: '0.12', text: 'Optional: ältere Sicherungen im Standardordner automatisch löschen (nur dieses Gerät, einstellbare Anzahl).' },
   { v: '0.11', text: 'Willkommensscreen: „Daten prüfen“ vergleicht die jüngste Sicherung mit dem lokalen Stand (grün/gelb/rot).' },
   { v: '0.10', text: 'Neues Icon (alte Registrierkasse), Backup-Dateiname ohne „Kassenbuch“, Serienbrief-Tab entfernt, Button Beenden mit Backupdialog.' },
   { v: '0.9', text: 'Backup-Dateiname: Datum/Zeit (mit Sekunden)/Gerät/Version. Serienbrieffelder aus dem Kunden-/Lieferantenstamm entfernt (Pflege im Auswertungs-Tab Serienbrief).' },
