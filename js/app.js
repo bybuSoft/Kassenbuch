@@ -3,7 +3,7 @@ import * as db from './db.js';
 import { h, fmtDateTime } from './util.js';
 import { nav } from './nav.js';
 import { lockScreen } from './lock.js';
-import { toast } from './ui.js';
+import { toast, confirmDlg } from './ui.js';
 import { startRestore, startBackup, latestBackupInfo, compareWithLocal } from './backup.js';
 import { kassenbuchScreen } from './kassenbuch.js';
 import { buchungScreen } from './buchung.js';
@@ -42,6 +42,10 @@ function startScreen() {
         startCheck = compareWithLocal(info);
         nav.refresh();
       } }, startCheck ? 'Erneut prüfen' : 'Daten prüfen'),
+      !startCheck ? h('button', { class: 'btn big danger', onclick: async () => {
+        const ok = await confirmDlg('ACHTUNG: Ohne Prüfung weißt du nicht, ob eine neuere Datensicherung existiert oder ob lokale Änderungen noch nicht gesichert sind.\n\nWenn du auf einem veralteten Stand weiterarbeitest, können Daten verloren gehen oder doppelt erfasst werden.\n\nPrüfung wirklich überspringen?', { title: 'Prüfung überspringen', ok: 'Ja, überspringen', danger: true });
+        if (ok) nav.go('buchung');
+      } }, 'Überspringen') : null,
       startCheck ? h('button', { class: `btn big ${weiterCls}`, onclick: () => nav.go('buchung') }, lvl === 'none' ? 'Ohne Restore starten' : 'Weiter zur Buchung') : null,
       showRestore ? h('button', { class: `btn big ${restoreCls}`, onclick: () => startRestore() }, 'Datensicherung einspielen (Restore)') : null,
       startCheck?.dirty && !empty ? h('button', { class: 'btn big ok', onclick: async () => { if (await startBackup()) { startCheck = null; nav.refresh(); } } }, 'Jetzt sichern') : null),
