@@ -3,22 +3,13 @@ import * as db from './db.js';
 import { h, uuid, chf, parseBetrag, today, fmtDate, monthOf, shiftMonth, lastDayOfMonth, normalize } from './util.js';
 import { showModal, confirmDlg, field, toast, printNode } from './ui.js';
 import { kontaktPicker, betragFields, kategorienFor } from './kontaktpick.js';
-import { startBackup, beenden } from './backup.js';
+import { beenden } from './backup.js';
 import { nav } from './nav.js';
 
 const FIRST = () => `${monthOf(today())}-01`;
 const view = { from: FIRST(), to: lastDayOfMonth(monthOf(today())), q: '', kat: '', art: '' };
 
 export function kassenbuchScreen() {
-  const dot = db.hasUnsavedChanges() ? h('span', { class: 'dot', title: 'Ungesicherte Änderungen', 'aria-label': 'Ungesicherte Änderungen' }) : null;
-  const toolbar = h('nav', { class: 'toolbar', 'aria-label': 'Funktionen' },
-    h('button', { class: 'btn', onclick: () => nav.go('kunden') }, 'Kunden'),
-    h('button', { class: 'btn', onclick: () => nav.go('lieferanten') }, 'Lieferanten'),
-    h('button', { class: 'btn', onclick: () => nav.go('auswertungen') }, 'Auswertungen'),
-    h('button', { class: 'btn', onclick: () => startBackup() }, 'Datensicherung', dot),
-    h('button', { class: 'btn', onclick: () => nav.go('einstellungen') }, 'Einstellungen'),
-    h('button', { class: 'btn', onclick: () => nav.go('infos') }, 'Infos'));
-
   // ---- Filter: Periode, Art, Kategorie, Suche
   const from = h('input', { type: 'date', value: view.from, 'aria-label': 'Von' });
   const to = h('input', { type: 'date', value: view.to, 'aria-label': 'Bis' });
@@ -78,9 +69,9 @@ export function kassenbuchScreen() {
   draw();
 
   return {
-    title: 'Kassenbuch', back: 'buchung',
+    title: 'Kassenbuch', back: 'menu',
     actions: [h('button', { class: 'btn', onclick: () => beenden() }, 'Beenden'), h('button', { class: 'btn primary', onclick: () => nav.go('buchung') }, '+ Buchung')],
-    node: h('div', { class: 'stack' }, toolbar, filters, result),
+    node: h('div', { class: 'stack' }, filters, result),
   };
 }
 

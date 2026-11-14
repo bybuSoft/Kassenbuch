@@ -69,9 +69,9 @@ export function buchungScreen() {
     if (again) { nav.refresh(); return; }
     // „Speichern“: erst fragen, ob ein Backup erstellt werden soll, danach ins Kassenbuch
     if (await confirmDlg('Die Buchung wurde gespeichert.\nSoll jetzt eine Datensicherung erstellt werden?', { title: 'Datensicherung', ok: 'Ja, sichern', cancel: 'Nein' })) await startBackup();
-    nav.go('kassenbuch');
+    nav.go('menu');
   };
-  const cancel = () => { resetDraft(); nav.go('kassenbuch'); };
+  const cancel = () => { resetDraft(); nav.go('menu'); };
 
   // ---- Liste der zuletzt erfassten Buchungen (nach Erfassungszeitpunkt absteigend)
   const recent = [...db.data.buchung.values()].sort((a, b) => (b.created || 0) - (a.created || 0)).slice(0, 25);
@@ -87,8 +87,8 @@ export function buchungScreen() {
   setTimeout(() => { if (!document.getElementById('modal-root').children.length && !draft.kontaktId) picker.el.querySelector('input')?.focus(); }, 0);
 
   return {
-    title: 'Buchung', back: null,
-    actions: [h('button', { class: 'btn', onclick: () => nav.go('kassenbuch') }, 'Kassenbuch'), h('button', { class: 'btn', onclick: () => beenden() }, 'Beenden')],
+    title: 'Buchung', back: 'menu',
+    actions: [h('button', { class: 'btn', onclick: () => beenden() }, 'Beenden')],
     node: h('div', { class: 'stack' },
       h('div', { class: 'card stack' },
         field('Datum', datum), picker.el, bf.el,

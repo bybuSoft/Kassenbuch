@@ -2,12 +2,13 @@
 // (die Zeichen nach dem letzten "-" im Branch-Namen, z. B. claude/festive-cray-4a3xvr -> 4a3xvr).
 // BRANCH_CODE wird beim Commit automatisch gesetzt (tools/set-version.sh, Hook in .githooks/).
 export const MAJOR = 0;
-export const MINOR = 15;
+export const MINOR = 16;
 export const BRANCH_CODE = 'uc7ksu';
 export const VERSION = `${MAJOR}.${MINOR}.${BRANCH_CODE}`;
 
 // Kurze Beschreibung je Änderung (neueste zuerst)
 export const CHANGES = [
+  { v: '0.16', text: 'Handy-Menüführung: neue Navigationsseite mit zwei Spalten (Buchung, Kassenbuch, Kunden, Lieferanten, Auswertungen, Datensicherung, Einstellungen, Infos); Verlassen der Buchung und aller Seiten führt dorthin.' },
   { v: '0.15', text: 'Backup-Passwort: erste Sicherung der Sitzung zweimal, danach einmal mit Vergleich gegen das bisherige Passwort (Tippfehler-Schutz).' },
   { v: '0.14', text: 'Willkommensscreen: Button „Überspringen“ (mit Warnung und Bestätigung); Daten prüfen liest den Ordner automatisch; ungesicherte Änderungen gelb.' },
   { v: '0.13', text: 'Alte Sicherungen werden geräteunabhängig bis zur eingestellten Anzahl gelöscht (andere Dateien bleiben). Willkommensscreen zeigt beim Einstieg nur „Daten prüfen“.' },

@@ -7,6 +7,7 @@ import { toast, confirmDlg } from './ui.js';
 import { startRestore, startBackup, latestBackupInfo, compareWithLocal } from './backup.js';
 import { kassenbuchScreen } from './kassenbuch.js';
 import { buchungScreen } from './buchung.js';
+import { menuScreen } from './menu.js';
 import { kontakteScreen } from './kontakte.js';
 import { auswertungenScreen } from './auswertungen.js';
 import { einstellungenScreen, infosScreen } from './einstellungen.js';
@@ -54,6 +55,7 @@ function startScreen() {
 
 const screens = {
   start: startScreen,
+  menu: menuScreen,
   buchung: buchungScreen,
   kassenbuch: kassenbuchScreen,
   kunden: () => kontakteScreen('kunde'),

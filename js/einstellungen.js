@@ -35,7 +35,7 @@ export function einstellungenScreen() {
   const test = hasTestData();
   const eig = db.eigene();
   return {
-    title: 'Einstellungen', back: 'kassenbuch', actions: [],
+    title: 'Einstellungen', back: 'menu', actions: [],
     node: h('div', { class: 'stack' },
       h('div', { class: 'card stack' }, h('h3', {}, 'Eigene Firma'),
         h('p', {}, h('strong', {}, db.kontaktName(eig)), h('br'), [eig.strasse, [eig.plz, eig.ort].filter(Boolean).join(' ')].filter(Boolean).join(', ')),
@@ -88,7 +88,7 @@ export function einstellungenScreen() {
 
 export function infosScreen() {
   return {
-    title: 'Infos', back: 'kassenbuch', actions: [],
+    title: 'Infos', back: 'menu', actions: [],
     node: h('div', { class: 'stack' }, h('div', { class: 'card stack' }, h('h3', {}, `Kassenbuch Version ${VERSION}`),
       h('p', { class: 'muted' }, 'Die dritte Stelle der Versionsnummer ist der Branch-Code, die ersten beiden werden manuell vergeben.'),
       h('h4', {}, 'Versionsverlauf'),
