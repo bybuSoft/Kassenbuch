@@ -1,4 +1,4 @@
-// Auswertungen: Perioden, Kundenkategorien, Seniorenzentrum-Liste, Treuhänder-Export (Excel), Serienbrief
+// Auswertungen: Perioden, Kundenkategorien, Seniorenzentrum-Liste, Treuhänder-Export (Excel)
 import * as db from './db.js';
 import { h, chf, today, isoDate, fmtDate, monthOf, monthLabel, monthShort, lastDayOfMonth, saveBlob, collator } from './util.js';
 import { field, segmented, toast, printNode, checkField } from './ui.js';
@@ -9,11 +9,11 @@ const now = new Date();
 const state = {
   tab: 'perioden',
   from: `${monthOf(today())}-01`, to: lastDayOfMonth(monthOf(today())),
-  senKat: '', serKat: '', vj: false,
+  senKat: '', vj: false,
 };
 const REPORTS = [
   ['perioden', 'Perioden'], ['kategorien', 'Kundenkategorien'], ['senioren', 'Kundenliste'],
-  ['treuhaender', 'Treuhänder-Export'], ['serienbrief', 'Serienbrief'],
+  ['treuhaender', 'Treuhänder-Export'],
 ];
 
 const inRange = (b) => b.datum >= state.from && b.datum <= state.to;
@@ -38,7 +38,7 @@ function periodControl() {
 export function auswertungenScreen() {
   const tabs = segmented(REPORTS.map(([value, label]) => ({ value, label })), state.tab, (v) => { state.tab = v; nav.refresh(); });
   tabs.classList.add('scroll');
-  const body = { perioden, kategorien, senioren, treuhaender, serienbrief }[state.tab]();
+  const body = { perioden, kategorien, senioren, treuhaender }[state.tab]();
   return { title: 'Auswertungen', back: 'kassenbuch', actions: [], node: h('div', { class: 'stack' }, tabs, body) };
 }
 
@@ -191,30 +191,4 @@ function treuhaender() {
         toast(`Excel erstellt: ${name}`);
       } }, 'Excel-Datei erstellen'),
       h('p', { class: 'muted' }, `Absender: ${db.kontaktName(eig)}`)));
-}
-
-// ---- Serienbrief ---------------------------------------------------------------------------
-function serienbrief() {
-  const kats = db.kategorienList('kundenkategorie');
-  const sel = h('select', { 'aria-label': 'Kundenkategorie', onchange: () => { state.serKat = sel.value; nav.refresh(); } },
-    h('option', { value: '' }, 'Alle Kategorien'), ...kats.map((c) => h('option', { value: c.id }, c.name)));
-  sel.value = state.serKat;
-  const kunden = db.kontakteList(false).filter((k) => !state.serKat || k.kategorieId === state.serKat);
-  const rows = kunden.map((k) => {
-    const chk = h('input', { type: 'checkbox', checked: !!k.briefErhalten, 'aria-label': `Brief erhalten: ${db.kontaktName(k)}`, onchange: async () => {
-      await db.put('kontakt', { ...k, briefErhalten: chk.checked, briefDatum: chk.checked ? (k.briefDatum || today()) : '' }); nav.refresh();
-    } });
-    return h('tr', {}, h('td', {}, chk), h('td', {}, h('div', {}, db.kontaktName(k)), h('div', { class: 'muted' }, [k.strasse, [k.plz, k.ort].filter(Boolean).join(' ')].filter(Boolean).join(', '))), h('td', {}, fmtDate(k.briefDatum)));
-  });
-  const markAll = async () => {
-    const t = today();
-    await db.batch(kunden.map((k) => ({ op: 'put', store: 'kontakt', obj: { ...k, briefErhalten: true, briefDatum: t } })));
-    toast(`${kunden.length} Kunden als versendet markiert`); nav.refresh();
-  };
-  const printList = () => printNode(h('div', { class: 'report' }, h('h3', {}, 'Adressliste Serienbrief'),
-    h('table', { class: 'tbl' }, th('Name', 'Adresse', 'Brief erhalten'),
-      h('tbody', {}, ...kunden.map((k) => h('tr', {}, h('td', {}, db.kontaktName(k)), h('td', {}, [k.strasse, [k.plz, k.ort].filter(Boolean).join(' ')].filter(Boolean).join(', ')), h('td', {}, k.briefErhalten ? `ja, ${fmtDate(k.briefDatum)}` : 'nein')))))));
-  return h('div', { class: 'stack' }, field('Kundenkategorie', sel),
-    h('div', { class: 'card' }, h('table', { class: 'tbl' }, th('Erhalten', 'Kunde', 'Letzter Versand'), h('tbody', {}, ...rows)), rows.length ? null : h('p', { class: 'muted' }, 'Keine Kunden.')),
-    h('div', { class: 'presets' }, h('button', { class: 'btn', onclick: markAll, disabled: !kunden.length }, 'Alle angezeigten: heute versendet'), h('button', { class: 'btn', onclick: printList }, 'Adressliste drucken')));
 }

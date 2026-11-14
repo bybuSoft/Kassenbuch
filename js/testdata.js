@@ -29,7 +29,7 @@ export async function createTestData() {
     beat: kunde('Beat', 'Imboden', 'Michael', { geburtsdatum: '1945-09-30', strasse: 'Bahnhofstrasse 10', plz: '3900', ort: 'Brig', antikoaguliert: true }, [['tel', '027 923 44 55', true]]),
     claudia: kunde('Claudia', 'Zenklusen', 'Externe', { strasse: 'Kirchweg 2', plz: '3930', ort: 'Visp' }, [['tel', '078 222 33 44', true], ['tel', '027 946 11 22', false]]),
     daniel: kunde('Daniel', 'Walker', 'Maria', { geburtsdatum: '1952-01-05', plz: '3904', ort: 'Naters', haemophilie: true, hiv: false, diabetes: true }),
-    erika: kunde('Erika', 'Brunner', 'Maria', { strasse: 'Poststrasse 7', plz: '3902', ort: 'Glis', briefErhalten: true, briefDatum: daysAgo(40) }, [['mail', 'erika.b@example.com', true]]),
+    erika: kunde('Erika', 'Brunner', 'Maria', { strasse: 'Poststrasse 7', plz: '3902', ort: 'Glis' }, [['mail', 'erika.b@example.com', true]]),
     franz: kunde('Franz', 'Kalbermatten', 'Michael', { plz: '3900', ort: 'Brig' }, [['tel', '079 555 66 77', true]]),
     gerda: kunde('Gerda', 'Summermatter', 'Externe', { strasse: 'Matte 3', plz: '3922', ort: 'Stalden', allergien: true }, [['tel', '079 333 44 55', true], ['mail', 'gerda@example.com', false]]),
     hans: kunde('Hans', 'Jossen', 'Maria', { plz: '3904', ort: 'Naters', antikoaguliert: true, notizen: '• Bitte Rezept mitbringen' }),

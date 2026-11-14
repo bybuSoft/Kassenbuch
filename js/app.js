@@ -4,7 +4,7 @@ import { h, fmtDateTime } from './util.js';
 import { nav } from './nav.js';
 import { lockScreen } from './lock.js';
 import { toast } from './ui.js';
-import { startRestore, startBackup } from './backup.js';
+import { startRestore, startBackup, latestBackupInfo, compareWithLocal } from './backup.js';
 import { kassenbuchScreen } from './kassenbuch.js';
 import { buchungScreen } from './buchung.js';
 import { kontakteScreen } from './kontakte.js';
@@ -18,9 +18,15 @@ let unlocked = false;
 let hiddenAt = 0;
 const LOCK_AFTER_MS = 5 * 60 * 1000;
 
+let startCheck = null; // Ergebnis von „Daten prüfen“ (nur auf dem Willkommensscreen)
+
 function startScreen() {
   const n = [...db.data.kontakt.values()].filter((k) => !k.sys).length;
   const empty = db.isEmpty();
+  const lvl = startCheck?.level;
+  // Weiter-Button: grün = aktuell, gelb = neuere Sicherung, rot = ungesicherte lokale Änderungen
+  const weiterCls = { ok: 'ok', warn: 'warn', red: 'danger' }[lvl] ?? (empty ? '' : 'primary');
+  const restoreCls = { ok: '', warn: 'ok', red: 'danger' }[lvl] ?? (empty ? 'primary' : '');
   return {
     title: 'Kassenbuch', back: null, actions: [],
     node: h('div', { class: 'card stack start' },
@@ -28,9 +34,17 @@ function startScreen() {
       h('p', { class: 'muted pre' }, empty
         ? 'Auf diesem Gerät sind noch keine Daten vorhanden.\nWenn du bereits eine Datensicherung hast, spiele sie jetzt ein.'
         : `Lokale Daten: ${db.data.buchung.size} Buchungen, ${n} Kontakte\nLetzte Änderung: ${fmtDateTime(db.data.meta.lastChange)}\nLetzte Datensicherung: ${fmtDateTime(db.data.meta.lastBackup)}`),
-      !empty && db.hasUnsavedChanges() ? h('p', { class: 'notice' }, 'Es gibt ungesicherte Änderungen.') : null,
-      h('button', { class: `btn big ${empty ? '' : 'primary'}`, onclick: () => nav.go('buchung') }, empty ? 'Ohne Restore starten' : 'Weiter zur Buchung'),
-      h('button', { class: `btn big ${empty ? 'primary' : ''}`, onclick: () => startRestore() }, 'Datensicherung einspielen (Restore)')),
+      !empty && db.hasUnsavedChanges() && !startCheck ? h('p', { class: 'notice' }, 'Es gibt ungesicherte Änderungen.') : null,
+      startCheck ? h('p', { class: `status ${lvl}` }, startCheck.text) : null,
+      h('button', { class: 'btn big', onclick: async () => {
+        const info = await latestBackupInfo();
+        if (!info) return;
+        startCheck = compareWithLocal(info);
+        nav.refresh();
+      } }, 'Daten prüfen'),
+      h('button', { class: `btn big ${weiterCls}`, onclick: () => nav.go('buchung') }, empty ? 'Ohne Restore starten' : 'Weiter zur Buchung'),
+      h('button', { class: `btn big ${restoreCls}`, onclick: () => startRestore() }, 'Datensicherung einspielen (Restore)'),
+      lvl === 'red' && !empty ? h('button', { class: 'btn big primary', onclick: async () => { if (await startBackup()) { startCheck = null; nav.refresh(); } } }, 'Jetzt sichern') : null),
   };
 }
 
@@ -58,10 +72,19 @@ function render() {
 }
 
 function showLock() {
-  app.replaceChildren(h('main', { class: 'center' }, lockScreen(() => { unlocked = true; nav.go('start'); })));
+  app.replaceChildren(h('main', { class: 'center' }, lockScreen(() => { unlocked = true; startCheck = null; nav.go('start'); })));
 }
 
 nav.go = (name, params) => { current = { name, params }; render(); };
+nav.exit = () => {
+  unlocked = false;
+  document.getElementById('modal-root').replaceChildren();
+  document.body.classList.remove('modal-open');
+  window.close(); // klappt nur, wenn der Browser es erlaubt (nicht in iOS-Web-Apps)
+  app.replaceChildren(h('main', { class: 'center' }, h('div', { class: 'card stack' },
+    h('h1', {}, 'Kassenbuch beendet'), h('p', { class: 'muted' }, 'Die App ist gesperrt und kann jetzt geschlossen werden (iPhone/iPad: nach oben wischen).'),
+    h('button', { class: 'btn primary', onclick: () => render() }, 'Wieder öffnen'))));
+};
 nav.refresh = () => { current.keepScroll = true; render(); };
 
 document.addEventListener('visibilitychange', () => {
