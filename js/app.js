@@ -73,6 +73,7 @@ function render() {
     h('h1', { onclick: s.onTitleTap }, s.title), h('div', { class: 'top-actions' }, ...s.actions));
   const scrollY = current.keepScroll ? window.scrollY : 0;
   app.replaceChildren(top, h('main', {}, s.node), h('footer', { class: 'foot muted' }, `Kassenbuch v${VERSION}`));
+  document.documentElement.style.setProperty('--top-h', `${top.offsetHeight}px`);
   window.scrollTo(0, scrollY);
   current.keepScroll = false;
 }
@@ -92,6 +93,19 @@ nav.exit = () => {
     h('button', { class: 'btn primary', onclick: () => render() }, 'Wieder öffnen'))));
 };
 nav.refresh = () => { current.keepScroll = true; render(); };
+
+// Bildschirmtastatur (iOS überlagert die Seite): Platz unten schaffen und fokussiertes Feld sichtbar halten
+const setKb = () => {
+  const vv = window.visualViewport;
+  if (!vv) return;
+  document.documentElement.style.setProperty('--kb', `${Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop))}px`);
+};
+window.visualViewport?.addEventListener('resize', setKb);
+window.visualViewport?.addEventListener('scroll', setKb);
+document.addEventListener('focusin', (e) => {
+  if (!e.target.matches?.('input:not([type=checkbox]):not([type=date]),textarea,select')) return;
+  setTimeout(() => { setKb(); e.target.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 300);
+});
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) hiddenAt = Date.now();

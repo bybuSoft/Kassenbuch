@@ -2,12 +2,13 @@
 // (die Zeichen nach dem letzten "-" im Branch-Namen, z. B. claude/festive-cray-4a3xvr -> 4a3xvr).
 // BRANCH_CODE wird beim Commit automatisch gesetzt (tools/set-version.sh, Hook in .githooks/).
 export const MAJOR = 0;
-export const MINOR = 18;
+export const MINOR = 19;
 export const BRANCH_CODE = 'uc7ksu';
 export const VERSION = `${MAJOR}.${MINOR}.${BRANCH_CODE}`;
 
 // Kurze Beschreibung je Änderung (neueste zuerst)
 export const CHANGES = [
+  { v: '0.19', text: 'Kompaktere Bildschirme fürs Handy, Tastatur verdeckt Felder nicht mehr; Buchung: 3 Buttons in einer Zeile; Menü; Kassenbuch mit aufklappbarem Filter; Kunden/Lieferanten: Buchungen anzeigen; Auswertungen mit festem Kopfbereich und Drucken oben rechts.' },
   { v: '0.18', text: 'Testdaten nur im Entwicklermodus (7x auf den Titel „Einstellungen“ tippen, gilt bis zum Schliessen der App); „Testdaten entfernen“ bleibt sichtbar, solange Testdaten vorhanden sind.' },
   { v: '0.17', text: 'Testmodus: neue Telefon-/E-Mail-Einträge zu echten Kontakten werden nicht mehr als Test markiert (und beim Entfernen der Testdaten nicht gelöscht).' },
   { v: '0.16', text: 'Handy-Menüführung: neue Navigationsseite mit zwei Spalten (Buchung, Kassenbuch, Kunden, Lieferanten, Auswertungen, Datensicherung, Einstellungen, Infos); Verlassen der Buchung und aller Seiten führt dorthin.' },
