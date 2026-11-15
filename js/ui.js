@@ -1,5 +1,5 @@
 // UI-Bausteine: Dialoge, Toasts, Formularfelder, Druck
-import { h } from './util.js';
+import { h, parseDatum } from './util.js';
 
 let modalCount = 0;
 
@@ -138,19 +138,6 @@ export function printNode(node) {
 window.addEventListener('afterprint', () => document.getElementById('print-area')?.replaceChildren());
 
 /** Datumsfeld, das auch auf dem Handy getippt werden kann (TT.MM.JJJJ, Tag beim Antippen markiert) und einen Kalender-Button hat. */
-export function parseDatum(str, ref = new Date()) {
-  const t = String(str || '').trim();
-  if (!t) return '';
-  let parts = t.split(/[^\d]+/).filter(Boolean);
-  if (parts.length === 1) { const d = parts[0]; parts = d.length === 8 ? [d.slice(0, 2), d.slice(2, 4), d.slice(4)] : d.length === 6 ? [d.slice(0, 2), d.slice(2, 4), d.slice(4)] : d.length === 4 ? [d.slice(0, 2), d.slice(2)] : d.length <= 2 ? [d] : []; }
-  if (!parts.length || parts.length > 3) return '';
-  const day = +parts[0], mon = parts[1] ? +parts[1] : ref.getMonth() + 1;
-  let yr = parts[2] ? +parts[2] : ref.getFullYear();
-  if (parts[2] && parts[2].length <= 2) yr += 2000;
-  const d = new Date(yr, mon - 1, day);
-  if (d.getFullYear() !== yr || d.getMonth() !== mon - 1 || d.getDate() !== day) return '';
-  return `${yr}-${String(mon).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-}
 export function datumField(iso) {
   const fmt = (i) => (i ? i.split('-').reverse().join('.') : '');
   let cur = iso || '';
@@ -162,5 +149,5 @@ export function datumField(iso) {
   cal.addEventListener('change', () => { if (cal.value) { cur = cal.value; text.value = fmt(cur); } });
   const btn = h('button', { type: 'button', class: 'btn', 'aria-label': 'Kalender', onclick: () => { cal.value = cur; try { cal.showPicker(); } catch { cal.focus(); cal.click(); } } }, '📅');
   const el = h('div', { class: 'datefield' }, text, btn, cal);
-  return { el, input: text, get value() { const v = parseDatum(text.value); return v || (text.value.trim() ? '' : cur); }, focusDay: () => { text.focus(); } };
+  return { el, input: text, get value() { return parseDatum(text.value); } };
 }

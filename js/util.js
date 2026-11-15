@@ -103,3 +103,20 @@ export function pickFile({ multiple = false } = {}) {
     input.click();
   });
 }
+
+/** Datum tippen: '15.11.2026', '15.11.26', '15.11', '1511', '15112026' -> 'YYYY-MM-DD' (leer bei ungültig). */
+export function parseDatum(str, ref = new Date()) {
+  const t = String(str || '').trim();
+  if (!t) return '';
+  let parts = t.split(/[^\d]+/).filter(Boolean);
+  if (parts.length === 1) { const d = parts[0]; parts = d.length === 8 ? [d.slice(0, 2), d.slice(2, 4), d.slice(4)] : d.length === 6 ? [d.slice(0, 2), d.slice(2, 4), d.slice(4)] : d.length === 4 ? [d.slice(0, 2), d.slice(2)] : d.length <= 2 ? [d] : []; }
+  if (!parts.length || parts.length > 3) return '';
+  const day = +parts[0], mon = parts[1] ? +parts[1] : ref.getMonth() + 1;
+  let yr = parts[2] ? +parts[2] : ref.getFullYear();
+  if (parts[2] && parts[2].length !== 2 && parts[2].length !== 4) return ''; // 1- oder 3-stellige Jahre sind Tippfehler
+  if (parts[2] && parts[2].length === 2) yr += 2000;
+  if (yr < 1900 || yr > 2100) return '';
+  const d = new Date(yr, mon - 1, day);
+  if (d.getFullYear() !== yr || d.getMonth() !== mon - 1 || d.getDate() !== day) return '';
+  return `${yr}-${String(mon).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}

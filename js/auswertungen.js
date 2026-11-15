@@ -9,7 +9,7 @@ import { nav } from './nav.js';
 const state = {
   tab: 'perioden',
   custom: false, from: '', to: '',
-  senKat: '', vj: false, level: 'monat', year: String(new Date().getFullYear() - 1),
+  senKat: '', vj: false, level: 'monat', year: '',
 };
 const REPORTS = [
   ['perioden', 'Perioden'], ['kategorien', 'Kategorien'], ['senioren', 'Kundenliste'], ['treuhaender', 'Treuhänder'],
@@ -38,9 +38,9 @@ export function auswertungenScreen() {
 /** Treuhänder: immer ein ganzes Jahr (Vorgabe: Vorjahr) */
 function yearBar() {
   const cy = new Date().getFullYear();
-  const years = new Set([cy, cy - 1, +state.year, ...db.buchungenList().map((b) => +b.datum.slice(0, 4))]);
+  const years = new Set([cy, cy - 1, +selYear(), ...db.buchungenList().map((b) => +b.datum.slice(0, 4))]);
   const sel = h('select', { 'aria-label': 'Jahr', onchange: () => { state.year = sel.value; nav.refresh(); } }, ...[...years].sort((a, b) => b - a).map((y) => h('option', { value: String(y) }, String(y))));
-  sel.value = state.year;
+  sel.value = selYear();
   return field('Jahr', sel);
 }
 
@@ -117,16 +117,15 @@ function kategorien() {
   const cur = all.filter(inRange), prev = state.vj ? all.filter(prevRange) : [];
   const katOf = (b) => db.data.kontakt.get(b.kontaktId)?.kategorieId || '';
   const kundenRows = groupRows(sel(cur), sel(prev), katOf, (id) => (id ? db.data.kundenkategorie.get(id)?.name || '?' : '(ohne Kategorie)'));
-  const lieferantRows = groupRows(lie(cur), lie(prev), (b) => b.kontaktId, (id) => db.kontaktName(db.data.kontakt.get(id)) || '?');
   const catName = (id) => db.data.buchungskategorie.get(id)?.name || '?';
-  // Drilldown: je Lieferant nach Buchungskategorie
-  const ids = new Map(); // Name -> Kontakt-IDs (gleichnamige Lieferanten werden getrennt aufgelöst)
-  [...lie(cur), ...lie(prev)].forEach((b) => { const n = db.kontaktName(db.data.kontakt.get(b.kontaktId)) || '?'; if (!ids.has(n)) ids.set(n, new Set()); ids.get(n).add(b.kontaktId); });
-  lieferantRows.forEach((r) => {
-    const set = ids.get(r[0]) || new Set();
-    const of = (arr) => arr.filter((b) => set.has(b.kontaktId));
-    r[4] = groupRows(of(lie(cur)), of(lie(prev)), (b) => b.kategorieId, catName);
-  });
+  // Je Lieferant (nach Kontakt-ID) eine Zeile mit Drilldown nach Buchungskategorie
+  const liefName = (id) => db.kontaktName(db.data.kontakt.get(id)) || '?';
+  const lieferantRows = [...new Set([...lie(cur), ...lie(prev)].map((b) => b.kontaktId))].map((id) => {
+    const of = (arr) => arr.filter((b) => b.kontaktId === id);
+    const [row] = groupRows(of(lie(cur)), of(lie(prev)), () => id, liefName);
+    row[4] = groupRows(of(lie(cur)), of(lie(prev)), (b) => b.kategorieId, catName);
+    return row;
+  }).sort((x, y) => collator.compare(x[0], y[0]));
   return h('div', { class: 'stack' },
     compareTable('Kunden: Einnahmen nach Kundenkategorie', 'Kategorie', kundenRows, 'in', { count: true }),
     compareTable('Lieferanten: Ausgaben nach Lieferant (antippen für Kategorien)', 'Lieferant', lieferantRows, 'out', { count: true }));
@@ -159,7 +158,7 @@ function senioren() {
     out.append(h('table', { class: 'tbl amt' }, th('Vorname', 'Name', { t: 'Betrag (CHF)', num: 1 }), h('tbody', {}, ...rows)));
   }
   const node = h('div', { class: 'stack' }, field('Kundenkategorie', sel), h('div', { class: 'card' }, out));
-  node._print = () => printNode(out.cloneNode(true));
+  if (state.senKat) node._print = () => printNode(out.cloneNode(true));
   return node;
 }
 
@@ -168,6 +167,7 @@ function senioren() {
 export const unstimmigeBuchungen = (bs) => bs.filter((b) => { const k = db.data.kontakt.get(b.kontaktId); return k && db.artOf(b) !== db.artOfKontakt(k); }).length;
 
 export const LEVELS = [['einzel', 'Einzelbuchung'], ['tag', 'Tag'], ['monat', 'Monat'], ['jahr', 'Jahr']];
+const selYear = () => state.year || String(new Date().getFullYear() - 1); // Vorgabe: Vorjahr (bei jedem Aufruf aktuell)
 const levelLabel = (l) => LEVELS.find(([v]) => v === l)?.[1] || 'Monat';
 
 /**
@@ -203,7 +203,7 @@ export function treuhaenderRows(from, to, level = 'monat', now = Date.now()) {
 }
 
 function treuhaender() {
-  const from = `${state.year}-01-01`, to = `${state.year}-12-31`;
+  const from = `${selYear()}-01-01`, to = `${selYear()}-12-31`;
   const { count, unstimmig } = treuhaenderRows(from, to, state.level);
   const eig = db.eigene();
   const levels = segmented(LEVELS.map(([value, label]) => ({ value, label })), state.level, (v) => { state.level = v; nav.refresh(); });
@@ -213,14 +213,16 @@ function treuhaender() {
       h('p', { class: 'notice' }, 'Hinweis: Es werden keine personenbezogenen Daten exportiert. Kunden erscheinen nur mit ihrer Kategorie, ohne Name und Buchungstext; bei Lieferanten steht der Name.'),
       unstimmig ? h('p', { class: 'notice' }, `Hinweis: ${unstimmig} Buchung${unstimmig === 1 ? '' : 'en'} mit unstimmiger Zuordnung (Kategorie passt nicht zum Kontakttyp, z. B. nach Typwechsel eines Kontakts). Bitte vor dem Versand prüfen.`) : null,
       field('Zusammenfassungsebene', levels),
-      h('p', { class: 'muted' }, `${count} Buchungen im Jahr ${state.year}.`),
+      h('p', { class: 'muted' }, `${count} Buchungen im Jahr ${selYear()}.`),
       h('button', { class: 'btn primary', disabled: !count, onclick: async () => {
         const { firma, buchungen } = treuhaenderRows(from, to, state.level);
+        let firmaTab = db.kontaktName(eig).slice(0, 31).replace(/[\\/?*[\]:]/g, ' ').trim() || 'Firma';
+        if (firmaTab.toLowerCase() === 'buchungen') firmaTab = 'Firma';
         const bytes = buildXlsx([
-          { name: db.kontaktName(eig).slice(0, 31).replace(/[\\/?*[\]:]/g, ' ') || 'Firma', rows: firma, widths: [24, 30] },
+          { name: firmaTab, rows: firma, widths: [24, 30] },
           { name: 'Buchungen', rows: buchungen, widths: [14, 30, 24, 24, 14] },
         ]);
-        const name = `kassenbuch-treuhaender-${state.year}.xlsx`;
+        const name = `kassenbuch-treuhaender-${selYear()}.xlsx`;
         await saveBlob(new Blob([bytes], { type: XLSX_MIME }), name);
         toast(`Excel erstellt: ${name}`);
       } }, 'Excel-Datei erstellen'),

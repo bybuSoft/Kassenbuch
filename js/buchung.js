@@ -1,6 +1,6 @@
 // Buchungsseite: Erfassung (Datum, Kunde, Betrag, Art, Kategorie, Text) und Liste der zuletzt erfassten Buchungen
 import * as db from './db.js';
-import { h, uuid, chf, parseBetrag, today, fmtDate } from './util.js';
+import { h, uuid, parseBetrag, today, fmtDate } from './util.js';
 import { field, toast, confirmDlg } from './ui.js';
 import { kontaktPicker, betragFields, kategorienFor, prefillFor } from './kontaktpick.js';
 import { startBackup, beenden } from './backup.js';
