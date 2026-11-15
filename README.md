@@ -44,7 +44,7 @@ npm install
 npm test
 ```
 
-Abgedeckt: Dateinamen und „Daten prüfen“, Löschen alter Sicherungen, Verschlüsselung (inkl. manipulierte Kopfdaten), Testmodus/Testdaten, Restore/Snapshot, Vorbelegung, Treuhänder-Export (Datenschutz).
+Abgedeckt: Dateinamen und „Daten prüfen“, Löschen alter Sicherungen, Verschlüsselung (inkl. manipulierte Kopfdaten), Testmodus/Testdaten, Restore/Snapshot, Vorbelegung, Datumseingabe, Treuhänder-Export (Datenschutz, Zusammenfassungsebenen).
 
 ## Struktur
 
@@ -54,7 +54,8 @@ js/app.js          Start, Navigation, Sperre, Startseite „Daten prüfen“
 js/menu.js         Menü (Navigationsseite)
 js/hilfe.js        Benutzerhilfe (druckbar, Infos → Hilfe)
 js/buchung.js      Buchungsseite (Erfassung + zuletzt erfasst)
-js/kassenbuch.js   Buchungsliste mit Filter, Buchungsdialog, Quittung
+js/kassenbuch.js   Buchungsliste mit Filter und Druck-Icon, Buchungsdialog
+js/quittung.js     Quittung (Druckansicht)
 js/kontaktpick.js  Kontaktwahl (Smartsuche), Betrag/Vorzeichen, Vorbelegung
 js/kontakte.js     Kunden-/Lieferantenverwaltung
 js/auswertungen.js Auswertungen und Treuhänder-Export; periodbar.js: Periodenwahl
