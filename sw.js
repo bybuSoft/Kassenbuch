@@ -1,11 +1,11 @@
 // Service Worker: macht die App offlinefähig. Strategie „Netz zuerst, Cache als Rückfall“:
 // Online wird immer die aktuelle Fassung geladen (und im Cache abgelegt), offline kommt die zuletzt geladene Fassung aus dem Cache.
-const CACHE = 'kassenbuch-v1';
+const CACHE = 'kassenbuch-v2';
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css',
   'icons/icon.svg', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png',
   'js/app.js', 'js/auswertungen.js', 'js/backup.js', 'js/buchung.js', 'js/crypto.js', 'js/db.js', 'js/einstellungen.js', 'js/hilfe.js',
-  'js/kassenbuch.js', 'js/kontakte.js', 'js/kontaktpick.js', 'js/lock.js', 'js/menu.js', 'js/nav.js', 'js/periodbar.js',
+  'js/kassenbuch.js', 'js/kontakte.js', 'js/kontaktpick.js', 'js/lock.js', 'js/menu.js', 'js/nav.js', 'js/periodbar.js', 'js/quittung.js',
   'js/testdata.js', 'js/ui.js', 'js/util.js', 'js/version.js', 'js/xlsx.js',
 ];
 
