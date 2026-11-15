@@ -143,10 +143,16 @@ export function datumField(iso) {
   let cur = iso || '';
   const text = h('input', { type: 'text', inputmode: 'decimal', autocomplete: 'off', placeholder: 'TT.MM.JJJJ', 'aria-label': 'Datum', value: fmt(cur) });
   const cal = h('input', { type: 'date', class: 'cal', tabindex: '-1', 'aria-hidden': 'true', value: cur });
-  const apply = () => { const v = parseDatum(text.value); if (v) cur = v; else if (text.value.trim()) cur = ''; text.value = fmt(cur); };
+  const apply = () => {
+    const v = parseDatum(text.value);
+    if (v) { cur = v; text.value = fmt(cur); text.removeAttribute('aria-invalid'); }
+    else if (text.value.trim()) { text.setAttribute('aria-invalid', 'true'); toast('Ungültiges Datum – bitte TT.MM.JJJJ erfassen.', 'err'); } // Eingabe bleibt zum Korrigieren stehen
+    else { text.value = fmt(cur); text.removeAttribute('aria-invalid'); }
+  };
+  text.addEventListener('input', () => text.removeAttribute('aria-invalid'));
   text.addEventListener('focus', () => setTimeout(() => text.setSelectionRange(0, 2), 0)); // Tag markiert: sofort überschreibbar
   text.addEventListener('blur', apply);
-  cal.addEventListener('change', () => { if (cal.value) { cur = cal.value; text.value = fmt(cur); } });
+  cal.addEventListener('change', () => { if (cal.value) { cur = cal.value; text.value = fmt(cur); text.removeAttribute('aria-invalid'); } });
   const btn = h('button', { type: 'button', class: 'btn', 'aria-label': 'Kalender', onclick: () => { cal.value = cur; try { cal.showPicker(); } catch { cal.focus(); cal.click(); } } }, '📅');
   const el = h('div', { class: 'datefield' }, text, btn, cal);
   return { el, input: text, get value() { return parseDatum(text.value); } };

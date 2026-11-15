@@ -11,6 +11,7 @@ const state = {
   custom: false, from: '', to: '',
   senKat: '', vj: false, level: 'monat', year: '',
 };
+const opened = new Set(); // aufgeklappte Drilldown-Zeilen (Schlüssel = Lieferant)
 const REPORTS = [
   ['perioden', 'Perioden'], ['kategorien', 'Kategorien'], ['senioren', 'Kundenliste'], ['treuhaender', 'Treuhänder'],
 ];
@@ -59,13 +60,20 @@ function compareTable(title, firstCol, rows, cls, { count = false } = {}) {
   return h('div', { class: 'card' }, h('h3', {}, title),
     h('table', { class: 'tbl amt' },
       th(firstCol, ...(count ? [{ t: 'Anzahl', num: 1 }] : []), { t: 'Betrag', num: 1 }, ...(vj ? [{ t: 'Vorjahr', num: 1 }, { t: 'Diff.', num: 1 }] : [])),
-      h('tbody', {}, ...rows.flatMap(([n, v, p, c, kids]) => {
+      h('tbody', {}, ...rows.flatMap(([n, v, p, c, kids, key]) => {
         const cells = (cnt, vv, pp) => [...(count ? [h('td', { class: 'num' }, cnt ?? '')] : []), h('td', { class: 'num' }, chf(vv)), ...(vj ? [h('td', { class: 'num' }, chf(pp)), diff(vv, pp)] : [])];
         const main = h('tr', {}, h('td', {}, n), ...cells(c, v, p));
         if (!kids || !kids.length) return [main];
-        const kidRows = kids.map(([kn, kv, kp, kc]) => { const r = h('tr', { class: 'kid' }, h('td', {}, kn), ...cells(kc, kv, kp)); r.hidden = true; return r; });
+        const kidRows = kids.map(([kn, kv, kp, kc]) => { const r = h('tr', { class: 'kid' }, h('td', {}, kn), ...cells(kc, kv, kp)); r.hidden = !opened.has(key); return r; });
         main.classList.add('drill'); main.title = 'Antippen: Aufteilung nach Kategorie';
-        main.addEventListener('click', () => { const open = main.classList.toggle('open'); kidRows.forEach((r) => { r.hidden = !open; }); });
+        main.classList.toggle('open', opened.has(key));
+        Object.entries({ tabindex: '0', role: 'button', 'aria-expanded': String(opened.has(key)) }).forEach(([a, b]) => main.setAttribute(a, b));
+        const toggle = () => { // aufgeklappte Zeilen bleiben beim Neuzeichnen (z. B. VJ-Vergleich) offen
+          const open = !opened.has(key); if (open) opened.add(key); else opened.delete(key);
+          main.classList.toggle('open', open); main.setAttribute('aria-expanded', String(open)); kidRows.forEach((r) => { r.hidden = !open; });
+        };
+        main.addEventListener('click', toggle);
+        main.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
         return [main, ...kidRows];
       }),
         h('tr', { class: 'total' }, h('td', {}, 'Total'), ...(count ? [h('td', {})] : []), h('td', { class: `num ${cls}` }, chf(tot[0])),
@@ -124,6 +132,7 @@ function kategorien() {
     const of = (arr) => arr.filter((b) => b.kontaktId === id);
     const [row] = groupRows(of(lie(cur)), of(lie(prev)), () => id, liefName);
     row[4] = groupRows(of(lie(cur)), of(lie(prev)), (b) => b.kategorieId, catName);
+    row[5] = id;
     return row;
   }).sort((x, y) => collator.compare(x[0], y[0]));
   return h('div', { class: 'stack' },
@@ -181,8 +190,8 @@ export function treuhaenderRows(from, to, level = 'monat', now = Date.now()) {
   const firma = [[B(db.kontaktName(eig))], ...[eig.strasse, [eig.plz, eig.ort].filter(Boolean).join(' ')].filter(Boolean).map((l) => [l]), ['Zeitraum', `${fmtDate(from)} – ${fmtDate(to)}`], ['Erzeugt', fmtDateTime(now)], ['Zusammenfassung', levelLabel(level)]];
 
   const periodKey = (b) => (level === 'jahr' ? b.datum.slice(0, 4) : level === 'monat' ? b.datum.slice(0, 7) : b.datum);
-  const periodCell = (k) => (level === 'jahr' ? k : level === 'monat' ? `${k.slice(5, 7)}.${k.slice(0, 4)}` : { d: k });
-  const periodHead = level === 'jahr' ? 'Jahr' : level === 'monat' ? 'Monat' : 'Datum';
+  // Immer ein echtes Excel-Datum (für den Import beim Treuhänder): bei Monat/Jahr der letzte Tag der Periode
+  const periodCell = (k) => ({ d: level === 'jahr' ? `${k}-12-31` : level === 'monat' ? lastDayOfMonth(k) : k });
   const items = bs.map((b) => {
     const k = db.data.kontakt.get(b.kontaktId);
     const lief = !!k?.istLieferant;
@@ -197,7 +206,7 @@ export function treuhaenderRows(from, to, level = 'monat', now = Date.now()) {
     lines = [...m.values()];
   }
   lines.sort((x, y) => (x.per < y.per ? -1 : x.per > y.per ? 1 : collator.compare(x.lief, y.lief) || collator.compare(x.kk, y.kk) || collator.compare(x.bk, y.bk) || (x.created || 0) - (y.created || 0)));
-  const buchungen = [[B(periodHead), B('Lieferant (Kunde leer)'), B('Kundenkategorie'), B('Buchungskategorie'), B('Betrag CHF')],
+  const buchungen = [[B('Datum'), B('Lieferant'), B('Kundenkategorie'), B('Buchungskategorie'), B('Betrag CHF')],
     ...lines.map((l) => [periodCell(l.per), l.lief, l.kk, l.bk, { n: l.betrag / 100, f: 'money' }])];
   return { firma, buchungen, count: bs.length, unstimmig: unstimmigeBuchungen(bs) };
 }

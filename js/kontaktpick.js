@@ -49,7 +49,11 @@ export function betragFields(sign = '+', value = '') {
   const signSel = h('select', { class: 'sign', 'aria-label': 'Vorzeichen' }, h('option', { value: '+' }, '+'), h('option', { value: '-' }, '−'));
   signSel.value = sign;
   const input = h('input', { type: 'text', inputmode: 'decimal', placeholder: '0.00', value, autocomplete: 'off', 'aria-label': 'Betrag in CHF' });
-  input.addEventListener('focus', () => setTimeout(() => input.select(), 0)); // Betrag markiert: direkt überschreibbar
+  // Erster Klick ins Feld markiert den ganzen Betrag (direkt überschreibbar), der zweite setzt den Cursor
+  let fresh = false;
+  input.addEventListener('focus', () => { fresh = true; setTimeout(() => { input.select(); }, 0); setTimeout(() => { fresh = false; }, 600); });
+  input.addEventListener('blur', () => { fresh = false; });
+  for (const ev of ['mouseup', 'touchend']) input.addEventListener(ev, (e) => { if (fresh) { e.preventDefault(); fresh = false; } });
   const el = h('label', { class: 'field' }, h('span', { class: 'lbl' }, 'Betrag (CHF)'), h('div', { class: 'amount-row' }, signSel, input));
   return { el, signSel, input };
 }
