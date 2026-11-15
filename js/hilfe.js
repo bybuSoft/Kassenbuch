@@ -65,7 +65,7 @@ export function helpContent() {
         'Reiter: Perioden, Kategorien, Kundenliste, Treuhänder. Reiter und Periode bleiben beim Scrollen oben stehen.',
         'Periode mit Von/Bis oder den Schnellwahlen (Monat, Vormonat, Jahr, Vorjahr). „VJ-Vergleich“ zeigt zusätzlich die Vorjahreswerte und die Differenz.',
         'Perioden: Einnahmen (Kunden) und Ausgaben (Lieferanten) nach Kategorie und nach Monat. Kategorien: Kunden nach Kundenkategorie, Lieferanten nach Lieferant; eine Lieferantenzeile antippen zeigt die Aufteilung nach Buchungskategorie.',
-        'Kundenliste: zuerst die Kundenkategorie wählen. Vorname, Name, Betrag nach Tag mit Total pro Monat, im Kopf der Firmenname; „Drucken / PDF“ oben rechts (erst mit gewählter Kategorie).',
+        'Kundenliste: zuerst die Kundenkategorie wählen. Vorname, Name, Betrag nach Tag mit Total pro Monat, im Kopf Firmenname und -adresse sowie der Zeitpunkt, an dem die Liste erstellt wurde; „Drucken / PDF“ oben rechts (erst mit gewählter Kategorie).',
         'Treuhänder: Jahr wählen (Vorgabe: Vorjahr; es wird immer ein ganzes Jahr exportiert) und die Zusammenfassungsebene (Einzelbuchung, Tag, Monat – Vorgabe –, Jahr). Excel-Datei: Tab 1 mit Firma, Adresse, Zeitraum, Erzeugungszeitpunkt und Ebene; Tab 2 mit den Buchungen (Datum, Lieferant, Kundenkategorie, Buchungskategorie, Betrag), ohne Summen. Das Datum ist ein echtes Excel-Datum für den Import; bei der Ebene Monat steht der letzte Tag des Monats, bei Jahr der 31.12. Bei Kunden stehen weder Name noch Buchungstext in der Datei, bei Lieferanten der Name. Ein Hinweis erscheint, wenn eine Buchung nicht zum Kontakttyp passt.',
       )),
 

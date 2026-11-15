@@ -150,7 +150,10 @@ function senioren() {
     .sort((a, b) => (a.datum < b.datum ? -1 : a.datum > b.datum ? 1 : 0));
   const out = h('div', { class: 'report' });
   const catName = db.data.kundenkategorie.get(state.senKat)?.name || '';
-  out.append(h('p', {}, h('strong', {}, db.kontaktName(db.eigene()))), h('h3', {}, `Kundenliste ${catName}`), h('p', { class: 'muted' }, `${fmtDate(state.from)} – ${fmtDate(state.to)}`));
+  const eig = db.eigene();
+  const adr = [eig.strasse, [eig.plz, eig.ort].filter(Boolean).join(' ')].filter(Boolean);
+  out.append(h('p', {}, h('strong', {}, db.kontaktName(eig)), ...adr.flatMap((l) => [h('br'), l])), h('h3', {}, `Kundenliste ${catName}`),
+    h('p', { class: 'muted' }, `${fmtDate(state.from)} – ${fmtDate(state.to)}`, h('br'), `Erstellt: ${fmtDateTime(Date.now())}`));
   if (!state.senKat) out.append(h('p', { class: 'muted' }, 'Bitte eine Kundenkategorie wählen.'));
   else if (!bs.length) out.append(h('p', { class: 'muted' }, 'Keine Buchungen für diese Kategorie im gewählten Zeitraum.'));
   const months = [...new Set(bs.map((b) => monthOf(b.datum)))];
