@@ -66,9 +66,6 @@ export function einstellungenScreen() {
       h('div', { class: 'card stack' }, h('h3', {}, 'Eigene Firma'),
         h('p', {}, h('strong', {}, db.kontaktName(eig)), h('br'), [eig.strasse, [eig.plz, eig.ort].filter(Boolean).join(' ')].filter(Boolean).join(', ')),
         h('button', { class: 'btn', onclick: async () => { await editKontakt({ id: eig.id }); nav.refresh(); } }, 'Bearbeiten')),
-      kategorieCard('Kundenkategorien', 'kundenkategorie'),
-      kategorieCard('Buchungskategorien – Einnahmen', 'buchungskategorie', 'einnahme'),
-      kategorieCard('Buchungskategorien – Ausgaben', 'buchungskategorie', 'ausgabe'),
       h('div', { class: 'card stack' }, h('h3', {}, 'Start'),
         field('Nach dem Start öffnen', (() => { const sel = h('select', { onchange: async () => { await db.setMeta('startScreen', sel.value); toast('Gespeichert'); } }, h('option', { value: 'menu' }, 'Menü'), h('option', { value: 'buchung' }, 'Buchung')); sel.value = db.data.meta.startScreen === 'menu' ? 'menu' : 'buchung'; return sel; })()),
         h('p', { class: 'muted' }, 'Gilt nach „Daten prüfen“ beim Start.')),
@@ -97,6 +94,9 @@ export function einstellungenScreen() {
           const ctl = showModal({ title: 'PIN ändern', body: [field('Aktuelle PIN', o), field('Neue PIN (4–12 Ziffern)', n)], buttons: [{ label: 'Abbrechen' }, { label: 'Ändern', cls: 'primary', onClick: async () => { await changePin(o.value, n.value); toast('PIN geändert'); } }] });
           await ctl.closed;
         } }, 'PIN ändern')),
+      kategorieCard('Kundenkategorien', 'kundenkategorie'),
+      kategorieCard('Buchungskategorien – Einnahmen', 'buchungskategorie', 'einnahme'),
+      kategorieCard('Buchungskategorien – Ausgaben', 'buchungskategorie', 'ausgabe'),
       db.devMode.unlocked ? testCard(test) : null, // Testdaten nur im Entwicklermodus sichtbar
     ),
   };

@@ -38,7 +38,7 @@ export function helpContent() {
       ul(
         'Liste der Buchungen nach Datum, mit Summen für Einnahmen, Ausgaben und Saldo.',
         'Die Suche bleibt sichtbar (Name, Text, Kategorie, Betrag). Mit „Filter“ klappst du Periode (Monat, Vormonat, Jahr, Vorjahr, Alles oder Von/Bis), Art und Kategorie auf. Ein roter Punkt am Filter-Button zeigt einen aktiven Filter.',
-        'Eine Buchung antippen: bearbeiten oder löschen. Bei positiven Einnahmen gibt es den Button „Quittung“ (Druckansicht; auf iPhone/iPad: Drucken → Als PDF sichern).',
+        'Eine Buchung antippen: bearbeiten oder löschen. Bei positiven Einnahmen gibt es in der Liste rechts neben dem Betrag das Druck-Icon für die Quittung (Druckansicht; auf iPhone/iPad: Drucken → Als PDF sichern).',
       )),
 
     sec('5. Kunden und Lieferanten',
