@@ -101,7 +101,7 @@ export const DEFAULT_AUSGABEN = ['Waren/Material', 'Miete Lokal', 'Miete Parkpla
 const blankKontakt = () => ({
   id: uuid(), istLieferant: false, geschlecht: '', anrede: '', vorname: '', name: '', name1: '', name2: '', geburtsdatum: '',
   strasse: '', plz: '', ort: '', kategorieId: null, diabetes: false, antikoaguliert: false, allergien: false,
-  hiv: false, haemophilie: false, notizen: '', sys: null,
+  hiv: false, haemophilie: false, notizen: '', sys: null, created: Date.now(),
 });
 export const newKontakt = (over = {}) => ({ ...blankKontakt(), ...over });
 
