@@ -135,3 +135,11 @@ main.lockpos{align-items:flex-start;min-height:0;padding-top:max(24px,8vh)}
 .help h2{margin-bottom:2px}.help-sec{margin-top:14px;break-inside:avoid}.help-sec h3{margin:0 0 4px;border-bottom:1px solid var(--line);padding-bottom:2px}
 .help ul{margin:4px 0;padding-left:1.2rem}.help li{margin:3px 0}.help p{margin:4px 0}
 @media print{.help{font-size:11pt;color:#000}.help .muted{color:#444}.help-sec h3{border-color:#999}}
+
+.row-main .amt{display:flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums;font-weight:600}
+.print-btn{appearance:none;border:0;background:none;font-size:1.15rem;line-height:1;min-width:36px;min-height:32px;cursor:pointer;color:var(--muted);border-radius:8px}
+.print-btn:active{background:var(--line)}
+.datefield{display:flex;gap:8px;position:relative}.datefield>input[type=text]{flex:1;min-width:0}
+.datefield .cal{position:absolute;right:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none;border:0;padding:0}
+.drill{cursor:pointer}.drill td:first-child::before{content:"▸ ";color:var(--muted)}.drill.open td:first-child::before{content:"▾ "}
+.kid td:first-child{padding-left:1.4rem;color:var(--muted)}

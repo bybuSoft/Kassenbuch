@@ -2,12 +2,13 @@
 // (die Zeichen nach dem letzten "-" im Branch-Namen, z. B. claude/festive-cray-4a3xvr -> 4a3xvr).
 // BRANCH_CODE wird beim Commit automatisch gesetzt (tools/set-version.sh, Hook in .githooks/).
 export const MAJOR = 0;
-export const MINOR = 23;
-export const BRANCH_CODE = '9s9gjm';
+export const MINOR = 24;
+export const BRANCH_CODE = '2';
 export const VERSION = `${MAJOR}.${MINOR}.${BRANCH_CODE}`;
 
 // Kurze Beschreibung je Änderung (neueste zuerst)
 export const CHANGES = [
+  { v: '0.24', text: 'Quittung per Druck-Icon in der Buchungsliste; Datum in Kontakt-Buchungen tippbar (Tag markiert) plus Kalender; Kategorien in den Einstellungen zuunterst; Lieferanten-Auswertung mit Drilldown nach Kategorie; Kundenliste ohne vorgewählte Kategorie; Treuhänder-Export mit Zusammenfassungsebene (Einzelbuchung/Tag/Monat/Jahr) und neuem Excel-Layout.' },
   { v: '0.23', text: 'Treuhänder-Excel: erster Tab Firma, danach Tabs Kunden und Lieferanten gruppiert; Kundenliste mit Firmenkopf; Einstellung Start mit Menü oder Buchung; Buchungen eines Kontakts direkt erfassen (mit Buchungstext); Telefon/E-Mail öffnet die App.' },
   { v: '0.22', text: 'Benutzerhilfe (Infos → Hilfe, druckbar).' },
   { v: '0.21', text: 'Offlinefähig (Service Worker), Datumsvorgaben aktuell bei offener App, Treuhänder-Export mit einheitlicher Datenschutzregel und Hinweis, Schutz vor manipulierten Backup-Dateien, Tests, README.' },

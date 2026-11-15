@@ -1,7 +1,7 @@
 // Kunden- und Lieferantenverwaltung
 import * as db from './db.js';
 import { h, uuid, normalize } from './util.js';
-import { showModal, confirmDlg, field, checkField, toast } from './ui.js';
+import { showModal, confirmDlg, field, checkField, toast, datumField } from './ui.js';
 import { nav } from './nav.js';
 import { fmtDate, chf, today, parseBetrag } from './util.js';
 import { betragFields, kategorienFor, prefillFor } from './kontaktpick.js';
@@ -58,7 +58,7 @@ function showKontaktBuchungen(k) {
     const total = bs.reduce((s, b) => s + b.betrag, 0);
     // Neue Buchung: Datum (heute, änderbar), Betrag und Kategorie aus der jüngsten Buchung vorbelegt
     const p = prefillFor(k);
-    const datum = h('input', { type: 'date', value: today(), required: true });
+    const df = datumField(today()); const datum = df.input;
     const bf = betragFields(p.sign, p.betrag);
     const cats = kategorienFor(k);
     const kat = h('select', { 'aria-label': 'Buchungskategorie' }, h('option', { value: '' }, '– wählen –'), ...cats.map((c) => h('option', { value: c.id }, c.name)));
@@ -66,10 +66,11 @@ function showKontaktBuchungen(k) {
     const text = h('input', { type: 'text', placeholder: 'optional', autocomplete: 'off', 'aria-label': 'Buchungstext' });
     const save = async () => {
       const cents = parseBetrag(bf.input.value);
-      if (!datum.value) { toast('Bitte ein Datum wählen.', 'err'); datum.focus(); return; }
+      const dv = df.value;
+      if (!dv) { toast('Bitte ein gültiges Datum erfassen (TT.MM.JJJJ).', 'err'); datum.focus(); return; }
       if (!cents) { toast('Bitte einen Betrag grösser als 0 erfassen.', 'err'); bf.input.focus(); return; }
       if (!kat.value) { toast('Bitte eine Buchungskategorie wählen.', 'err'); kat.focus(); return; }
-      await db.put('buchung', { id: uuid(), datum: datum.value, betrag: bf.signSel.value === '-' ? -cents : cents, kontaktId: k.id, kategorieId: kat.value, text: text.value.trim(), created: Date.now() });
+      await db.put('buchung', { id: uuid(), datum: dv, betrag: bf.signSel.value === '-' ? -cents : cents, kontaktId: k.id, kategorieId: kat.value, text: text.value.trim(), created: Date.now() });
       toast('Buchung gespeichert');
       draw(true);
     };
@@ -78,7 +79,7 @@ function showKontaktBuchungen(k) {
     kat.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); text.focus(); } });
     text.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); save(); } });
     doSave = save;
-    const form = h('div', { class: 'stack' }, field('Datum', datum), bf.el, field('Buchungskategorie', kat), field('Buchungstext', text));
+    const form = h('div', { class: 'stack' }, field('Datum', df.el), bf.el, field('Buchungskategorie', kat), field('Buchungstext', text));
     const list = h('div', { class: 'list' }, ...(bs.length ? bs.map((b) => h('div', { class: 'row static' },
       h('div', { class: 'row-main' }, h('strong', {}, fmtDate(b.datum)), h('span', { class: b.betrag < 0 ? 'out' : 'in' }, chf(b.betrag))),
       h('div', { class: 'row-sub muted' }, [db.data.buchungskategorie.get(b.kategorieId)?.name, b.text].filter(Boolean).join(' · ')))) : [h('p', { class: 'muted pad' }, 'Keine Buchungen vorhanden.')]));

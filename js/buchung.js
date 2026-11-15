@@ -4,7 +4,7 @@ import { h, uuid, chf, parseBetrag, today, fmtDate } from './util.js';
 import { field, toast, confirmDlg } from './ui.js';
 import { kontaktPicker, betragFields, kategorienFor, prefillFor } from './kontaktpick.js';
 import { startBackup, beenden } from './backup.js';
-import { openBuchung } from './kassenbuch.js';
+import { buchungRow } from './kassenbuch.js';
 import { nav } from './nav.js';
 
 // Entwurf bleibt über Neuzeichnen erhalten
@@ -70,9 +70,7 @@ export function buchungScreen() {
   if (!recent.length) list.append(h('p', { class: 'muted pad' }, 'Noch keine Buchungen erfasst.'));
   for (const b of recent) {
     const kat = db.data.buchungskategorie.get(b.kategorieId);
-    list.append(h('button', { type: 'button', class: 'row', onclick: async () => { await openBuchung(b); } },
-      h('div', { class: 'row-main' }, h('strong', {}, db.kontaktName(db.data.kontakt.get(b.kontaktId))), h('span', { class: b.betrag < 0 ? 'out' : 'in' }, chf(b.betrag))),
-      h('div', { class: 'row-sub muted' }, [fmtDate(b.datum), kat?.name, b.text, b.test ? 'Test' : ''].filter(Boolean).join(' · '))));
+    list.append(buchungRow(b, [fmtDate(b.datum), kat?.name, b.text, b.test ? 'Test' : '']));
   }
 
   setTimeout(() => { if (!document.getElementById('modal-root').children.length && !draft.kontaktId) picker.el.querySelector('input')?.focus(); }, 0);

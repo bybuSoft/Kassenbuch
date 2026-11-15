@@ -16,15 +16,19 @@ test('Treuhänder-Export: Namen/Texte nur bei Lieferanten, nie bei Kunden – au
   await mk('b3', lief.id, cat(db, 'ausgabe'), 1000, 'Gutschrift');
   await mk('b4', kunde.id, cat(db, 'einnahme'), -2000, 'Rückzahlung Anna');
   await mk('b5', kunde.id, cat(db, 'ausgabe'), -500, 'Unstimmig Anna');            // Kunde auf Ausgabe-Kategorie
-  const { firma, kunden, lieferanten, count, unstimmig } = treuhaenderRows('2026-11-01', '2026-11-30');
-  const rows = [...firma, ...kunden, ...lieferanten];
+  const { firma, buchungen, count, unstimmig } = treuhaenderRows('2026-11-01', '2026-11-30', 'einzel');
   assert.equal(count, 5);
   assert.equal(unstimmig, 1);
-  const text = JSON.stringify(rows);
+  assert.equal(buchungen.length, 6);
+  const text = JSON.stringify([firma, buchungen]);
   assert.ok(!/Anna|Geheim/.test(text), 'kein Kundenname/-text im Export');
-  const byLabel = (l) => rows.filter((r) => r[1] === l).length;
-  assert.equal(byLabel('Ausgabe (Gutschrift)'), 1);
-  assert.equal(byLabel('Einnahme (Rückzahlung)'), 1);
-  assert.ok(JSON.stringify(lieferanten).includes('Podo Supply') && !JSON.stringify(kunden).includes('Podo Supply'));
-  assert.ok(text.includes('Podo Supply') && text.includes('Material'));
+  assert.ok(text.includes('Podo Supply') && !text.includes('Gutschrift'), 'Lieferantenname ja, Buchungstext nein');
+  assert.ok(text.includes('Einzelbuchung'));
+  // Monat: zusammengefasst, Kunden ohne Namen, keine Summenzeilen
+  const m = treuhaenderRows('2026-11-01', '2026-11-30', 'monat').buchungen;
+  assert.equal(m[1][0], '11.2026');
+  assert.ok(m.slice(1).every((r) => r[1] === '' || r[1] === 'Podo Supply'));
+  const podo = m.slice(1).filter((r) => r[1] === 'Podo Supply');
+  assert.equal(podo.length, 1); assert.equal(podo[0][4].n, -302.4);
+  assert.equal(treuhaenderRows('2026-11-01', '2026-11-30', 'jahr').buchungen[1][0], '2026');
 });

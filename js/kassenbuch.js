@@ -53,9 +53,7 @@ export function kassenbuchScreen() {
       if (b.datum !== lastDay) { lastDay = b.datum; list.append(h('div', { class: 'day' }, fmtDate(b.datum))); }
       const k = db.data.kontakt.get(b.kontaktId);
       const kat = db.data.buchungskategorie.get(b.kategorieId);
-      list.append(h('button', { type: 'button', class: 'row', onclick: () => openBuchung(b) },
-        h('div', { class: 'row-main' }, h('strong', {}, db.kontaktName(k)), h('span', { class: b.betrag < 0 ? 'out' : 'in' }, chf(b.betrag))),
-        h('div', { class: 'row-sub muted' }, [kat?.name, b.text].filter(Boolean).join(' · '))));
+      list.append(buchungRow(b, [kat?.name, b.text]));
     }
     result.replaceChildren(summary, h('p', { class: 'muted small' }, `${all.length} Buchung${all.length === 1 ? '' : 'en'} · ${fmtDate(view.from)} – ${fmtDate(view.to)}`), list);
   };
@@ -69,6 +67,18 @@ export function kassenbuchScreen() {
     actions: [h('button', { class: 'btn', onclick: () => beenden() }, 'Beenden'), h('button', { class: 'btn primary', 'aria-label': 'Neue Buchung', title: 'Neue Buchung', onclick: () => nav.go('buchung') }, '+')],
     node: h('div', { class: 'stack' }, filters, result),
   };
+}
+
+/** Zeile der Buchungsliste: Antippen = bearbeiten; bei positiven Einnahmen Druck-Icon (Quittung) rechts neben dem Betrag */
+export function buchungRow(b, sub) {
+  const k = db.data.kontakt.get(b.kontaktId);
+  const quittung = db.artOf(b) === 'einnahme' && b.betrag > 0;
+  const print = quittung ? h('button', { type: 'button', class: 'print-btn', title: 'Quittung drucken', 'aria-label': 'Quittung drucken', onclick: (e) => { e.stopPropagation(); printQuittung(b); } }, '🖨') : null;
+  const row = h('div', { class: 'row', role: 'button', tabindex: '0', onclick: () => openBuchung(b) },
+    h('div', { class: 'row-main' }, h('strong', {}, db.kontaktName(k)), h('div', { class: 'amt' }, h('span', { class: b.betrag < 0 ? 'out' : 'in' }, chf(b.betrag)), print)),
+    h('div', { class: 'row-sub muted' }, sub.filter(Boolean).join(' · ')));
+  row.addEventListener('keydown', (e) => { if (e.target === row && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openBuchung(b); } });
+  return row;
 }
 
 /** Buchungsdialog (neu oder bearbeiten) */
@@ -112,7 +122,6 @@ export async function openBuchung(existing) {
       if (!(await confirmDlg('Diese Buchung wirklich löschen?', { title: 'Buchung löschen', ok: 'Löschen', danger: true }))) return false;
       await db.del('buchung', ex.id); toast('Buchung gelöscht'); ctl.close('deleted'); return false;
     } });
-    if (db.artOf(ex) === 'einnahme' && ex.betrag > 0) buttons.push({ label: 'Quittung', onClick: () => { printQuittung(ex); return false; } });
   }
   buttons.push({ label: 'Abbrechen', value: null });
   const save = async (again) => {
