@@ -117,7 +117,7 @@ function senioren() {
     .sort((a, b) => (a.datum < b.datum ? -1 : a.datum > b.datum ? 1 : 0));
   const out = h('div', { class: 'report' });
   const catName = db.data.kundenkategorie.get(state.senKat)?.name || '';
-  out.append(h('h3', {}, `Kundenliste ${catName}`), h('p', { class: 'muted' }, `${fmtDate(state.from)} – ${fmtDate(state.to)}`));
+  out.append(h('p', {}, h('strong', {}, db.kontaktName(db.eigene()))), h('h3', {}, `Kundenliste ${catName}`), h('p', { class: 'muted' }, `${fmtDate(state.from)} – ${fmtDate(state.to)}`));
   if (!bs.length) out.append(h('p', { class: 'muted' }, 'Keine Buchungen für diese Kategorie im gewählten Zeitraum.'));
   const months = [...new Set(bs.map((b) => monthOf(b.datum)))];
   for (const mo of months) {
@@ -143,27 +143,48 @@ export const unstimmigeBuchungen = (bs) => bs.filter((b) => { const k = db.data.
 
 export function treuhaenderRows(from, to) {
   const bs = db.buchungenList().filter((b) => b.datum >= from && b.datum <= to).sort((a, b) => (a.datum < b.datum ? -1 : a.datum > b.datum ? 1 : (a.created || 0) - (b.created || 0)));
-  const rows = [[{ s: 'Datum', b: true }, { s: 'Art', b: true }, { s: 'Kategorie', b: true }, { s: 'Lieferant', b: true }, { s: 'Betrag CHF', b: true }, { s: 'Buchungstext', b: true }]];
-  for (const b of bs) {
-    const k = db.data.kontakt.get(b.kontaktId);
-    const art = db.artOf(b);
-    // Eine Regel für den Personenbezug: Name und Buchungstext nur, wenn der KONTAKT ein Lieferant ist (nie bei Kunden, unabhängig von der Kategorie).
-    const lief = !!k?.istLieferant;
-    const artText = art === 'einnahme' ? (b.betrag < 0 ? 'Einnahme (Rückzahlung)' : 'Einnahme') : (b.betrag > 0 ? 'Ausgabe (Gutschrift)' : 'Ausgabe');
-    rows.push([{ d: b.datum }, artText, db.data.buchungskategorie.get(b.kategorieId)?.name || '', lief ? db.kontaktName(k) : '', { n: b.betrag / 100, f: 'money' }, lief ? b.text || '' : '']);
-  }
-  const sums = [[{ s: 'Art', b: true }, { s: 'Kategorie', b: true }, { s: 'Total CHF', b: true }]];
+  const B = (s) => ({ s, b: true });
+  const catName = (b) => db.data.buchungskategorie.get(b.kategorieId)?.name || '';
+  // Eine Regel für den Personenbezug: Name und Buchungstext nur, wenn der KONTAKT ein Lieferant ist (nie bei Kunden, unabhängig von der Kategorie).
+  const isLief = (b) => !!db.data.kontakt.get(b.kontaktId)?.istLieferant;
+  const eig = db.eigene();
+  const adr = [eig.strasse, [eig.plz, eig.ort].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+
+  // Tab 1: Firma Body care – Kopf, Zeitraum und Summen je Kategorie
+  const firma = [[B(db.kontaktName(eig))], adr ? [adr] : [], [`Zeitraum ${fmtDate(from)} – ${fmtDate(to)}`], [], [B('Art'), B('Kategorie'), B('Total CHF')]].filter((r) => r.length);
   let te = 0, ta = 0;
   for (const art of ['einnahme', 'ausgabe']) {
     for (const c of db.kategorienList('buchungskategorie', art)) {
-      const t = bs.filter((b) => b.kategorieId === c.id).reduce((s, b) => s + b.betrag, 0);
+      const t = bs.filter((b) => b.kategorieId === c.id).reduce((x, b) => x + b.betrag, 0);
       if (!t) continue;
-      sums.push([art === 'einnahme' ? 'Einnahme' : 'Ausgabe', c.name, { n: t / 100, f: 'money' }]);
+      firma.push([art === 'einnahme' ? 'Einnahme' : 'Ausgabe', c.name, { n: t / 100, f: 'money' }]);
       if (art === 'einnahme') te += t; else ta += t;
     }
   }
-  sums.push([{ s: 'Total Einnahmen', b: true }, '', { n: te / 100, f: 'money', b: true }], [{ s: 'Total Ausgaben', b: true }, '', { n: ta / 100, f: 'money', b: true }], [{ s: 'Ergebnis', b: true }, '', { n: (te + ta) / 100, f: 'money', b: true }]);
-  return { rows, sums, count: bs.length, unstimmig: unstimmigeBuchungen(bs) };
+  firma.push([B('Total Einnahmen'), '', { n: te / 100, f: 'money', b: true }], [B('Total Ausgaben'), '', { n: ta / 100, f: 'money', b: true }], [B('Ergebnis'), '', { n: (te + ta) / 100, f: 'money', b: true }]);
+
+  // Gruppiert: je Gruppe Titel, Buchungen, Zwischensumme
+  const grouped = (title, items, keyOf, nameOf, withText) => {
+    const rows = [[B(title)], [B('Datum'), B('Art'), B('Kategorie'), B('Betrag CHF'), ...(withText ? [B('Buchungstext')] : [])]];
+    const groups = new Map();
+    items.forEach((b) => { const k = keyOf(b); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(b); });
+    const sorted = [...groups].sort((x, y) => collator.compare(nameOf(x[0]), nameOf(y[0])));
+    for (const [k, arr] of sorted) {
+      rows.push([], [B(nameOf(k))]);
+      for (const b of arr) {
+        const art = db.artOf(b);
+        const artText = art === 'einnahme' ? (b.betrag < 0 ? 'Einnahme (Rückzahlung)' : 'Einnahme') : (b.betrag > 0 ? 'Ausgabe (Gutschrift)' : 'Ausgabe');
+        rows.push([{ d: b.datum }, artText, catName(b), { n: b.betrag / 100, f: 'money' }, ...(withText ? [b.text || ''] : [])]);
+      }
+      rows.push([B(`Total ${nameOf(k)}`), '', '', { n: arr.reduce((x, b) => x + b.betrag, 0) / 100, f: 'money', b: true }]);
+    }
+    return rows;
+  };
+  // Kunden: gruppiert nach Kundenkategorie (keine Namen/Texte). Lieferanten: gruppiert nach Lieferant mit Buchungstext.
+  const kunden = grouped('Kunden', bs.filter((b) => !isLief(b)), (b) => db.data.kontakt.get(b.kontaktId)?.kategorieId || '',
+    (id) => (id ? db.data.kundenkategorie.get(id)?.name || '?' : '(ohne Kategorie)'), false);
+  const lieferanten = grouped('Lieferanten', bs.filter(isLief), (b) => b.kontaktId, (id) => db.kontaktName(db.data.kontakt.get(id)) || '?', true);
+  return { firma, kunden, lieferanten, count: bs.length, unstimmig: unstimmigeBuchungen(bs) };
 }
 
 function treuhaender() {
@@ -176,10 +197,11 @@ function treuhaender() {
       unstimmig ? h('p', { class: 'notice' }, `Hinweis: ${unstimmig} Buchung${unstimmig === 1 ? '' : 'en'} mit unstimmiger Zuordnung (Kategorie passt nicht zum Kontakttyp, z. B. nach Typwechsel eines Kontakts). Bitte vor dem Versand prüfen. Namen und Texte von Kunden werden in jedem Fall nicht exportiert.`) : null,
       h('p', { class: 'muted' }, `${count} Buchungen im Zeitraum ${fmtDate(state.from)} – ${fmtDate(state.to)}.`),
       h('button', { class: 'btn primary', disabled: !count, onclick: async () => {
-        const { rows, sums } = treuhaenderRows(state.from, state.to);
+        const { firma, kunden, lieferanten } = treuhaenderRows(state.from, state.to);
         const bytes = buildXlsx([
-          { name: 'Buchungen', rows, widths: [12, 10, 22, 30, 14, 40] },
-          { name: 'Summen', rows: sums, widths: [18, 24, 14] },
+          { name: db.kontaktName(eig).slice(0, 31).replace(/[\\/?*[\]:]/g, ' ') || 'Firma', rows: firma, widths: [24, 24, 14] },
+          { name: 'Kunden', rows: kunden, widths: [24, 22, 24, 14] },
+          { name: 'Lieferanten', rows: lieferanten, widths: [24, 22, 24, 14, 40] },
         ]);
         const name = `kassenbuch-treuhaender-${state.from}_${state.to}.xlsx`;
         await saveBlob(new Blob([bytes], { type: XLSX_MIME }), name);

@@ -16,7 +16,8 @@ test('Treuhänder-Export: Namen/Texte nur bei Lieferanten, nie bei Kunden – au
   await mk('b3', lief.id, cat(db, 'ausgabe'), 1000, 'Gutschrift');
   await mk('b4', kunde.id, cat(db, 'einnahme'), -2000, 'Rückzahlung Anna');
   await mk('b5', kunde.id, cat(db, 'ausgabe'), -500, 'Unstimmig Anna');            // Kunde auf Ausgabe-Kategorie
-  const { rows, count, unstimmig } = treuhaenderRows('2026-11-01', '2026-11-30');
+  const { firma, kunden, lieferanten, count, unstimmig } = treuhaenderRows('2026-11-01', '2026-11-30');
+  const rows = [...firma, ...kunden, ...lieferanten];
   assert.equal(count, 5);
   assert.equal(unstimmig, 1);
   const text = JSON.stringify(rows);
@@ -24,5 +25,6 @@ test('Treuhänder-Export: Namen/Texte nur bei Lieferanten, nie bei Kunden – au
   const byLabel = (l) => rows.filter((r) => r[1] === l).length;
   assert.equal(byLabel('Ausgabe (Gutschrift)'), 1);
   assert.equal(byLabel('Einnahme (Rückzahlung)'), 1);
+  assert.ok(JSON.stringify(lieferanten).includes('Podo Supply') && !JSON.stringify(kunden).includes('Podo Supply'));
   assert.ok(text.includes('Podo Supply') && text.includes('Material'));
 });
