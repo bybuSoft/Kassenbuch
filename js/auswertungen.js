@@ -190,8 +190,8 @@ export function treuhaenderRows(from, to, level = 'monat', now = Date.now()) {
   const firma = [[B(db.kontaktName(eig))], ...[eig.strasse, [eig.plz, eig.ort].filter(Boolean).join(' ')].filter(Boolean).map((l) => [l]), ['Zeitraum', `${fmtDate(from)} – ${fmtDate(to)}`], ['Erzeugt', fmtDateTime(now)], ['Zusammenfassung', levelLabel(level)]];
 
   const periodKey = (b) => (level === 'jahr' ? b.datum.slice(0, 4) : level === 'monat' ? b.datum.slice(0, 7) : b.datum);
-  const periodCell = (k) => (level === 'jahr' ? k : level === 'monat' ? `${k.slice(5, 7)}.${k.slice(0, 4)}` : { d: k });
-  const periodHead = level === 'jahr' ? 'Jahr' : level === 'monat' ? 'Monat' : 'Datum';
+  // Immer ein echtes Excel-Datum (für den Import beim Treuhänder): bei Monat/Jahr der letzte Tag der Periode
+  const periodCell = (k) => ({ d: level === 'jahr' ? `${k}-12-31` : level === 'monat' ? lastDayOfMonth(k) : k });
   const items = bs.map((b) => {
     const k = db.data.kontakt.get(b.kontaktId);
     const lief = !!k?.istLieferant;
@@ -206,7 +206,7 @@ export function treuhaenderRows(from, to, level = 'monat', now = Date.now()) {
     lines = [...m.values()];
   }
   lines.sort((x, y) => (x.per < y.per ? -1 : x.per > y.per ? 1 : collator.compare(x.lief, y.lief) || collator.compare(x.kk, y.kk) || collator.compare(x.bk, y.bk) || (x.created || 0) - (y.created || 0)));
-  const buchungen = [[B(periodHead), B('Lieferant (Kunde leer)'), B('Kundenkategorie'), B('Buchungskategorie'), B('Betrag CHF')],
+  const buchungen = [[B('Datum'), B('Lieferant'), B('Kundenkategorie'), B('Buchungskategorie'), B('Betrag CHF')],
     ...lines.map((l) => [periodCell(l.per), l.lief, l.kk, l.bk, { n: l.betrag / 100, f: 'money' }])];
   return { firma, buchungen, count: bs.length, unstimmig: unstimmigeBuchungen(bs) };
 }

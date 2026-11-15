@@ -2,12 +2,13 @@
 // (die Zeichen nach dem letzten "-" im Branch-Namen, z. B. claude/festive-cray-4a3xvr -> 4a3xvr).
 // BRANCH_CODE wird beim Commit automatisch gesetzt (tools/set-version.sh, Hook in .githooks/).
 export const MAJOR = 0;
-export const MINOR = 28;
+export const MINOR = 29;
 export const BRANCH_CODE = '9s9gjm';
 export const VERSION = `${MAJOR}.${MINOR}.${BRANCH_CODE}`;
 
 // Kurze Beschreibung je Änderung (neueste zuerst)
 export const CHANGES = [
+  { v: '0.29', text: 'Treuhänder-Export: Datumsspalte ist immer ein echtes Excel-Datum (bei Monat letzter Tag des Monats, bei Jahr 31.12.) für den Import.' },
   { v: '0.28', text: 'Auswertung Kategorien: aufgeklappte Lieferanten bleiben beim Neuzeichnen offen, Zeilen per Tastatur bedienbar.' },
   { v: '0.27', text: 'Betrag: erster Klick markiert alles, zweiter setzt den Cursor; ungültiges Datum bleibt zum Korrigieren stehen (rot markiert); kein doppeltes Buchen bei Doppeltipp.' },
   { v: '0.26', text: 'Review-Korrekturen: Datumsprüfung (Jahr), Drilldown je Lieferant, Datum bleibt nach dem Buchen, Kundenliste Druck erst mit Kategorie, Vorjahr immer aktuell, eindeutige Excel-Tabs, Quittungs-Icon neben der Zeile.' },

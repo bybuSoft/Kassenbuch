@@ -26,11 +26,11 @@ test('Treuhänder-Export: Namen/Texte nur bei Lieferanten, nie bei Kunden – au
   assert.ok(text.includes('Einzelbuchung'));
   // Monat: zusammengefasst, Kunden ohne Namen, keine Summenzeilen
   const m = treuhaenderRows('2026-11-01', '2026-11-30', 'monat').buchungen;
-  assert.equal(m[1][0], '11.2026');
+  assert.deepEqual(m[1][0], { d: '2026-11-30' }); // Monat: letzter Tag
   assert.ok(m.slice(1).every((r) => r[1] === '' || r[1] === 'Podo Supply'));
   const podo = m.slice(1).filter((r) => r[1] === 'Podo Supply');
   assert.equal(podo.length, 1); assert.equal(podo[0][4].n, -302.4);
-  assert.equal(treuhaenderRows('2026-11-01', '2026-11-30', 'jahr').buchungen[1][0], '2026');
+  assert.deepEqual(treuhaenderRows('2026-11-01', '2026-11-30', 'jahr').buchungen[1][0], { d: '2026-12-31' }); // Jahr: 31.12.
 });
 
 test('Treuhänder-Export: Zusammenfassung nach Tag fasst gleiche Kategorien zusammen, ohne Summenzeilen', async () => {
