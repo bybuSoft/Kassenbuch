@@ -46,9 +46,9 @@ function startScreen() {
       } }, startCheck ? 'Erneut prüfen' : 'Daten prüfen'),
       !startCheck ? h('button', { class: 'btn big danger', onclick: async () => {
         const ok = await confirmDlg('ACHTUNG: Ohne Prüfung weißt du nicht, ob eine neuere Datensicherung existiert oder ob lokale Änderungen noch nicht gesichert sind.\n\nWenn du auf einem veralteten Stand weiterarbeitest, können Daten verloren gehen oder doppelt erfasst werden.\n\nPrüfung wirklich überspringen?', { title: 'Prüfung überspringen', ok: 'Ja, überspringen', danger: true });
-        if (ok) nav.go('buchung');
+        if (ok) nav.go(db.data.meta.startScreen === 'menu' ? 'menu' : 'buchung');
       } }, 'Überspringen') : null,
-      startCheck ? h('button', { class: `btn big ${weiterCls}`, onclick: () => nav.go('buchung') }, lvl === 'none' ? 'Ohne Restore starten' : 'Weiter zur Buchung') : null,
+      startCheck ? h('button', { class: `btn big ${weiterCls}`, onclick: () => nav.go(db.data.meta.startScreen === 'menu' ? 'menu' : 'buchung') }, lvl === 'none' ? 'Ohne Restore starten' : (db.data.meta.startScreen === 'menu' ? 'Weiter zum Menü' : 'Weiter zur Buchung')) : null,
       showRestore ? h('button', { class: `btn big ${restoreCls}`, onclick: () => startRestore() }, 'Datensicherung einspielen (Restore)') : null,
       startCheck?.dirty && !empty ? h('button', { class: 'btn big ok', onclick: async () => { if (await startBackup()) { startCheck = null; nav.refresh(); } } }, 'Jetzt sichern') : null),
   };

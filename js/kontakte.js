@@ -3,7 +3,8 @@ import * as db from './db.js';
 import { h, uuid, normalize } from './util.js';
 import { showModal, confirmDlg, field, checkField, toast } from './ui.js';
 import { nav } from './nav.js';
-import { fmtDate, chf } from './util.js';
+import { fmtDate, chf, today, parseBetrag } from './util.js';
+import { betragFields, kategorienFor, prefillFor } from './kontaktpick.js';
 
 const HEALTH = [['diabetes', 'Diabetes'], ['antikoaguliert', 'Antikoaguliert'], ['allergien', 'Allergien'], ['hiv', 'HIV-positiv'], ['haemophilie', 'Hämophilie']];
 const listState = { kunde: { q: '', kat: '' }, lieferant: { q: '' } };
@@ -48,18 +49,45 @@ export function kontakteScreen(typ) {
   };
 }
 
-/** Alle Buchungen eines Kunden/Lieferanten, nach Datum absteigend */
+/** Alle Buchungen eines Kunden/Lieferanten (nach Datum absteigend) mit Schnellerfassung einer neuen Buchung */
 function showKontaktBuchungen(k) {
-  const bs = db.buchungenOf(k.id).sort((a, b) => (a.datum === b.datum ? (b.created || 0) - (a.created || 0) : a.datum < b.datum ? 1 : -1));
-  const total = bs.reduce((s, b) => s + b.betrag, 0);
-  const list = h('div', { class: 'list' }, ...(bs.length ? bs.map((b) => h('div', { class: 'row static' },
-    h('div', { class: 'row-main' }, h('strong', {}, fmtDate(b.datum)), h('span', { class: b.betrag < 0 ? 'out' : 'in' }, chf(b.betrag))),
-    h('div', { class: 'row-sub muted' }, [db.data.buchungskategorie.get(b.kategorieId)?.name, b.text].filter(Boolean).join(' · ')))) : [h('p', { class: 'muted pad' }, 'Keine Buchungen vorhanden.')]));
-  return showModal({
-    title: `Buchungen: ${db.kontaktName(k)}`, wide: true,
-    body: [h('p', { class: 'muted small' }, `${bs.length} Buchung${bs.length === 1 ? '' : 'en'} · Total ${chf(total)}`), list],
-    buttons: [{ label: 'Schliessen', cls: 'primary' }],
-  }).closed;
+  const body = h('div', { class: 'stack' });
+  let doSave = async () => {};
+  const draw = (focusDatum) => {
+    const bs = db.buchungenOf(k.id).sort((a, b) => (a.datum === b.datum ? (b.created || 0) - (a.created || 0) : a.datum < b.datum ? 1 : -1));
+    const total = bs.reduce((s, b) => s + b.betrag, 0);
+    // Neue Buchung: Datum (heute, änderbar), Betrag und Kategorie aus der jüngsten Buchung vorbelegt
+    const p = prefillFor(k);
+    const datum = h('input', { type: 'date', value: today(), required: true });
+    const bf = betragFields(p.sign, p.betrag);
+    const cats = kategorienFor(k);
+    const kat = h('select', { 'aria-label': 'Buchungskategorie' }, h('option', { value: '' }, '– wählen –'), ...cats.map((c) => h('option', { value: c.id }, c.name)));
+    kat.value = p.kategorieId;
+    const text = h('input', { type: 'text', placeholder: 'optional', autocomplete: 'off', 'aria-label': 'Buchungstext' });
+    const save = async () => {
+      const cents = parseBetrag(bf.input.value);
+      if (!datum.value) { toast('Bitte ein Datum wählen.', 'err'); datum.focus(); return; }
+      if (!cents) { toast('Bitte einen Betrag grösser als 0 erfassen.', 'err'); bf.input.focus(); return; }
+      if (!kat.value) { toast('Bitte eine Buchungskategorie wählen.', 'err'); kat.focus(); return; }
+      await db.put('buchung', { id: uuid(), datum: datum.value, betrag: bf.signSel.value === '-' ? -cents : cents, kontaktId: k.id, kategorieId: kat.value, text: text.value.trim(), created: Date.now() });
+      toast('Buchung gespeichert');
+      draw(true);
+    };
+    datum.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); bf.input.focus(); bf.input.select(); } });
+    bf.input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); kat.focus(); } });
+    kat.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); text.focus(); } });
+    text.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); save(); } });
+    doSave = save;
+    const form = h('div', { class: 'stack' }, field('Datum', datum), bf.el, field('Buchungskategorie', kat), field('Buchungstext', text));
+    const list = h('div', { class: 'list' }, ...(bs.length ? bs.map((b) => h('div', { class: 'row static' },
+      h('div', { class: 'row-main' }, h('strong', {}, fmtDate(b.datum)), h('span', { class: b.betrag < 0 ? 'out' : 'in' }, chf(b.betrag))),
+      h('div', { class: 'row-sub muted' }, [db.data.buchungskategorie.get(b.kategorieId)?.name, b.text].filter(Boolean).join(' · ')))) : [h('p', { class: 'muted pad' }, 'Keine Buchungen vorhanden.')]));
+    body.replaceChildren(form, h('p', { class: 'muted small' }, `${bs.length} Buchung${bs.length === 1 ? '' : 'en'} · Total ${chf(total)}`), list);
+    if (focusDatum) setTimeout(() => datum.focus(), 0);
+  };
+  draw(true);
+  return showModal({ title: `Buchungen: ${db.kontaktName(k)}`, wide: true, body,
+    buttons: [{ label: 'Schliessen' }, { label: 'Buchen', cls: 'primary', onClick: async () => { await doSave(); return false; } }] }).closed;
 }
 
 /**
@@ -120,7 +148,9 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
         comms.forEach((o) => { o.bevorzugt = false; }); // es kann nur eine Kommunikation bevorzugt sein
         c.bevorzugt = pref.checked; drawComms();
       } });
-      return h('div', { class: 'comm' }, typ, wert, checkField('bevorzugt', pref),
+      const href = c.wert.trim() ? (c.typ === 'mail' ? `mailto:${c.wert.trim()}` : `tel:${c.wert.trim().replace(/[^\d+]/g, '')}`) : '';
+      const open = href ? h('a', { class: 'btn small', href, 'aria-label': c.typ === 'mail' ? 'E-Mail-App öffnen' : 'Anrufen' }, c.typ === 'mail' ? '✉' : '☎') : null;
+      return h('div', { class: 'comm' }, typ, wert, open, checkField('bevorzugt', pref),
         h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Entfernen', onclick: () => { comms.splice(i, 1); drawComms(); } }, '×'));
     }), h('button', { type: 'button', class: 'btn small', onclick: () => { comms.push({ id: uuid(), kontaktId: k.id, typ: 'tel', wert: '', bevorzugt: false }); drawComms(); } }, '+ Telefon/E-Mail'));
   };
