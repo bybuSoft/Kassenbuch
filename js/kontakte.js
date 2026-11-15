@@ -98,6 +98,12 @@ function showKontaktBuchungen(k) {
     buttons: [{ label: 'Schliessen' }, { label: 'Buchen', cls: 'primary', onClick: async () => { await doSave(); return false; } }] }).closed;
 }
 
+/** Stellt sicher, dass (bei mindestens einem Eintrag) genau ein Eintrag bevorzugt ist. */
+function normPref(list) {
+  const first = list.findIndex((c) => c.bevorzugt);
+  list.forEach((c, i) => { c.bevorzugt = list.length > 0 && i === (first < 0 ? 0 : first); });
+}
+
 /**
  * Kontakt anlegen/bearbeiten. Gibt die ID des gespeicherten Kontakts zurück (null bei Abbruch/Löschen).
  * lockType ('kunde'|'lieferant'): Typ ist fest vorgegeben (z. B. aus dem Buchungsdialog).
@@ -106,7 +112,7 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
   const ex = id ? db.data.kontakt.get(id) : null;
   const k = ex ? { ...ex } : db.newKontakt({ ...prefill, ...(lockType ? { istLieferant: lockType === 'lieferant' } : {}) });
   const comms = ex ? db.commsOf(id).map((c) => ({ ...c })) : [];
-  comms.forEach((c, i) => { if (c.bevorzugt && comms.findIndex((o) => o.bevorzugt) !== i) c.bevorzugt = false; }); // nur eine bevorzugt
+  normPref(comms);
   const locked = !!lockType || !!k.sys;
 
   // ---- Felder
@@ -144,23 +150,28 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
   chkLief.addEventListener('change', syncType);
   syncType();
 
-  // Kommunikation (mehrere Telefonnummern/E-Mails)
+  // Kommunikation (mehrere Telefonnummern/E-Mails): pro Zeile Icon (öffnet App), Wert, bevorzugt, Entfernen
   const commBox = h('div', { class: 'stack' });
   const drawComms = () => {
+    normPref(comms);
     commBox.replaceChildren(...comms.map((c, i) => {
-      const typ = h('select', { 'aria-label': 'Art', onchange: () => { c.typ = typ.value; drawComms(); } },
-        h('option', { value: 'tel' }, 'Telefon'), h('option', { value: 'mail' }, 'E-Mail'));
-      typ.value = c.typ;
-      const wert = h('input', { value: c.wert, type: c.typ === 'mail' ? 'email' : 'tel', 'aria-label': c.typ === 'mail' ? 'E-Mail' : 'Telefonnummer', autocomplete: 'off', oninput: () => { c.wert = wert.value; } });
+      const mail = c.typ === 'mail';
+      const wert = h('input', { value: c.wert, type: mail ? 'email' : 'tel', placeholder: mail ? 'E-Mail' : 'Telefon', 'aria-label': mail ? 'E-Mail' : 'Telefonnummer', autocomplete: 'off',
+        oninput: () => { c.wert = wert.value; } });
       const pref = h('input', { type: 'checkbox', checked: !!c.bevorzugt, onchange: () => {
-        comms.forEach((o) => { o.bevorzugt = false; }); // es kann nur eine Kommunikation bevorzugt sein
-        c.bevorzugt = pref.checked; drawComms();
+        if (!pref.checked) { pref.checked = true; return; } // genau eine bevorzugt: nur umsetzen, nicht abwählen
+        comms.forEach((o) => { o.bevorzugt = false; }); c.bevorzugt = true; drawComms();
       } });
-      const href = c.wert.trim() ? (c.typ === 'mail' ? `mailto:${c.wert.trim()}` : `tel:${c.wert.trim().replace(/[^\d+]/g, '')}`) : '';
-      const open = href ? h('a', { class: 'btn small', href, 'aria-label': c.typ === 'mail' ? 'E-Mail-App öffnen' : 'Anrufen' }, c.typ === 'mail' ? '✉' : '☎') : null;
-      return h('div', { class: 'comm' }, typ, wert, open, checkField('bevorzugt', pref),
+      const v = c.wert.trim();
+      const href = v ? (mail ? `mailto:${v}` : `tel:${v.replace(/[^\d+]/g, '')}`) : '';
+      const icon = href
+        ? h('a', { class: 'comm-ico', href, 'aria-label': mail ? 'E-Mail-App öffnen' : 'Anrufen' }, mail ? '✉' : '☎')
+        : h('span', { class: 'comm-ico dim', 'aria-hidden': 'true' }, mail ? '✉' : '☎');
+      return h('div', { class: 'comm' }, icon, wert, checkField('bevorzugt', pref),
         h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Entfernen', onclick: () => { comms.splice(i, 1); drawComms(); } }, '×'));
-    }), h('button', { type: 'button', class: 'btn small', onclick: () => { comms.push({ id: uuid(), kontaktId: k.id, typ: 'tel', wert: '', bevorzugt: false }); drawComms(); } }, '+ Telefon/E-Mail'));
+    }), h('div', { class: 'comm-add' },
+      h('button', { type: 'button', class: 'btn small', onclick: () => { comms.push({ id: uuid(), kontaktId: k.id, typ: 'tel', wert: '', bevorzugt: false }); drawComms(); } }, '+ Telefon'),
+      h('button', { type: 'button', class: 'btn small', onclick: () => { comms.push({ id: uuid(), kontaktId: k.id, typ: 'mail', wert: '', bevorzugt: false }); drawComms(); } }, '+ E-Mail')));
   };
   drawComms();
 
@@ -209,7 +220,7 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
       HEALTH.forEach(([key]) => { out[key] = health[key].checked; });
     }
     const cl = comms.filter((c) => c.wert.trim()).map((c) => ({ ...c, wert: c.wert.trim() }));
-    let seenPref = false; cl.forEach((c) => { if (c.bevorzugt) { if (seenPref) c.bevorzugt = false; seenPref = true; } });
+    normPref(cl);
     const dups = db.findDuplicates(out, cl);
     if (dups.length) {
       const lines = dups.map((d) => `• ${db.kontaktName(d)}${d.plz || d.ort ? `, ${[d.plz, d.ort].filter(Boolean).join(' ')}` : ''}`).join('\n');
