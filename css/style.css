@@ -76,8 +76,9 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--pri);outline-off
 .chip{display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:var(--bg);border-radius:10px;padding:6px 10px}.chip strong{flex:1;min-width:8ch}
 .kontaktpick{display:flex;flex-direction:column;gap:4px}.kp-row{display:flex;gap:8px}.kp-row input{flex:1}
 .sugg{border-radius:10px;overflow:hidden;border:1px solid var(--line)}.sugg:empty{display:none}.sugg .row{display:flex;justify-content:space-between;gap:8px;background:var(--bg)}
-.comm{display:grid;grid-template-columns:110px 1fr auto auto;gap:6px;align-items:center}
-@media(max-width:520px){.comm{grid-template-columns:1fr auto;}.comm select,.comm input[type=tel],.comm input[type=email]{grid-column:1/-1}}
+.comm{display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center}
+.comm-ico{font-size:1.25rem;text-decoration:none;color:inherit;width:1.6em;text-align:center}
+.comm-ico.dim{opacity:.4}
 #toast-root{position:fixed;left:0;right:0;bottom:calc(16px + env(safe-area-inset-bottom));display:flex;justify-content:center;z-index:50;pointer-events:none}
 .toast{background:#1d1d1f;color:#fff;padding:10px 16px;border-radius:999px;max-width:92vw;box-shadow:0 2px 12px rgba(0,0,0,.4)}.toast.err{background:#b00020}
 /* Druck */
@@ -146,3 +147,4 @@ main.lockpos{align-items:flex-start;min-height:0;padding-top:max(24px,8vh)}
 .rowwrap{display:flex;align-items:center;background:var(--card);border-bottom:1px solid var(--line)}.rowwrap:last-child{border-bottom:0}.rowwrap .row{flex:1;min-width:0;border-bottom:0}.rowwrap .print-btn{margin-right:6px;flex:none}
 input[aria-invalid=true]{border-color:#c0392b;box-shadow:0 0 0 1px #c0392b}
 .drill:focus-visible{outline:2px solid var(--pri);outline-offset:-2px}
+.comm-add{display:flex;gap:8px}
