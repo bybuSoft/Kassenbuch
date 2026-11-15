@@ -15,14 +15,14 @@ Auf dem iPad/iPhone: in Safari öffnen, *Teilen → Zum Home-Bildschirm*.
 
 ## Funktionen
 
-- **Menü** (Startseite nach „Daten prüfen“): grosse Buttons in zwei Spalten für Buchung, Kassenbuch, Kunden, Lieferanten, Auswertungen, Datensicherung, Einstellungen, Infos. „Beenden“ fragt (bei ungesicherten Änderungen) nach einer Sicherung und sperrt die App.
-- **Buchung** (Erfassungsseite): Datum, Kunde/Lieferant (Smartsuche nur über Namen, Vorschläge erst nach Eingabe), Betrag mit Vorzeichenfeld **+/−**, Kategorie, Text. Nach der Kontaktwahl werden Vorzeichen, Betrag und Kategorie aus der letzten Buchung des Kontakts vorbelegt. Darunter die zuletzt erfassten Buchungen. Buttons: Abbrechen, Speichern & neu, Speichern (fragt anschliessend nach einer Datensicherung).
+- **Menü** (Startseite nach „Daten prüfen“, in den Einstellungen unter „Start“ wählbar: Menü oder Buchung): grosse Buttons in zwei Spalten für Buchung, Kassenbuch, Kunden, Lieferanten, Auswertungen, Datensicherung, Einstellungen, Infos. „Beenden“ fragt (bei ungesicherten Änderungen) nach einer Sicherung und sperrt die App.
+- **Buchung** (Erfassungsseite): Datum, Kunde/Lieferant (Smartsuche nur über Namen, Vorschläge erst nach Eingabe), Betrag mit Vorzeichenfeld **+/−**, Kategorie, Text. Nach der Kontaktwahl werden Vorzeichen, Betrag und Kategorie aus der letzten Buchung des Kontakts vorbelegt. Darunter die zuletzt erfassten Buchungen (mit Quittungs-Icon). Der Betrag wird beim Antippen markiert. Buttons: Abbrechen, Speichern & neu, Speichern (fragt anschliessend nach einer Datensicherung).
   - Die **Art** (Einnahme/Ausgabe) ergibt sich aus dem Kontakt: Kunde = Einnahme, Lieferant = Ausgabe. Das Vorzeichen bildet Rückzahlungen (Kunde) und Gutschriften (Lieferant) ab.
-- **Kassenbuch**: Liste mit Suche und aufklappbarem Filter (Periode, Art, Kategorie), Summen, Bearbeiten/Löschen.
-- **Kunden/Lieferanten**: mehrere Telefonnummern/E-Mails (nur eine bevorzugt), Geschlecht/Firma, Anrede (Du/Sie), Dublettenprüfung (Name + PLZ/Telefon, zeigt alle Treffer), Kundenkategorien, Notizen mit Marker, Gesundheitsangaben, Button „Buchungen“ (alle Buchungen des Kontakts). Löschen ersetzt den Kontakt in den Buchungen durch „Gelöschter Kunde/Lieferant“.
-- **Quittung** (aus einer positiven Einnahme): Druckansicht, auf iOS *Drucken → Als PDF sichern*.
-- **Auswertungen**: Perioden und Kategorien (Kunden nach Kundenkategorie, Lieferanten nach Lieferant) mit optionalem **Vorjahresvergleich**, Kundenliste (Drucken/PDF), **Excel-Export für den Treuhänder**. Der Kopfbereich bleibt beim Scrollen stehen.
-  - Treuhänder-Export: Namen und Buchungstexte nur bei **Lieferanten**, nie bei Kunden. Hinweis bei Buchungen, deren Kategorie nicht zum Kontakttyp passt.
+- **Kassenbuch**: Liste mit Suche und aufklappbarem Filter (Periode, Art, Kategorie), Summen, Bearbeiten/Löschen, Quittungs-Icon (🖨) rechts neben dem Betrag bei positiven Einnahmen.
+- **Kunden/Lieferanten**: mehrere Telefonnummern/E-Mails (nur eine bevorzugt), Geschlecht/Firma, Anrede (Du/Sie), Dublettenprüfung (Name + PLZ/Telefon, zeigt alle Treffer), Kundenkategorien, Notizen mit Marker, Gesundheitsangaben, Telefon-/Mail-Buttons (öffnen die jeweilige App), Button „Buchungen“: alle Buchungen des Kontakts mit Quittungs-Icon und Schnellerfassung einer neuen Buchung (Datum tippbar mit Tag markiert oder per Kalender, Betrag und Kategorie aus der jüngsten Buchung vorbelegt, Buchungstext leer; Button „Buchen“). Löschen ersetzt den Kontakt in den Buchungen durch „Gelöschter Kunde/Lieferant“.
+- **Quittung** (Druck-Icon bei einer positiven Einnahme in der Buchungsliste, auch in „Buchungen“ eines Kunden): Druckansicht, auf iOS *Drucken → Als PDF sichern*.
+- **Auswertungen**: Perioden und Kategorien (Kunden nach Kundenkategorie, Lieferanten nach Lieferant mit Drilldown nach Buchungskategorie) mit optionalem **Vorjahresvergleich**, Kundenliste (Kategorie wählen, Firmenkopf, Drucken/PDF), **Excel-Export für den Treuhänder**. Der Kopfbereich bleibt beim Scrollen stehen.
+  - Treuhänder-Export: immer ein ganzes Jahr (Auswahl, Vorgabe Vorjahr), Zusammenfassungsebene Einzelbuchung/Tag/Monat/Jahr (Vorgabe Monat). Tab 1: Firma mit Adresse, Zeitraum, Erzeugungszeitpunkt, Ebene. Tab 2 „Buchungen“: Datum/Monat/Jahr, Lieferant (bei Kunden leer), Kundenkategorie, Buchungskategorie, Betrag; keine Summen und keine Buchungstexte. Namen nur bei **Lieferanten**, nie bei Kunden. Hinweis bei Buchungen, deren Kategorie nicht zum Kontakttyp passt.
 - **Datensicherung**: verschlüsselt (PBKDF2 + AES-GCM). Dateiname `JJJJMMTT-HHMMSS-Gerät-vVersion.enc`. Der **Gerätename** steht in den Einstellungen (nicht in der Sicherung). Passwort: erste Sicherung der Sitzung zweimal, danach einmal mit Vergleich gegen das bisherige Passwort (Tippfehlerschutz).
   - **Standardordner** (nur Browser mit Ordnerzugriff, z. B. Chrome/Edge; nicht iPhone/iPad): Sicherungen werden direkt dort abgelegt, der Restore listet sie. Optional werden ältere Sicherungen (`.enc`) automatisch bis zur eingestellten Anzahl gelöscht; andere Dateien bleiben unberührt.
   - **Daten prüfen** (Willkommensscreen): liest die Dateinamen der Sicherungen und vergleicht die jüngste mit dem lokalen Stand. **Grün** = aktuell, **gelb** = neuere Sicherung vorhanden oder ungesicherte lokale Änderungen, **rot** = neuere Sicherung *und* ungesicherte lokale Änderungen (Restore würde überschreiben). Mit „Überspringen“ (nach Warnung) lässt sich die Prüfung auslassen.
@@ -54,7 +54,7 @@ js/app.js          Start, Navigation, Sperre, Startseite „Daten prüfen“
 js/menu.js         Menü (Navigationsseite)
 js/hilfe.js        Benutzerhilfe (druckbar, Infos → Hilfe)
 js/buchung.js      Buchungsseite (Erfassung + zuletzt erfasst)
-js/kassenbuch.js   Buchungsliste mit Filter, Buchungsdialog, Quittung
+js/kassenbuch.js   Buchungsliste mit Filter und Druck-Icon, Buchungsdialog, Quittung
 js/kontaktpick.js  Kontaktwahl (Smartsuche), Betrag/Vorzeichen, Vorbelegung
 js/kontakte.js     Kunden-/Lieferantenverwaltung
 js/auswertungen.js Auswertungen und Treuhänder-Export; periodbar.js: Periodenwahl
