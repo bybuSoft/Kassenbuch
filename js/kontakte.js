@@ -4,7 +4,7 @@ import { h, uuid, normalize } from './util.js';
 import { showModal, confirmDlg, field, checkField, toast, datumField } from './ui.js';
 import { nav } from './nav.js';
 import { printQuittung } from './quittung.js';
-import { fmtDate, fmtDateTime, chf, today, parseBetrag } from './util.js';
+import { fmtDate, chf, today, parseBetrag } from './util.js';
 import { betragFields, kategorienFor, prefillFor } from './kontaktpick.js';
 
 const HEALTH = [['diabetes', 'Diabetes'], ['antikoaguliert', 'Antikoaguliert'], ['allergien', 'Allergien'], ['hiv', 'HIV-positiv'], ['haemophilie', 'Hämophilie']];
@@ -31,13 +31,11 @@ export function kontakteScreen(typ) {
     });
     list.replaceChildren(...(rows.length ? rows.map((k) => {
       const kat = db.data.kundenkategorie.get(k.kategorieId);
-      const adr = [k.strasse, [k.plz, k.ort].filter(Boolean).join(' ')].filter(Boolean).join(', ');
       const prefer = db.commsOf(k.id).filter((c) => c.bevorzugt)[0] || db.commsOf(k.id)[0];
       return h('button', { type: 'button', class: 'row', onclick: async () => { await editKontakt({ id: k.id }); nav.refresh(); } },
         h('div', { class: 'row-main' },
           h('strong', {}, db.kontaktName(k) || '(ohne Name)'),
-          h('span', { class: 'muted small' }, k.created ? fmtDateTime(k.created) : '')),
-        adr ? h('div', { class: 'row-sub muted' }, adr) : null,
+          h('span', { class: 'muted' }, [k.plz, k.ort].filter(Boolean).join(' '))),
         h('div', { class: 'row-sub muted' }, [kat?.name, prefer?.wert, k.sys === 'eigene' ? 'eigene Firma' : ''].filter(Boolean).join(' · ')));
     }) : [h('p', { class: 'muted pad' }, 'Keine Einträge.')]));
   };
