@@ -43,7 +43,7 @@ export function helpContent() {
 
     sec('5. Kunden und Lieferanten',
       ul(
-        'Suche und Kategorie-Filter; „+ Neu“ legt einen Kontakt an, antippen öffnet ihn.',
+        'Suche und Kategorie-Filter; „+ Neu“ legt einen Kontakt an, antippen öffnet ihn. Die Liste zeigt pro Kontakt Name, Adresse, Kategorie, bevorzugte Kommunikation und den Erstellungszeitpunkt (bei älteren Kontakten leer).',
         'Pro Kontakt: Adresse, Geschlecht/Firma, Anrede (Du/Sie), mehrere Telefonnummern/E-Mails (je eine Zeile; per „+ Telefon“ bzw. „+ E-Mail“ hinzufügen, direkt im Feld ändern, mit × löschen; genau eine ist „bevorzugt“, das Icon öffnet die Telefon-/Mail-App), Kundenkategorie, Gesundheitsangaben und Notizen.',
         'Der Button „Buchungen“ zeigt alle Buchungen des Kontakts, neueste zuerst (bei Einnahmen mit Quittungs-Icon). Oben kannst du direkt eine neue Buchung erfassen: Das Datum lässt sich tippen (der Tag ist markiert) oder über 📅 im Kalender wählen und bleibt nach „Buchen“ stehen; Betrag und Kategorie sind aus der jüngsten Buchung vorbelegt, der Buchungstext ist leer. „Buchen“ speichert, der Dialog bleibt offen.',
         'Neben Telefonnummern und E-Mail-Adressen öffnen ☎ und ✉ die Telefon- bzw. Mail-App.',
