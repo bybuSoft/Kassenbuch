@@ -32,3 +32,16 @@ test('Treuhänder-Export: Namen/Texte nur bei Lieferanten, nie bei Kunden – au
   assert.equal(podo.length, 1); assert.equal(podo[0][4].n, -302.4);
   assert.equal(treuhaenderRows('2026-11-01', '2026-11-30', 'jahr').buchungen[1][0], '2026');
 });
+
+test('Treuhänder-Export: Zusammenfassung nach Tag fasst gleiche Kategorien zusammen, ohne Summenzeilen', async () => {
+  const db = await freshDb();
+  const { treuhaenderRows } = await import('../js/auswertungen.js');
+  const kunde = db.newKontakt({ name: 'Muster' }); await db.put('kontakt', kunde);
+  const c = cat(db, 'einnahme');
+  for (const [id, d, b] of [['x1', '2026-03-05', 1000], ['x2', '2026-03-05', 2500], ['x3', '2026-03-06', 500]])
+    await db.put('buchung', { id, datum: d, betrag: b, kontaktId: kunde.id, kategorieId: c.id, text: 't', created: 1 });
+  const rows = treuhaenderRows('2026-01-01', '2026-12-31', 'tag').buchungen;
+  assert.equal(rows.length, 3); // Kopf + 2 Tage
+  assert.equal(rows[1][4].n, 35);
+  assert.ok(!/Muster/.test(JSON.stringify(rows)));
+});

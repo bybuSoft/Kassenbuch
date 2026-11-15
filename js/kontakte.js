@@ -3,7 +3,7 @@ import * as db from './db.js';
 import { h, uuid, normalize } from './util.js';
 import { showModal, confirmDlg, field, checkField, toast, datumField } from './ui.js';
 import { nav } from './nav.js';
-import { printQuittung } from './kassenbuch.js';
+import { printQuittung } from './quittung.js';
 import { fmtDate, chf, today, parseBetrag } from './util.js';
 import { betragFields, kategorienFor, prefillFor } from './kontaktpick.js';
 
@@ -54,12 +54,13 @@ export function kontakteScreen(typ) {
 function showKontaktBuchungen(k) {
   const body = h('div', { class: 'stack' });
   let doSave = async () => {};
+  let lastDatum = today(); // Datum bleibt nach dem Buchen stehen (Nacherfassen mehrerer Buchungen)
   const draw = (focusDatum) => {
     const bs = db.buchungenOf(k.id).sort((a, b) => (a.datum === b.datum ? (b.created || 0) - (a.created || 0) : a.datum < b.datum ? 1 : -1));
     const total = bs.reduce((s, b) => s + b.betrag, 0);
     // Neue Buchung: Datum (heute, änderbar), Betrag und Kategorie aus der jüngsten Buchung vorbelegt
     const p = prefillFor(k);
-    const df = datumField(today()); const datum = df.input;
+    const df = datumField(lastDatum); const datum = df.input;
     const bf = betragFields(p.sign, p.betrag);
     const cats = kategorienFor(k);
     const kat = h('select', { 'aria-label': 'Buchungskategorie' }, h('option', { value: '' }, '– wählen –'), ...cats.map((c) => h('option', { value: c.id }, c.name)));
@@ -73,6 +74,7 @@ function showKontaktBuchungen(k) {
       if (!kat.value) { toast('Bitte eine Buchungskategorie wählen.', 'err'); kat.focus(); return; }
       await db.put('buchung', { id: uuid(), datum: dv, betrag: bf.signSel.value === '-' ? -cents : cents, kontaktId: k.id, kategorieId: kat.value, text: text.value.trim(), created: Date.now() });
       toast('Buchung gespeichert');
+      lastDatum = dv;
       draw(true);
     };
     datum.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); bf.input.focus(); bf.input.select(); } });

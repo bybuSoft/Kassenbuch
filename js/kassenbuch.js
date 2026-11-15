@@ -6,6 +6,7 @@ import { periodBar } from './periodbar.js';
 import { kontaktPicker, betragFields, kategorienFor, prefillFor } from './kontaktpick.js';
 import { beenden } from './backup.js';
 import { nav } from './nav.js';
+import { printQuittung } from './quittung.js';
 
 const FIRST = () => `${monthOf(today())}-01`;
 const monthRange = () => ({ from: FIRST(), to: lastDayOfMonth(monthOf(today())) });
@@ -73,12 +74,11 @@ export function kassenbuchScreen() {
 export function buchungRow(b, sub) {
   const k = db.data.kontakt.get(b.kontaktId);
   const quittung = db.artOf(b) === 'einnahme' && b.betrag > 0;
-  const print = quittung ? h('button', { type: 'button', class: 'print-btn', title: 'Quittung drucken', 'aria-label': 'Quittung drucken', onclick: (e) => { e.stopPropagation(); printQuittung(b); } }, '🖨') : null;
-  const row = h('div', { class: 'row', role: 'button', tabindex: '0', onclick: () => openBuchung(b) },
-    h('div', { class: 'row-main' }, h('strong', {}, db.kontaktName(k)), h('div', { class: 'amt' }, h('span', { class: b.betrag < 0 ? 'out' : 'in' }, chf(b.betrag)), print)),
-    h('div', { class: 'row-sub muted' }, sub.filter(Boolean).join(' · ')));
-  row.addEventListener('keydown', (e) => { if (e.target === row && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openBuchung(b); } });
-  return row;
+  return h('div', { class: 'rowwrap' },
+    h('button', { type: 'button', class: 'row', onclick: () => openBuchung(b) },
+      h('div', { class: 'row-main' }, h('strong', {}, db.kontaktName(k)), h('span', { class: b.betrag < 0 ? 'out' : 'in' }, chf(b.betrag))),
+      h('div', { class: 'row-sub muted' }, sub.filter(Boolean).join(' · '))),
+    quittung ? h('button', { type: 'button', class: 'print-btn', title: 'Quittung drucken', 'aria-label': 'Quittung drucken', onclick: () => printQuittung(b) }, '🖨') : null);
 }
 
 /** Buchungsdialog (neu oder bearbeiten) */
@@ -144,22 +144,4 @@ export async function openBuchung(existing) {
   const r = await ctl.closed;
   nav.refresh();
   if (r === 'again') openBuchung(null);
-}
-
-/** Quittung als Druckansicht (iOS: Teilen/Drucken > als PDF sichern) */
-export function printQuittung(b) {
-  const k = db.data.kontakt.get(b.kontaktId);
-  const eig = db.eigene();
-  const kat = db.data.buchungskategorie.get(b.kategorieId);
-  const adr = (c) => [c.strasse, [c.plz, c.ort].filter(Boolean).join(' ')].filter(Boolean);
-  const row = (l, v) => h('tr', {}, h('th', {}, l), h('td', {}, v));
-  printNode(h('div', { class: 'quittung' },
-    h('div', { class: 'q-absender' }, h('strong', {}, db.kontaktName(eig)), ...adr(eig).map((l) => h('div', {}, l))),
-    h('h1', {}, 'Quittung'),
-    h('table', {},
-      row('Datum', fmtDate(b.datum)),
-      row('Erhalten von', h('div', {}, h('div', {}, db.kontaktName(k)), ...adr(k).map((l) => h('div', {}, l)))),
-      row('Betrag', `CHF ${chf(Math.abs(b.betrag))}`),
-      row('Für', [kat?.name, b.text].filter(Boolean).join(' – '))),
-    h('div', { class: 'q-sign' }, h('div', {}, `${eig.ort || ''}${eig.ort ? ', ' : ''}${fmtDate(b.datum)}`), h('div', { class: 'line' }, 'Unterschrift'))));
 }
