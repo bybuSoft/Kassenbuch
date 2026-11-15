@@ -144,3 +144,4 @@ main.lockpos{align-items:flex-start;min-height:0;padding-top:max(24px,8vh)}
 .drill{cursor:pointer}.drill td:first-child::before{content:"▸ ";color:var(--muted)}.drill.open td:first-child::before{content:"▾ "}
 .kid td:first-child{padding-left:1.4rem;color:var(--muted)}
 .rowwrap{display:flex;align-items:center;background:var(--card);border-bottom:1px solid var(--line)}.rowwrap:last-child{border-bottom:0}.rowwrap .row{flex:1;min-width:0;border-bottom:0}.rowwrap .print-btn{margin-right:6px;flex:none}
+input[aria-invalid=true]{border-color:#c0392b;box-shadow:0 0 0 1px #c0392b}

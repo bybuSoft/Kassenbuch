@@ -66,13 +66,16 @@ function showKontaktBuchungen(k) {
     const kat = h('select', { 'aria-label': 'Buchungskategorie' }, h('option', { value: '' }, '– wählen –'), ...cats.map((c) => h('option', { value: c.id }, c.name)));
     kat.value = p.kategorieId;
     const text = h('input', { type: 'text', placeholder: 'optional', autocomplete: 'off', 'aria-label': 'Buchungstext' });
+    let busy = false; // verhindert doppeltes Speichern bei Doppeltipp
     const save = async () => {
+      if (busy) return;
       const cents = parseBetrag(bf.input.value);
       const dv = df.value;
       if (!dv) { toast('Bitte ein gültiges Datum erfassen (TT.MM.JJJJ).', 'err'); datum.focus(); return; }
       if (!cents) { toast('Bitte einen Betrag grösser als 0 erfassen.', 'err'); bf.input.focus(); return; }
       if (!kat.value) { toast('Bitte eine Buchungskategorie wählen.', 'err'); kat.focus(); return; }
-      await db.put('buchung', { id: uuid(), datum: dv, betrag: bf.signSel.value === '-' ? -cents : cents, kontaktId: k.id, kategorieId: kat.value, text: text.value.trim(), created: Date.now() });
+      busy = true;
+      try { await db.put('buchung', { id: uuid(), datum: dv, betrag: bf.signSel.value === '-' ? -cents : cents, kontaktId: k.id, kategorieId: kat.value, text: text.value.trim(), created: Date.now() }); } catch (e) { busy = false; throw e; }
       toast('Buchung gespeichert');
       lastDatum = dv;
       draw(true);
