@@ -31,7 +31,7 @@ export function helpContent() {
         h('span', {}, b('Vorzeichen + / −: '), 'Kunde: + ist eine Einnahme, − eine Rückzahlung. Lieferant: − ist eine Ausgabe, + eine Gutschrift. Ob Einnahme oder Ausgabe, ergibt sich aus dem Kontakt und der Kategorie.'),
         h('span', {}, b('Kategorie und Text: '), 'Die Kategorien passen zum Kontakt (Kunde: Einnahmen, Lieferant: Ausgaben). Der Buchungstext ist optional.'),
         h('span', {}, b('Buttons: '), '„Abbrechen“ verwirft die Eingabe und geht zum Menü. „Speichern & neu“ speichert und lässt das Formular für die nächste Buchung leer. „Speichern“ speichert, fragt nach einer Datensicherung und geht danach zum Menü.'),
-        h('span', {}, b('Zuletzt erfasst: '), 'Unter dem Formular stehen die zuletzt erfassten Buchungen; antippen zum Bearbeiten.'),
+        h('span', {}, b('Zuletzt erfasst: '), 'Unter dem Formular stehen die zuletzt erfassten Buchungen; antippen zum Bearbeiten, bei positiven Einnahmen mit Druck-Icon für die Quittung.'),
       )),
 
     sec('4. Kassenbuch',
@@ -45,7 +45,8 @@ export function helpContent() {
       ul(
         'Suche und Kategorie-Filter; „+ Neu“ legt einen Kontakt an, antippen öffnet ihn.',
         'Pro Kontakt: Adresse, Geschlecht/Firma, Anrede (Du/Sie), mehrere Telefonnummern/E-Mails (nur eine kann „bevorzugt“ sein), Kundenkategorie, Gesundheitsangaben und Notizen.',
-        'Der Button „Buchungen“ zeigt alle Buchungen des Kontakts, neueste zuerst.',
+        'Der Button „Buchungen“ zeigt alle Buchungen des Kontakts, neueste zuerst (bei Einnahmen mit Quittungs-Icon). Oben kannst du direkt eine neue Buchung erfassen: Das Datum lässt sich tippen (der Tag ist markiert) oder über 📅 im Kalender wählen und bleibt nach „Buchen“ stehen; Betrag und Kategorie sind aus der jüngsten Buchung vorbelegt, der Buchungstext ist leer. „Buchen“ speichert, der Dialog bleibt offen.',
+        'Neben Telefonnummern und E-Mail-Adressen öffnen ☎ und ✉ die Telefon- bzw. Mail-App.',
         'Beim Speichern warnt die Dublettenprüfung vor gleichnamigen Kontakten mit gleicher PLZ oder gleicher Telefonnummer und listet alle Treffer.',
         'Löschen: Die Buchungen bleiben erhalten und werden „Gelöschter Kunde“ bzw. „Gelöschter Lieferant“ zugeordnet.',
       )),
@@ -56,25 +57,26 @@ export function helpContent() {
         h('span', {}, b('Dateiname: '), 'JJJJMMTT-HHMMSS-Gerät-vVersion.enc. Den Gerätenamen legst du in den Einstellungen fest. Er steht nur im Dateinamen, nicht in der Sicherung.'),
         h('span', {}, b('Speicherort: '), 'iPhone/iPad: im Teilen-Dialog „In Dateien sichern“ (z. B. iCloud Drive). Desktop (Chrome/Edge): in den Einstellungen einen Standardordner wählen, dann wird dort direkt gespeichert. Optional werden ältere Sicherungen automatisch bis zur eingestellten Anzahl gelöscht (andere Dateien bleiben unberührt).'),
         h('span', {}, b('Restore: '), 'Auf dem Willkommensscreen oder in den Einstellungen. Du wählst eine Sicherung (mit Gerät und Datum), gibst das Passwort ein und bestätigst. Die lokalen Daten werden durch die Sicherung ersetzt.'),
-        h('span', {}, b('Daten prüfen: '), 'Liest die Dateinamen der Sicherungen (Standardordner bzw. Dateiauswahl) und vergleicht die jüngste mit dem lokalen Stand. Grün = aktuell, weiter zur Buchung. Gelb = neuere Sicherung vorhanden (Restore empfohlen) oder ungesicherte lokale Änderungen (jetzt sichern). Rot = neuere Sicherung und ungesicherte Änderungen: ein Restore würde die lokalen Änderungen überschreiben, zuerst sichern.'),
+        h('span', {}, b('Daten prüfen: '), 'Liest die Dateinamen der Sicherungen (Standardordner bzw. Dateiauswahl) und vergleicht die jüngste mit dem lokalen Stand. Grün = aktuell, weiter (zum Menü bzw. zur Buchung, je nach Einstellung „Start“). Gelb = neuere Sicherung vorhanden (Restore empfohlen) oder ungesicherte lokale Änderungen (jetzt sichern). Rot = neuere Sicherung und ungesicherte Änderungen: ein Restore würde die lokalen Änderungen überschreiben, zuerst sichern.'),
       )),
 
     sec('7. Auswertungen',
       ul(
         'Reiter: Perioden, Kategorien, Kundenliste, Treuhänder. Reiter und Periode bleiben beim Scrollen oben stehen.',
         'Periode mit Von/Bis oder den Schnellwahlen (Monat, Vormonat, Jahr, Vorjahr). „VJ-Vergleich“ zeigt zusätzlich die Vorjahreswerte und die Differenz.',
-        'Perioden: Einnahmen (Kunden) und Ausgaben (Lieferanten) nach Kategorie und nach Monat. Kategorien: Kunden nach Kundenkategorie, Lieferanten nach Lieferant.',
-        'Kundenliste: Vorname, Name, Betrag nach Tag mit Total pro Monat; „Drucken / PDF“ oben rechts.',
-        'Treuhänder: Excel-Datei mit Buchungen und Summen. Es werden keine Kundendaten exportiert – bei Kunden stehen weder Name noch Buchungstext in der Datei, bei Lieferanten beides. Ein Hinweis erscheint, wenn eine Buchung nicht zum Kontakttyp passt.',
+        'Perioden: Einnahmen (Kunden) und Ausgaben (Lieferanten) nach Kategorie und nach Monat. Kategorien: Kunden nach Kundenkategorie, Lieferanten nach Lieferant; eine Lieferantenzeile antippen zeigt die Aufteilung nach Buchungskategorie.',
+        'Kundenliste: zuerst die Kundenkategorie wählen. Vorname, Name, Betrag nach Tag mit Total pro Monat, im Kopf der Firmenname; „Drucken / PDF“ oben rechts (erst mit gewählter Kategorie).',
+        'Treuhänder: Jahr wählen (Vorgabe: Vorjahr; es wird immer ein ganzes Jahr exportiert) und die Zusammenfassungsebene (Einzelbuchung, Tag, Monat – Vorgabe –, Jahr). Excel-Datei: Tab 1 mit Firma, Adresse, Zeitraum, Erzeugungszeitpunkt und Ebene; Tab 2 mit den Buchungen (Datum/Monat/Jahr, Lieferant, Kundenkategorie, Buchungskategorie, Betrag), ohne Summen. Bei Kunden stehen weder Name noch Buchungstext in der Datei, bei Lieferanten der Name. Ein Hinweis erscheint, wenn eine Buchung nicht zum Kontakttyp passt.',
       )),
 
     sec('8. Einstellungen',
       ul(
         'Eigene Firma: erscheint auf Quittungen und kann bei Ausgaben als Kontakt gewählt werden.',
-        'Kategorien für Kunden, Einnahmen und Ausgaben: neu, ändern, löschen (löschen nur, wenn sie nirgends verwendet werden).',
+        'Start: Nach „Daten prüfen“ öffnet sich das Menü oder die Buchung.',
         'Gerät: Gerätename für die Dateinamen der Sicherungen.',
         'Datensicherung: Sicherung erstellen, Restore, Standardordner (nur Desktop-Browser) und automatisches Löschen alter Sicherungen.',
         'PIN ändern.',
+        'Kategorien für Kunden, Einnahmen und Ausgaben (zuunterst): neu, ändern, löschen (löschen nur, wenn sie nirgends verwendet werden).',
       )),
 
     sec('9. Beenden',
