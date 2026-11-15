@@ -3,6 +3,7 @@ import * as db from './db.js';
 import { h, uuid, normalize } from './util.js';
 import { showModal, confirmDlg, field, checkField, toast, datumField } from './ui.js';
 import { nav } from './nav.js';
+import { printQuittung } from './kassenbuch.js';
 import { fmtDate, chf, today, parseBetrag } from './util.js';
 import { betragFields, kategorienFor, prefillFor } from './kontaktpick.js';
 
@@ -81,7 +82,8 @@ function showKontaktBuchungen(k) {
     doSave = save;
     const form = h('div', { class: 'stack' }, field('Datum', df.el), bf.el, field('Buchungskategorie', kat), field('Buchungstext', text));
     const list = h('div', { class: 'list' }, ...(bs.length ? bs.map((b) => h('div', { class: 'row static' },
-      h('div', { class: 'row-main' }, h('strong', {}, fmtDate(b.datum)), h('span', { class: b.betrag < 0 ? 'out' : 'in' }, chf(b.betrag))),
+      h('div', { class: 'row-main' }, h('strong', {}, fmtDate(b.datum)), h('div', { class: 'amt' }, h('span', { class: b.betrag < 0 ? 'out' : 'in' }, chf(b.betrag)),
+        db.artOf(b) === 'einnahme' && b.betrag > 0 ? h('button', { type: 'button', class: 'print-btn', title: 'Quittung drucken', 'aria-label': 'Quittung drucken', onclick: () => printQuittung(b) }, '🖨') : null)),
       h('div', { class: 'row-sub muted' }, [db.data.buchungskategorie.get(b.kategorieId)?.name, b.text].filter(Boolean).join(' · ')))) : [h('p', { class: 'muted pad' }, 'Keine Buchungen vorhanden.')]));
     body.replaceChildren(form, h('p', { class: 'muted small' }, `${bs.length} Buchung${bs.length === 1 ? '' : 'en'} · Total ${chf(total)}`), list);
     if (focusDatum) setTimeout(() => datum.focus(), 0);

@@ -9,7 +9,7 @@ import { nav } from './nav.js';
 const state = {
   tab: 'perioden',
   custom: false, from: '', to: '',
-  senKat: '', vj: false, level: 'monat',
+  senKat: '', vj: false, level: 'monat', year: String(new Date().getFullYear() - 1),
 };
 const REPORTS = [
   ['perioden', 'Perioden'], ['kategorien', 'Kategorien'], ['senioren', 'Kundenliste'], ['treuhaender', 'Treuhänder'],
@@ -26,13 +26,22 @@ export function auswertungenScreen() {
   const body = { perioden, kategorien, senioren, treuhaender }[state.tab]();
   const vjBtn = state.tab === 'perioden' || state.tab === 'kategorien'
     ? h('button', { type: 'button', class: `btn small toggle${state.vj ? ' on' : ''}`, 'aria-pressed': String(state.vj), title: 'Vorjahresvergleich', onclick: () => { state.vj = !state.vj; nav.refresh(); } }, 'VJ-Vergleich') : null;
-  const bar = periodBar({ from: state.from, to: state.to, extra: vjBtn, onSet: (f, t) => { state.from = f; state.to = t; state.custom = true; nav.refresh(); } });
+  const bar = state.tab === 'treuhaender' ? yearBar() : periodBar({ from: state.from, to: state.to, extra: vjBtn, onSet: (f, t) => { state.from = f; state.to = t; state.custom = true; nav.refresh(); } });
   // Kopfbereich (Reiter + Periode) bleibt beim Scrollen stehen
   return {
     title: 'Auswertungen', back: 'menu',
     actions: body._print ? [h('button', { class: 'btn', onclick: body._print }, 'Drucken / PDF')] : [],
     node: h('div', { class: 'stack' }, h('div', { class: 'sticky-head' }, tabs, bar), body),
   };
+}
+
+/** Treuhänder: immer ein ganzes Jahr (Vorgabe: Vorjahr) */
+function yearBar() {
+  const cy = new Date().getFullYear();
+  const years = new Set([cy, cy - 1, +state.year, ...db.buchungenList().map((b) => +b.datum.slice(0, 4))]);
+  const sel = h('select', { 'aria-label': 'Jahr', onchange: () => { state.year = sel.value; nav.refresh(); } }, ...[...years].sort((a, b) => b - a).map((y) => h('option', { value: String(y) }, String(y))));
+  sel.value = state.year;
+  return field('Jahr', sel);
 }
 
 // ---- Vorjahresvergleich (optional) -------------------------------------------------------
@@ -169,7 +178,7 @@ export function treuhaenderRows(from, to, level = 'monat', now = Date.now()) {
   const bs = db.buchungenList().filter((b) => b.datum >= from && b.datum <= to);
   const B = (s) => ({ s, b: true });
   const eig = db.eigene();
-  const firma = [[B(db.kontaktName(eig))], ['Zeitraum', `${fmtDate(from)} – ${fmtDate(to)}`], ['Erzeugt', fmtDateTime(now)], ['Zusammenfassung', levelLabel(level)]];
+  const firma = [[B(db.kontaktName(eig))], ...[eig.strasse, [eig.plz, eig.ort].filter(Boolean).join(' ')].filter(Boolean).map((l) => [l]), ['Zeitraum', `${fmtDate(from)} – ${fmtDate(to)}`], ['Erzeugt', fmtDateTime(now)], ['Zusammenfassung', levelLabel(level)]];
 
   const periodKey = (b) => (level === 'jahr' ? b.datum.slice(0, 4) : level === 'monat' ? b.datum.slice(0, 7) : b.datum);
   const periodCell = (k) => (level === 'jahr' ? k : level === 'monat' ? `${k.slice(5, 7)}.${k.slice(0, 4)}` : { d: k });
@@ -194,7 +203,8 @@ export function treuhaenderRows(from, to, level = 'monat', now = Date.now()) {
 }
 
 function treuhaender() {
-  const { count, unstimmig } = treuhaenderRows(state.from, state.to, state.level);
+  const from = `${state.year}-01-01`, to = `${state.year}-12-31`;
+  const { count, unstimmig } = treuhaenderRows(from, to, state.level);
   const eig = db.eigene();
   const levels = segmented(LEVELS.map(([value, label]) => ({ value, label })), state.level, (v) => { state.level = v; nav.refresh(); });
   return h('div', { class: 'stack' },
@@ -203,14 +213,14 @@ function treuhaender() {
       h('p', { class: 'notice' }, 'Hinweis: Es werden keine personenbezogenen Daten exportiert. Kunden erscheinen nur mit ihrer Kategorie, ohne Name und Buchungstext; bei Lieferanten steht der Name.'),
       unstimmig ? h('p', { class: 'notice' }, `Hinweis: ${unstimmig} Buchung${unstimmig === 1 ? '' : 'en'} mit unstimmiger Zuordnung (Kategorie passt nicht zum Kontakttyp, z. B. nach Typwechsel eines Kontakts). Bitte vor dem Versand prüfen.`) : null,
       field('Zusammenfassungsebene', levels),
-      h('p', { class: 'muted' }, `${count} Buchungen im Zeitraum ${fmtDate(state.from)} – ${fmtDate(state.to)}.`),
+      h('p', { class: 'muted' }, `${count} Buchungen im Jahr ${state.year}.`),
       h('button', { class: 'btn primary', disabled: !count, onclick: async () => {
-        const { firma, buchungen } = treuhaenderRows(state.from, state.to, state.level);
+        const { firma, buchungen } = treuhaenderRows(from, to, state.level);
         const bytes = buildXlsx([
           { name: db.kontaktName(eig).slice(0, 31).replace(/[\\/?*[\]:]/g, ' ') || 'Firma', rows: firma, widths: [24, 30] },
           { name: 'Buchungen', rows: buchungen, widths: [14, 30, 24, 24, 14] },
         ]);
-        const name = `kassenbuch-treuhaender-${state.from}_${state.to}.xlsx`;
+        const name = `kassenbuch-treuhaender-${state.year}.xlsx`;
         await saveBlob(new Blob([bytes], { type: XLSX_MIME }), name);
         toast(`Excel erstellt: ${name}`);
       } }, 'Excel-Datei erstellen'),
