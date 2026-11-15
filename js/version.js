@@ -8,7 +8,7 @@ export const VERSION = `${MAJOR}.${MINOR}.${BRANCH_CODE}`;
 
 // Kurze Beschreibung je Änderung (neueste zuerst)
 export const CHANGES = [
-  { v: '0.23', text: 'Treuhänder-Excel: erster Tab Firma, danach Tabs Kunden und Lieferanten gruppiert; Kundenliste mit Firmenkopf; Einstellung Start mit Menü oder Buchung; Buchungen eines Kontakts direkt erfassen; Telefon/E-Mail öffnet die App.' },
+  { v: '0.23', text: 'Treuhänder-Excel: erster Tab Firma, danach Tabs Kunden und Lieferanten gruppiert; Kundenliste mit Firmenkopf; Einstellung Start mit Menü oder Buchung; Buchungen eines Kontakts direkt erfassen (mit Buchungstext); Telefon/E-Mail öffnet die App.' },
   { v: '0.22', text: 'Benutzerhilfe (Infos → Hilfe, druckbar).' },
   { v: '0.21', text: 'Offlinefähig (Service Worker), Datumsvorgaben aktuell bei offener App, Treuhänder-Export mit einheitlicher Datenschutzregel und Hinweis, Schutz vor manipulierten Backup-Dateien, Tests, README.' },
   { v: '0.20', text: 'PIN-Dialog nach oben (Tastatur überdeckt nichts); Testdaten-Bereich nur im Entwicklermodus; Beenden ohne Rückfrage nach Sicherung, wenn alles gesichert ist.' },

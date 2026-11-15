@@ -52,7 +52,7 @@ export function kontakteScreen(typ) {
 /** Alle Buchungen eines Kunden/Lieferanten (nach Datum absteigend) mit Schnellerfassung einer neuen Buchung */
 function showKontaktBuchungen(k) {
   const body = h('div', { class: 'stack' });
-  let ctl = null;
+  let doSave = async () => {};
   const draw = (focusDatum) => {
     const bs = db.buchungenOf(k.id).sort((a, b) => (a.datum === b.datum ? (b.created || 0) - (a.created || 0) : a.datum < b.datum ? 1 : -1));
     const total = bs.reduce((s, b) => s + b.betrag, 0);
@@ -63,21 +63,22 @@ function showKontaktBuchungen(k) {
     const cats = kategorienFor(k);
     const kat = h('select', { 'aria-label': 'Buchungskategorie' }, h('option', { value: '' }, '– wählen –'), ...cats.map((c) => h('option', { value: c.id }, c.name)));
     kat.value = p.kategorieId;
+    const text = h('input', { type: 'text', placeholder: 'optional', autocomplete: 'off', 'aria-label': 'Buchungstext' });
     const save = async () => {
       const cents = parseBetrag(bf.input.value);
       if (!datum.value) { toast('Bitte ein Datum wählen.', 'err'); datum.focus(); return; }
       if (!cents) { toast('Bitte einen Betrag grösser als 0 erfassen.', 'err'); bf.input.focus(); return; }
       if (!kat.value) { toast('Bitte eine Buchungskategorie wählen.', 'err'); kat.focus(); return; }
-      await db.put('buchung', { id: uuid(), datum: datum.value, betrag: bf.signSel.value === '-' ? -cents : cents, kontaktId: k.id, kategorieId: kat.value, text: '', created: Date.now() });
+      await db.put('buchung', { id: uuid(), datum: datum.value, betrag: bf.signSel.value === '-' ? -cents : cents, kontaktId: k.id, kategorieId: kat.value, text: text.value.trim(), created: Date.now() });
       toast('Buchung gespeichert');
       draw(true);
     };
     datum.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); bf.input.focus(); bf.input.select(); } });
     bf.input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); kat.focus(); } });
-    kat.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); save(); } });
-    const form = h('fieldset', { class: 'fs' }, h('legend', {}, 'Neue Buchung'),
-      h('div', { class: 'stack' }, field('Datum', datum), bf.el, field('Buchungskategorie', kat),
-        h('button', { type: 'button', class: 'btn primary', onclick: save }, 'Buchung speichern')));
+    kat.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); text.focus(); } });
+    text.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); save(); } });
+    doSave = save;
+    const form = h('div', { class: 'stack' }, field('Datum', datum), bf.el, field('Buchungskategorie', kat), field('Buchungstext', text));
     const list = h('div', { class: 'list' }, ...(bs.length ? bs.map((b) => h('div', { class: 'row static' },
       h('div', { class: 'row-main' }, h('strong', {}, fmtDate(b.datum)), h('span', { class: b.betrag < 0 ? 'out' : 'in' }, chf(b.betrag))),
       h('div', { class: 'row-sub muted' }, [db.data.buchungskategorie.get(b.kategorieId)?.name, b.text].filter(Boolean).join(' · ')))) : [h('p', { class: 'muted pad' }, 'Keine Buchungen vorhanden.')]));
@@ -85,8 +86,8 @@ function showKontaktBuchungen(k) {
     if (focusDatum) setTimeout(() => datum.focus(), 0);
   };
   draw(true);
-  ctl = showModal({ title: `Buchungen: ${db.kontaktName(k)}`, wide: true, body, buttons: [{ label: 'Schliessen', cls: 'primary' }] });
-  return ctl.closed;
+  return showModal({ title: `Buchungen: ${db.kontaktName(k)}`, wide: true, body,
+    buttons: [{ label: 'Schliessen' }, { label: 'Buchen', cls: 'primary', onClick: async () => { await doSave(); return false; } }] }).closed;
 }
 
 /**
