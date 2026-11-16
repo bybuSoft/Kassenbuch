@@ -81,6 +81,14 @@ export function helpContent() {
         'Kategorien für Kunden, Einnahmen und Ausgaben (zuunterst): neu, ändern, löschen (löschen nur, wenn sie nirgends verwendet werden).',
       )),
 
+    sec('8a. Notizen',
+      ul(
+        'Infos → „Notizen“ (neben „Hilfe“): freie Notizen mit Titel und Text. „• Punkt einfügen“ setzt einen Aufzählungspunkt; Enter in einer Punktzeile beginnt den nächsten Punkt, ein leerer Punkt beendet die Liste.',
+        'Bilder/Screenshots: „Bild / Screenshot wählen“ (iPhone/iPad: Fotos, dort liegen auch Bildschirmfotos), „Bild aus Zwischenablage“ oder per Einfügen (Strg+V bzw. langes Tippen → Einfügen) ins Textfeld. Bilder werden verkleinert gespeichert (höchstens 12 pro Notiz); antippen vergrössert, × entfernt.',
+        'Senden: Die Empfängeradresse steht in den Einstellungen unter „Notizen“. „Senden“ öffnet die E-Mail-App mit Adresse, Betreff und Text. Bilder lassen sich dort nicht anhängen: bei Notizen mit Bildern gibt es zusätzlich „Teilen mit Bildern“ (Mail wählen, Adresse selbst eintragen). E-Mail ist nicht verschlüsselt: keine sensiblen Kundendaten senden.',
+        'Notizen sind Teil der Datensicherung (die Empfängeradresse nicht).',
+      )),
+
     sec('9. Beenden',
       h('p', {}, 'Im Menü „Beenden“: Sind alle Änderungen gesichert, bestätigst du mit OK. Gibt es ungesicherte Änderungen, kannst du vorher sichern. Danach ist die App gesperrt. Eine Web-App kann sich nicht selbst schliessen: auf iPhone/iPad nach oben wischen.')),
 

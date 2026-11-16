@@ -149,3 +149,13 @@ main.lockpos{align-items:flex-start;min-height:0;padding-top:max(24px,8vh)}
 input[aria-invalid=true]{border-color:#c0392b;box-shadow:0 0 0 1px #c0392b}
 .drill:focus-visible{outline:2px solid var(--pri);outline-offset:-2px}
 .comm-add{display:flex;gap:8px}
+
+/* Notizen */
+.note-row{display:flex;gap:10px;align-items:center;text-align:left;width:100%;background:none;border:0;border-bottom:1px solid var(--line);padding:8px 0;color:inherit;font:inherit;cursor:pointer}
+.note-row:last-child{border-bottom:0}
+.note-main{display:flex;flex-direction:column;min-width:0;flex:1}.note-sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.85rem}
+.note-thumb{width:48px;height:48px;object-fit:cover;border-radius:8px;flex:none}
+.note-imgs{display:flex;flex-wrap:wrap;gap:8px}.note-img{position:relative}
+.note-img img{width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid var(--line);display:block}
+.note-img .icon-btn{position:absolute;top:2px;right:2px;background:var(--card);border-radius:50%;width:28px;height:28px;min-width:0;min-height:0;font-size:1.2rem;line-height:1}
+.note-full{max-width:100%;height:auto;display:block;border-radius:8px}
