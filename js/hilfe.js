@@ -27,7 +27,7 @@ export function helpContent() {
       ul(
         h('span', {}, b('Datum: '), 'Vorgabe ist der heutige Tag, solange du es nicht änderst.'),
         h('span', {}, b('Kunde/Lieferant: '), 'Name oder Vorname eintippen, in der Trefferliste den Kontakt antippen. Gesucht wird nur in den Namen. Gibt es den Kontakt noch nicht: „+ Neuer Kunde“ bzw. „+ Neuer Lieferant“.'),
-        h('span', {}, b('Betrag: '), 'Nach der Kontaktwahl werden Vorzeichen, Betrag und Kategorie aus der letzten Buchung dieses Kontakts vorbelegt. Der Betrag ist markiert und kann direkt überschrieben werden.'),
+        h('span', {}, b('Betrag: '), 'Nach der Kontaktwahl werden Vorzeichen, Betrag und Kategorie aus der letzten Buchung dieses Kontakts vorbelegt. Der Betrag ist markiert und kann direkt überschrieben werden. Ein Betrag von 0 ist erlaubt, löst aber eine Warnung aus („Abbrechen“ oder „Trotzdem speichern“); ein leeres oder ungültiges Betragsfeld wird abgelehnt.'),
         h('span', {}, b('Vorzeichen + / −: '), 'Kunde: + ist eine Einnahme, − eine Rückzahlung. Lieferant: − ist eine Ausgabe, + eine Gutschrift. Ob Einnahme oder Ausgabe, ergibt sich aus dem Kontakt und der Kategorie.'),
         h('span', {}, b('Kategorie und Text: '), 'Die Kategorien passen zum Kontakt (Kunde: Einnahmen, Lieferant: Ausgaben). Der Buchungstext ist optional.'),
         h('span', {}, b('Buttons: '), '„Abbrechen“ verwirft die Eingabe und geht zum Menü. „Speichern & neu“ speichert und lässt das Formular für die nächste Buchung leer. „Speichern“ speichert, fragt nach einer Datensicherung und geht danach zum Menü.'),
