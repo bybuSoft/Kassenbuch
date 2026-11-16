@@ -3,7 +3,7 @@
 // BRANCH_CODE wird beim Commit automatisch gesetzt (tools/set-version.sh, Hook in .githooks/).
 export const MAJOR = 0;
 export const MINOR = 30;
-export const BRANCH_CODE = 'mopsdl';
+export const BRANCH_CODE = 'deq22i';
 export const VERSION = `${MAJOR}.${MINOR}.${BRANCH_CODE}`;
 
 // Kurze Beschreibung je Änderung (neueste zuerst)
