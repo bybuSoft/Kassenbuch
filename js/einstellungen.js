@@ -8,6 +8,7 @@ import { createTestData, removeTestData, hasTestData } from './testdata.js';
 import { VERSION, CHANGES } from './version.js';
 import { startBackup, startRestore, folderSupported, backupFolder, chooseBackupFolder, clearBackupFolder, pruneSettings } from './backup.js';
 import { nav } from './nav.js';
+import { validMail } from './notizen.js';
 
 /** Liste der Kategorien mit Neu/Ändern/Löschen (nur wenn nirgends verwendet) */
 function kategorieCard(title, store, art) {
@@ -73,6 +74,14 @@ export function einstellungenScreen() {
         field('Gerätename', h('input', { type: 'text', value: db.deviceName(), placeholder: 'z. B. iPhone-Marlene', autocomplete: 'off',
           onchange: async (e) => { await db.setMeta('deviceName', e.target.value.trim()); toast('Gerätename gespeichert'); } })),
         h('p', { class: 'muted' }, 'Wird Teil des Dateinamens der Datensicherung und beim Restore angezeigt. Er wird nicht in der Sicherung gespeichert.')),
+      h('div', { class: 'card stack' }, h('h3', {}, 'Notizen'),
+        field('Empfänger-E-Mail für „Senden“', h('input', { type: 'email', inputmode: 'email', value: db.data.meta.notizMail || '', placeholder: 'name@beispiel.ch', autocomplete: 'off', autocapitalize: 'off',
+          onchange: async (e) => {
+            const v = e.target.value.trim();
+            if (v && !validMail(v)) { e.target.setAttribute('aria-invalid', 'true'); toast('Ungültige E-Mail-Adresse', 'err'); return; }
+            e.target.removeAttribute('aria-invalid'); await db.setMeta('notizMail', v); toast(v ? 'Adresse gespeichert' : 'Adresse entfernt');
+          } })),
+        h('p', { class: 'muted' }, 'Notizen (Infos → Notizen) werden an diese Adresse gesendet. Sie wird nicht in der Datensicherung gespeichert.')),
       h('div', { class: 'card stack' }, h('h3', {}, 'Datensicherung'),
         h('p', { class: 'muted' }, `Letzte Änderung der Daten: ${fmtDateTime(db.data.meta.lastChange)}\nLetzte Datensicherung: ${fmtDateTime(db.data.meta.lastBackup)}`),
         folderSupported()
@@ -104,7 +113,7 @@ export function einstellungenScreen() {
 
 export function infosScreen() {
   return {
-    title: 'Infos', back: 'menu', actions: [h('button', { class: 'btn primary', onclick: () => nav.go('hilfe') }, 'Hilfe')],
+    title: 'Infos', back: 'menu', actions: [h('button', { class: 'btn', onclick: () => nav.go('notizen') }, 'Notizen'), h('button', { class: 'btn primary', onclick: () => nav.go('hilfe') }, 'Hilfe')],
     node: h('div', { class: 'stack' }, h('div', { class: 'card stack' }, h('h3', {}, `Kassenbuch Version ${VERSION}`),
       h('p', { class: 'muted' }, 'Die dritte Stelle der Versionsnummer ist der Branch-Code, die ersten beiden werden manuell vergeben.'),
       h('h4', {}, 'Versionsverlauf'),

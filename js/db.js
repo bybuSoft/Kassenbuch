@@ -3,8 +3,10 @@
 import { uuid, normalize, collator } from './util.js';
 
 const DB_NAME = 'kassenbuch';
-const DB_VERSION = 1;
-export const STORES = ['kontakt', 'kommunikation', 'kundenkategorie', 'buchungskategorie', 'buchung'];
+const DB_VERSION = 2; // 2: Store „notiz“
+export const STORES = ['kontakt', 'kommunikation', 'kundenkategorie', 'buchungskategorie', 'buchung', 'notiz'];
+/** Tabellen, die in jeder Sicherung vorkommen müssen (Sicherungen vor Version 0.32 haben keine Notizen). */
+const REQUIRED_STORES = STORES.filter((s) => s !== 'notiz');
 const ALL_STORES = [...STORES, 'meta'];
 
 /** Entwicklermodus (Testdaten): nur im Arbeitsspeicher, gilt bis zum Sperren/Beenden/Schliessen der App. */
@@ -13,7 +15,7 @@ export const devMode = { unlocked: false };
 /** Cache: je Tabelle eine Map id -> Objekt; meta ist ein einfaches Objekt key -> value */
 export const data = {
   kontakt: new Map(), kommunikation: new Map(), kundenkategorie: new Map(),
-  buchungskategorie: new Map(), buchung: new Map(), meta: {},
+  buchungskategorie: new Map(), buchung: new Map(), notiz: new Map(), meta: {},
 };
 
 let idb = null;
@@ -32,7 +34,7 @@ export async function init() {
   idb = await new Promise((resolve, reject) => {
     const r = indexedDB.open(DB_NAME, DB_VERSION);
     r.onupgradeneeded = () => {
-      for (const s of ALL_STORES) r.result.createObjectStore(s, { keyPath: s === 'meta' ? 'key' : 'id' });
+      for (const s of ALL_STORES) if (!r.result.objectStoreNames.contains(s)) r.result.createObjectStore(s, { keyPath: s === 'meta' ? 'key' : 'id' });
     };
     r.onsuccess = () => resolve(r.result);
     r.onerror = () => reject(r.error);
@@ -189,6 +191,11 @@ export async function deleteKontakt(id) {
   await batch(ops);
 }
 
+// ---- Notizen -------------------------------------------------------------
+/** Neue Notiz: Titel, Text (Punkte mit „• “) und Bilder (Data-URLs, damit sie unverändert in der Sicherung mitgehen). */
+export const newNotiz = (over = {}) => ({ id: uuid(), titel: '', text: '', bilder: [], created: Date.now(), modified: Date.now(), ...over });
+export const notizenList = () => [...data.notiz.values()].sort((a, b) => (b.modified || 0) - (a.modified || 0));
+
 // ---- Snapshot / Restore ----------------------------------------------------
 export function snapshot() {
   const stores = {};
@@ -198,7 +205,7 @@ export function snapshot() {
 
 export function validateSnapshot(snap) {
   if (!snap || snap.app !== 'kassenbuch' || !snap.stores) throw new Error('Das ist keine Kassenbuch-Datensicherung.');
-  for (const s of STORES) if (!Array.isArray(snap.stores[s])) throw new Error(`Datensicherung unvollständig (${s}).`);
+  for (const s of REQUIRED_STORES) if (!Array.isArray(snap.stores[s])) throw new Error(`Datensicherung unvollständig (${s}).`);
   const ids = (s) => new Set(snap.stores[s].map((o) => o.id));
   const kon = ids('kontakt'), kk = ids('kundenkategorie'), bk = ids('buchungskategorie');
   for (const b of snap.stores.buchung) if (!kon.has(b.kontaktId) || !bk.has(b.kategorieId)) throw new Error('Datensicherung inkonsistent (Buchung ohne Kontakt/Kategorie).');
@@ -214,7 +221,7 @@ export async function replaceAll(snap) {
   for (const s of STORES) {
     const os = tx.objectStore(s);
     os.clear();
-    snap.stores[s].forEach((o) => os.put(o));
+    (snap.stores[s] || []).forEach((o) => os.put(o));
   }
   const m = tx.objectStore('meta');
   m.put({ key: 'lastChange', value: snap.lastChange || 0 });

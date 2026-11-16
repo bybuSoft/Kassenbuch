@@ -9,6 +9,7 @@ import { kassenbuchScreen } from './kassenbuch.js';
 import { buchungScreen } from './buchung.js';
 import { menuScreen } from './menu.js';
 import { hilfeScreen } from './hilfe.js';
+import { notizenScreen } from './notizen.js';
 import { kontakteScreen } from './kontakte.js';
 import { auswertungenScreen } from './auswertungen.js';
 import { einstellungenScreen, infosScreen } from './einstellungen.js';
@@ -65,6 +66,7 @@ const screens = {
   einstellungen: einstellungenScreen,
   infos: infosScreen,
   hilfe: hilfeScreen,
+  notizen: notizenScreen,
 };
 
 function render() {
