@@ -2,12 +2,13 @@
 // (die Zeichen nach dem letzten "-" im Branch-Namen, z. B. claude/festive-cray-4a3xvr -> 4a3xvr).
 // BRANCH_CODE wird beim Commit automatisch gesetzt (tools/set-version.sh, Hook in .githooks/).
 export const MAJOR = 0;
-export const MINOR = 30;
-export const BRANCH_CODE = 'mopsdl';
+export const MINOR = 31;
+export const BRANCH_CODE = 'deq22i';
 export const VERSION = `${MAJOR}.${MINOR}.${BRANCH_CODE}`;
 
 // Kurze Beschreibung je Änderung (neueste zuerst)
 export const CHANGES = [
+  { v: '0.31', text: 'Kontakte: Geburtsdatum tippbar, „Speichern und neu“, Dublettenprüfung auch bei reinen Namenseinträgen, Druck mit allen Feldern, Datum im Buchungsdialog ganz markiert.' },
   { v: '0.30', text: 'Dublettenprüfung erweitert: Kontakte auch über gemeinsame E-Mail-Adresse, Buchungen (gleicher Kontakt, Datum und Betrag) mit Rückfrage. Kunden/Lieferanten: Druckansicht aller gespeicherten Daten inkl. Buchungen (Auskunft DSGVO).' },
   { v: '0.29', text: 'Treuhänder-Export: Datumsspalte ist immer ein echtes Excel-Datum (bei Monat letzter Tag des Monats, bei Jahr 31.12.) für den Import.' },
   { v: '0.28', text: 'Auswertung Kategorien: aufgeklappte Lieferanten bleiben beim Neuzeichnen offen, Zeilen per Tastatur bedienbar.' },

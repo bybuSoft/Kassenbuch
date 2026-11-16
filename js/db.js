@@ -150,7 +150,7 @@ export function kategorieInUse(store, id) {
   return [...data.buchung.values()].some((b) => b.kategorieId === id);
 }
 
-/** Mögliche Dubletten: gleicher Name UND (gleiche PLZ ODER gemeinsame Telefonnummer ODER gemeinsame E-Mail-Adresse). */
+/** Mögliche Dubletten: gleicher Name UND (gleiche PLZ ODER gemeinsame Telefonnummer ODER gemeinsame E-Mail-Adresse ODER bei einem der Einträge keine weiteren Daten). */
 export function findDuplicates(k, comms) {
   const nm = normalize(kontaktName(k));
   if (!nm) return [];
@@ -165,7 +165,9 @@ export function findDuplicates(k, comms) {
     const oc = commsOf(o.id);
     const samePhone = oc.some((c) => c.typ === 'tel' && phones.has(digits(c.wert)));
     const sameMail = oc.some((c) => c.typ === 'mail' && mails.has(mailKey(c.wert)));
-    return samePlz || samePhone || sameMail;
+    // Ohne weitere Daten (nur Name) bei einem der beiden Einträge lässt sich nichts ausschliessen: ebenfalls warnen
+    const noData = (x, xc) => !(x.plz || '').trim() && !(x.ort || '').trim() && !(x.strasse || '').trim() && !xc.length;
+    return samePlz || samePhone || sameMail || noData(k, comms) || noData(o, oc);
   });
 }
 

@@ -14,22 +14,24 @@ export function printKontakt(k) {
   const comms = db.commsOf(k.id).sort((a, b) => (b.bevorzugt ? 1 : 0) - (a.bevorzugt ? 1 : 0));
   const bs = db.buchungenOf(k.id).sort((a, b) => (a.datum === b.datum ? (a.created || 0) - (b.created || 0) : a.datum < b.datum ? -1 : 1));
   const total = bs.reduce((s, b) => s + b.betrag, 0);
-  const row = (l, v) => (v ? h('tr', {}, h('th', {}, l), h('td', { class: 'pre' }, v)) : null);
-  const health = k.istLieferant ? [] : HEALTH.filter(([key]) => k[key]).map(([, label]) => label);
-  const adr = (c) => [c.strasse, [c.plz, c.ort].filter(Boolean).join(' ')].filter(Boolean);
+  const row = (l, v) => h('tr', {}, h('th', {}, l), h('td', { class: 'pre' }, v || '–')); // alle Felder andrucken, leere mit «–»
+    const adr = (c) => [c.strasse, [c.plz, c.ort].filter(Boolean).join(' ')].filter(Boolean);
 
+  const mails = comms.filter((c) => c.typ === 'mail'); const tels = comms.filter((c) => c.typ !== 'mail');
+  const commRows = (list, l) => (list.length ? list.map((c, i) => row(list.length > 1 ? `${l} ${i + 1}` : l, c.wert + (c.bevorzugt ? ' (bevorzugt)' : ''))) : [row(l, '')]);
   const stamm = h('table', { class: 'kd-tbl' },
     row('Art', k.istLieferant ? 'Lieferant' : 'Kunde'),
-    k.istLieferant ? row('Name 1', k.name1) : row('Vorname', k.vorname),
-    k.istLieferant ? row('Name 2', k.name2) : row('Name', k.name),
-    row('Geburtsdatum', fmtDate(k.geburtsdatum)),
-    row('Kundenkategorie', kat?.name),
+    ...(k.istLieferant
+      ? [row('Name 1', k.name1), row('Name 2', k.name2)]
+      : [row('Vorname', k.vorname), row('Name', k.name), row('Geburtsdatum', fmtDate(k.geburtsdatum)), row('Kundenkategorie', kat?.name)]),
     row('Geschlecht / Firma', GESCHLECHT[k.geschlecht]),
     row('Anrede', ANREDE[k.anrede]),
     row('Strasse', k.strasse),
-    row('PLZ / Ort', [k.plz, k.ort].filter(Boolean).join(' ')),
-    ...comms.map((c) => row(c.typ === 'mail' ? 'E-Mail' : 'Telefon', c.wert + (c.bevorzugt ? ' (bevorzugt)' : ''))),
-    row('Gesundheit', health.join(', ')),
+    row('PLZ', k.plz),
+    row('Ort', k.ort),
+    ...commRows(tels, 'Telefon'),
+    ...commRows(mails, 'E-Mail'),
+    ...(k.istLieferant ? [] : HEALTH.map(([key, label]) => row(label, k[key] ? 'Ja' : 'Nein'))),
     row('Notizen', (k.notizen || '').trim()),
     row('Erfasst am', k.created ? fmtDateTime(k.created) : ''));
 

@@ -45,12 +45,12 @@ export function helpContent() {
       ul(
         'Suche und Kategorie-Filter; „+ Neu“ legt einen Kontakt an, antippen öffnet ihn. Die Liste zeigt pro Kontakt Name, Adresse, Kategorie, bevorzugte Kommunikation und den Erstellungszeitpunkt (bei älteren Kontakten leer).',
         'Pro Kontakt: Adresse, Geschlecht/Firma, Anrede (Du/Sie), mehrere Telefonnummern/E-Mails (je eine Zeile; per „+ Telefon“ bzw. „+ E-Mail“ hinzufügen, direkt im Feld ändern, mit × löschen; genau eine ist „bevorzugt“, das Icon öffnet die Telefon-/Mail-App), Kundenkategorie, Gesundheitsangaben und Notizen.',
-        'Dublettenprüfung beim Speichern: gleicher Name und gleiche PLZ, Telefonnummer oder E-Mail-Adresse zeigt eine Warnung (mit „Trotzdem speichern“). Dasselbe gilt für Buchungen mit gleichem Kontakt, Datum und Betrag.',
-        'Drucken (Button im Kontakt): Blatt mit allen gespeicherten Daten des Kunden/Lieferanten und allen zugehörigen Buchungen, z. B. für Auskunftsbegehren nach Datenschutzrecht (auf iPhone/iPad: Drucken → Als PDF sichern).',
-        'Der Button „Buchungen“ zeigt alle Buchungen des Kontakts, neueste zuerst (bei Einnahmen mit Quittungs-Icon). Oben kannst du direkt eine neue Buchung erfassen: Das Datum lässt sich tippen (der Tag ist markiert) oder über 📅 im Kalender wählen und bleibt nach „Buchen“ stehen; Betrag und Kategorie sind aus der jüngsten Buchung vorbelegt, der Buchungstext ist leer. „Buchen“ speichert, der Dialog bleibt offen.',
+        'Neue Kontakte: „Speichern und neu“ speichert und öffnet sofort ein leeres Formular vom gleichen Typ. Das Geburtsdatum lässt sich tippen (TT.MM.JJJJ) oder über 📅 im Kalender wählen.',
+        'Dublettenprüfung beim Speichern: gleicher Name und gleiche PLZ, Telefonnummer oder E-Mail-Adresse zeigt eine Warnung (mit „Trotzdem speichern“); ebenso bei gleichem Namen, wenn einer der beiden Einträge sonst keine Daten (PLZ, Ort, Strasse, Telefon, E-Mail) hat. Dasselbe gilt für Buchungen mit gleichem Kontakt, Datum und Betrag.',
+        'Drucken (Button im Kontakt): Blatt mit allen Feldern des Kunden/Lieferanten (leere mit «–») und allen zugehörigen Buchungen, z. B. für Auskunftsbegehren nach Datenschutzrecht (auf iPhone/iPad: Drucken → Als PDF sichern).',
+        'Der Button „Buchungen“ zeigt alle Buchungen des Kontakts, neueste zuerst (bei Einnahmen mit Quittungs-Icon). Oben kannst du direkt eine neue Buchung erfassen: Das Datum lässt sich tippen (das ganze Datum ist markiert und direkt überschreibbar) oder über 📅 im Kalender wählen und bleibt nach „Buchen“ stehen; Betrag und Kategorie sind aus der jüngsten Buchung vorbelegt, der Buchungstext ist leer. „Buchen“ speichert, der Dialog bleibt offen.',
         'Neben Telefonnummern und E-Mail-Adressen öffnen ☎ und ✉ die Telefon- bzw. Mail-App.',
-        'Beim Speichern warnt die Dublettenprüfung vor gleichnamigen Kontakten mit gleicher PLZ oder gleicher Telefonnummer und listet alle Treffer.',
-        'Löschen: Die Buchungen bleiben erhalten und werden „Gelöschter Kunde“ bzw. „Gelöschter Lieferant“ zugeordnet.',
+                'Löschen: Die Buchungen bleiben erhalten und werden „Gelöschter Kunde“ bzw. „Gelöschter Lieferant“ zugeordnet.',
       )),
 
     sec('6. Datensicherung, Restore und „Daten prüfen“',

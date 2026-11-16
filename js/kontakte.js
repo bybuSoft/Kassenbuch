@@ -63,7 +63,7 @@ function showKontaktBuchungen(k) {
     const total = bs.reduce((s, b) => s + b.betrag, 0);
     // Neue Buchung: Datum (heute, änderbar), Betrag und Kategorie aus der jüngsten Buchung vorbelegt
     const p = prefillFor(k);
-    const df = datumField(lastDatum); const datum = df.input;
+    const df = datumField(lastDatum, { selectAll: true }); const datum = df.input;
     const bf = betragFields(p.sign, p.betrag);
     const cats = kategorienFor(k);
     const kat = h('select', { 'aria-label': 'Buchungskategorie' }, h('option', { value: '' }, '– wählen –'), ...cats.map((c) => h('option', { value: c.id }, c.name)));
@@ -126,7 +126,8 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
   const chkLief = h('input', { type: 'checkbox', checked: k.istLieferant, disabled: locked });
   const vorname = h('input', { value: k.vorname, autocomplete: 'off' });
   const name = h('input', { value: k.name, autocomplete: 'off' });
-  const geb = h('input', { type: 'date', value: k.geburtsdatum });
+  const gebF = datumField(k.geburtsdatum, { selectAll: true }); // manuell tippbar (TT.MM.JJJJ) oder per Kalender
+  const geb = gebF.el;
   const kat = h('select', {}, h('option', { value: '' }, '– keine –'),
     ...db.kategorienList('kundenkategorie').map((c) => h('option', { value: c.id }, c.name)));
   kat.value = k.kategorieId || '';
@@ -215,7 +216,7 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
   if (ex) buttons.push({ label: '🖨 Drucken', onClick: async () => { printKontakt(ex); return false; } });
   if (ex) buttons.push({ label: 'Buchungen', onClick: async () => { await showKontaktBuchungen(ex); return false; } });
   buttons.push({ label: 'Abbrechen', value: null });
-  buttons.push({ label: 'Speichern', cls: 'primary', onClick: async () => {
+  const saveFn = (again) => async () => {
     const lief = chkLief.checked;
     const out = { ...k, istLieferant: lief, geschlecht: geschlecht.value, anrede: anrede.value, strasse: strasse.value.trim(), plz: plz.value.trim(), ort: ort.value.trim(), notizen: notizen.value };
     if (lief) {
@@ -224,7 +225,8 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
     } else {
       out.vorname = vorname.value.trim(); out.name = name.value.trim();
       if (!out.name) { toast('Bitte einen Namen erfassen.', 'err'); name.focus(); return false; }
-      out.geburtsdatum = geb.value; out.kategorieId = kat.value || null;
+      if (gebF.input.value.trim() && !gebF.value) { toast('Ungültiges Geburtsdatum – bitte TT.MM.JJJJ erfassen.', 'err'); gebF.input.focus(); return false; }
+      out.geburtsdatum = gebF.value || ''; out.kategorieId = kat.value || null;
       HEALTH.forEach(([key]) => { out[key] = health[key].checked; });
     }
     const cl = comms.filter((c) => c.wert.trim()).map((c) => ({ ...c, wert: c.wert.trim() }));
@@ -240,10 +242,17 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
     cl.forEach((c) => ops.push({ op: 'put', store: 'kommunikation', obj: c }));
     await db.batch(ops);
     toast('Gespeichert');
-    return { saved: out.id };
-  } });
+    return { saved: out.id, again };
+  };
+  if (!ex) buttons.push({ label: 'Speichern und neu', onClick: saveFn(true) });
+  buttons.push({ label: 'Speichern', cls: 'primary', onClick: saveFn(false) });
 
   const ctl = showModal({ title: ex ? (k.istLieferant ? 'Lieferant bearbeiten' : 'Kunde bearbeiten') : (k.istLieferant ? 'Neuer Lieferant' : 'Neuer Kunde'), body, buttons, wide: true });
   const r = await ctl.closed;
-  return r && r.saved ? r.saved : null;
+  if (!(r && r.saved)) return null;
+  if (r.again) { // «Speichern und neu»: gleicher Typ, leeres Formular
+    const nextLock = lockType || (k.istLieferant ? 'lieferant' : 'kunde');
+    return (await editKontakt({ prefill: { istLieferant: k.istLieferant }, lockType: nextLock })) || r.saved;
+  }
+  return r.saved;
 }

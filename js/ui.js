@@ -138,7 +138,7 @@ export function printNode(node) {
 window.addEventListener('afterprint', () => document.getElementById('print-area')?.replaceChildren());
 
 /** Datumsfeld, das auch auf dem Handy getippt werden kann (TT.MM.JJJJ, Tag beim Antippen markiert) und einen Kalender-Button hat. */
-export function datumField(iso) {
+export function datumField(iso, { selectAll = false } = {}) {
   const fmt = (i) => (i ? i.split('-').reverse().join('.') : '');
   let cur = iso || '';
   const text = h('input', { type: 'text', inputmode: 'decimal', autocomplete: 'off', placeholder: 'TT.MM.JJJJ', 'aria-label': 'Datum', value: fmt(cur) });
@@ -150,7 +150,7 @@ export function datumField(iso) {
     else { text.value = fmt(cur); text.removeAttribute('aria-invalid'); }
   };
   text.addEventListener('input', () => text.removeAttribute('aria-invalid'));
-  text.addEventListener('focus', () => setTimeout(() => text.setSelectionRange(0, 2), 0)); // Tag markiert: sofort überschreibbar
+  text.addEventListener('focus', () => setTimeout(() => text.setSelectionRange(0, selectAll ? text.value.length : 2), 0)); // Tag markiert: sofort überschreibbar
   text.addEventListener('blur', apply);
   cal.addEventListener('change', () => { if (cal.value) { cur = cal.value; text.value = fmt(cur); text.removeAttribute('aria-invalid'); } });
   const btn = h('button', { type: 'button', class: 'btn', 'aria-label': 'Kalender', onclick: () => { cal.value = cur; try { cal.showPicker(); } catch { cal.focus(); cal.click(); } } }, '📅');
