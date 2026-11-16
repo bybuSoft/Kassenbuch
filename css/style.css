@@ -85,6 +85,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--pri);outline-off
 #print-area{display:none}
 .quittung{max-width:170mm;margin:0 auto;font-size:12pt;color:#000}.quittung h1{font-size:24pt;margin:24mm 0 8mm}.quittung table{border-collapse:collapse;width:100%}.quittung th{text-align:left;width:35%;padding:3mm 0;vertical-align:top;font-weight:600}.quittung td{padding:3mm 0}
 .q-sign{margin-top:30mm;display:flex;justify-content:space-between;gap:20mm}.q-sign .line{border-top:1px solid #000;min-width:70mm;padding-top:2mm;text-align:left}
+.kontaktdruck{max-width:180mm;margin:0 auto;font-size:11pt;color:#000}.kontaktdruck h1{font-size:18pt;margin:10mm 0 2mm}.kontaktdruck h3{margin:8mm 0 2mm}.kd-tbl{border-collapse:collapse;width:100%}.kd-tbl th{text-align:left;width:32%;padding:1.5mm 0;vertical-align:top;font-weight:600}.kd-tbl td{padding:1.5mm 0}.kd-tbl .pre{white-space:pre-wrap}.kd-bu tr{break-inside:avoid}.kd-bu thead{display:table-header-group}
 @media print{body>*:not(#print-area){display:none!important}#print-area{display:block;color:#000;background:#fff}body{background:#fff;padding:0}.tbl th,.tbl td{border-bottom:1px solid #999}@page{margin:15mm}}
 
 /* Ampel für „Daten prüfen“ */

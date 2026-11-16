@@ -81,3 +81,25 @@ test('Vorbelegung nach Kontaktwahl: letzte Buchung bzw. Standard je Typ', async 
   assert.deepEqual(prefillFor(k), { sign: '+', betrag: '85.00', kategorieId: kat });
   assert.deepEqual(prefillFor(k, 'b2'), { sign: '-', betrag: '65.00', kategorieId: kat }); // beim Bearbeiten: ohne die eigene Buchung
 });
+
+test('Dublettenprüfung Kontakte: gleicher Name + PLZ/Telefon/E-Mail', async () => {
+  const db = await freshDb();
+  const a = db.newKontakt({ vorname: 'Anna', name: 'Meier', plz: '3900' }); await db.put('kontakt', a);
+  await db.put('kommunikation', { id: 'm1', kontaktId: a.id, typ: 'mail', wert: 'Anna@Example.ch' });
+  const mk = (over) => db.newKontakt({ vorname: 'Anna', name: 'Meier', plz: '3000', ...over });
+  assert.equal(db.findDuplicates(mk({ plz: '3900' }), []).length, 1, 'gleiche PLZ');
+  assert.equal(db.findDuplicates(mk(), []).length, 0, 'andere PLZ, keine Kommunikation');
+  assert.equal(db.findDuplicates(mk(), [{ typ: 'mail', wert: ' anna@example.ch ' }]).length, 1, 'gleiche E-Mail');
+  assert.equal(db.findDuplicates(mk({ name: 'Müller' }), [{ typ: 'mail', wert: 'anna@example.ch' }]).length, 0, 'anderer Name');
+});
+
+test('Dublettenprüfung Buchungen: gleicher Kontakt, Datum, Betrag', async () => {
+  const db = await freshDb();
+  const k = db.newKontakt({ name: 'K' }); await db.put('kontakt', k);
+  const c = cat(db, 'einnahme').id;
+  await db.put('buchung', buchung(db, k.id, c, 6500, 'b1'));
+  assert.equal(db.findDuplicateBuchungen(buchung(db, k.id, c, 6500, 'neu')).length, 1);
+  assert.equal(db.findDuplicateBuchungen(buchung(db, k.id, c, 6500, 'b1')).length, 0, 'sich selbst ignorieren');
+  assert.equal(db.findDuplicateBuchungen(buchung(db, k.id, c, 7000, 'neu')).length, 0, 'anderer Betrag');
+  assert.equal(db.findDuplicateBuchungen({ ...buchung(db, k.id, c, 6500, 'neu'), datum: '2026-11-02' }).length, 0, 'anderes Datum');
+});

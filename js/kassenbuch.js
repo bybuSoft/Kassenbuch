@@ -3,7 +3,7 @@ import * as db from './db.js';
 import { h, uuid, chf, parseBetrag, today, fmtDate, monthOf, lastDayOfMonth, normalize } from './util.js';
 import { showModal, confirmDlg, field, toast, printNode } from './ui.js';
 import { periodBar } from './periodbar.js';
-import { kontaktPicker, betragFields, kategorienFor, prefillFor } from './kontaktpick.js';
+import { kontaktPicker, betragFields, kategorienFor, prefillFor, confirmBuchungDup } from './kontaktpick.js';
 import { beenden } from './backup.js';
 import { nav } from './nav.js';
 import { printQuittung } from './quittung.js';
@@ -133,6 +133,7 @@ export async function openBuchung(existing) {
     if (!katSel.value) { toast('Bitte eine Buchungskategorie wählen.', 'err'); return false; }
     const b = { id: ex ? ex.id : uuid(), datum: datum.value, betrag: bf.signSel.value === '-' ? -cents : cents, kontaktId, kategorieId: katSel.value, text: text.value.trim(), created: ex ? ex.created : Date.now() };
     if (ex && ex.test) b.test = true;
+    if (!(await confirmBuchungDup(b))) return false;
     await db.put('buchung', b);
     toast('Buchung gespeichert');
     return again ? 'again' : 'saved';

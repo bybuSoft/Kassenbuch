@@ -2,7 +2,7 @@
 import * as db from './db.js';
 import { h, uuid, parseBetrag, today, fmtDate } from './util.js';
 import { field, toast, confirmDlg } from './ui.js';
-import { kontaktPicker, betragFields, kategorienFor, prefillFor } from './kontaktpick.js';
+import { kontaktPicker, betragFields, kategorienFor, prefillFor, confirmBuchungDup } from './kontaktpick.js';
 import { startBackup, beenden } from './backup.js';
 import { buchungRow } from './kassenbuch.js';
 import { nav } from './nav.js';
@@ -54,7 +54,9 @@ export function buchungScreen() {
     if (!k) { toast('Bitte einen Kunden oder Lieferanten wählen.', 'err'); return; }
     if (!cents) { toast('Bitte einen Betrag grösser als 0 erfassen (z. B. 65.00).', 'err'); bf.input.focus(); return; }
     if (!katSel.value) { toast('Bitte eine Buchungskategorie wählen.', 'err'); return; }
-    await db.put('buchung', { id: uuid(), datum: datum.value, betrag: bf.signSel.value === '-' ? -cents : cents, kontaktId: k.id, kategorieId: katSel.value, text: text.value.trim(), created: Date.now() });
+    const nb = { id: uuid(), datum: datum.value, betrag: bf.signSel.value === '-' ? -cents : cents, kontaktId: k.id, kategorieId: katSel.value, text: text.value.trim(), created: Date.now() };
+    if (!(await confirmBuchungDup(nb))) return;
+    await db.put('buchung', nb);
     toast('Buchung gespeichert');
     resetDraft();
     if (again) { nav.refresh(); return; }

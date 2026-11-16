@@ -1,6 +1,7 @@
 // Gemeinsame Bausteine für Buchungserfassung: Kontaktwahl mit Smartsuche (nur Namen) und Vorzeichen-/Betragsfeld
 import * as db from './db.js';
-import { h, normalize } from './util.js';
+import { h, normalize, chf, fmtDate } from './util.js';
+import { confirmDlg } from './ui.js';
 import { editKontakt } from './kontakte.js';
 
 /** Kunde/Lieferant wählen. Vorschläge erscheinen erst nach Eingabe. */
@@ -67,4 +68,12 @@ export function prefillFor(kontakt, excludeId = null) {
   if (!last) return { sign: kontakt.istLieferant ? '-' : '+', betrag: '', kategorieId: '' };
   const kat = db.data.buchungskategorie.get(last.kategorieId);
   return { sign: last.betrag < 0 ? '-' : '+', betrag: (Math.abs(last.betrag) / 100).toFixed(2), kategorieId: kat && kat.art === db.artOfKontakt(kontakt) ? kat.id : '' };
+}
+
+/** Dublettenprüfung für eine Buchung: true = speichern (kein Treffer oder trotzdem bestätigt). */
+export async function confirmBuchungDup(b) {
+  const dups = db.findDuplicateBuchungen(b);
+  if (!dups.length) return true;
+  const lines = dups.map((d) => `• ${fmtDate(d.datum)}, CHF ${chf(d.betrag)}${d.text ? `, ${d.text}` : ''}`).join('\n');
+  return confirmDlg(`Für ${db.kontaktName(db.data.kontakt.get(b.kontaktId))} gibt es schon ${dups.length === 1 ? 'eine Buchung' : `${dups.length} Buchungen`} mit gleichem Datum und Betrag:\n${lines}\n\nTrotzdem speichern?`, { title: 'Dublettenprüfung', ok: 'Trotzdem speichern' });
 }

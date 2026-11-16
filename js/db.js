@@ -150,20 +150,28 @@ export function kategorieInUse(store, id) {
   return [...data.buchung.values()].some((b) => b.kategorieId === id);
 }
 
-/** Mögliche Dubletten: gleicher Name UND (gleiche PLZ ODER gemeinsame Telefonnummer). */
+/** Mögliche Dubletten: gleicher Name UND (gleiche PLZ ODER gemeinsame Telefonnummer ODER gemeinsame E-Mail-Adresse). */
 export function findDuplicates(k, comms) {
   const nm = normalize(kontaktName(k));
   if (!nm) return [];
   const digits = (s) => String(s).replace(/\D/g, '');
+  const mailKey = (s) => String(s).trim().toLowerCase();
   const phones = new Set(comms.filter((c) => c.typ === 'tel').map((c) => digits(c.wert)).filter(Boolean));
+  const mails = new Set(comms.filter((c) => c.typ === 'mail').map((c) => mailKey(c.wert)).filter(Boolean));
   return [...data.kontakt.values()].filter((o) => {
     if (o.id === k.id || o.sys || o.istLieferant !== k.istLieferant) return false;
     if (normalize(kontaktName(o)) !== nm) return false;
     const samePlz = (o.plz || '').trim() === (k.plz || '').trim();
-    const samePhone = commsOf(o.id).some((c) => c.typ === 'tel' && phones.has(digits(c.wert)));
-    return samePlz || samePhone;
+    const oc = commsOf(o.id);
+    const samePhone = oc.some((c) => c.typ === 'tel' && phones.has(digits(c.wert)));
+    const sameMail = oc.some((c) => c.typ === 'mail' && mails.has(mailKey(c.wert)));
+    return samePlz || samePhone || sameMail;
   });
 }
+
+/** Mögliche doppelte Buchung: gleicher Kontakt, gleiches Datum und gleicher Betrag (ohne die Buchung selbst). */
+export const findDuplicateBuchungen = (b) =>
+  [...data.buchung.values()].filter((o) => o.id !== b.id && o.kontaktId === b.kontaktId && o.datum === b.datum && o.betrag === b.betrag);
 
 export const buchungenOf = (kontaktId) => [...data.buchung.values()].filter((b) => b.kontaktId === kontaktId);
 

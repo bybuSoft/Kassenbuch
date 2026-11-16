@@ -4,8 +4,9 @@ import { h, uuid, normalize } from './util.js';
 import { showModal, confirmDlg, field, checkField, toast, datumField } from './ui.js';
 import { nav } from './nav.js';
 import { printQuittung } from './quittung.js';
+import { printKontakt } from './kontaktdruck.js';
 import { fmtDate, fmtDateTime, chf, today, parseBetrag } from './util.js';
-import { betragFields, kategorienFor, prefillFor } from './kontaktpick.js';
+import { betragFields, kategorienFor, prefillFor, confirmBuchungDup } from './kontaktpick.js';
 
 const HEALTH = [['diabetes', 'Diabetes'], ['antikoaguliert', 'Antikoaguliert'], ['allergien', 'Allergien'], ['hiv', 'HIV-positiv'], ['haemophilie', 'Hämophilie']];
 const listState = { kunde: { q: '', kat: '' }, lieferant: { q: '' } };
@@ -77,7 +78,11 @@ function showKontaktBuchungen(k) {
       if (!cents) { toast('Bitte einen Betrag grösser als 0 erfassen.', 'err'); bf.input.focus(); return; }
       if (!kat.value) { toast('Bitte eine Buchungskategorie wählen.', 'err'); kat.focus(); return; }
       busy = true;
-      try { await db.put('buchung', { id: uuid(), datum: dv, betrag: bf.signSel.value === '-' ? -cents : cents, kontaktId: k.id, kategorieId: kat.value, text: text.value.trim(), created: Date.now() }); } catch (e) { busy = false; throw e; }
+      try {
+        const nb = { id: uuid(), datum: dv, betrag: bf.signSel.value === '-' ? -cents : cents, kontaktId: k.id, kategorieId: kat.value, text: text.value.trim(), created: Date.now() };
+        if (!(await confirmBuchungDup(nb))) { busy = false; return; }
+        await db.put('buchung', nb);
+      } catch (e) { busy = false; throw e; }
       toast('Buchung gespeichert');
       lastDatum = dv;
       draw(true);
@@ -207,6 +212,7 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
       return false;
     } });
   }
+  if (ex) buttons.push({ label: '🖨 Drucken', onClick: async () => { printKontakt(ex); return false; } });
   if (ex) buttons.push({ label: 'Buchungen', onClick: async () => { await showKontaktBuchungen(ex); return false; } });
   buttons.push({ label: 'Abbrechen', value: null });
   buttons.push({ label: 'Speichern', cls: 'primary', onClick: async () => {
