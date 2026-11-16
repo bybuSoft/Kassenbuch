@@ -70,6 +70,9 @@ export function prefillFor(kontakt, excludeId = null) {
   return { sign: last.betrag < 0 ? '-' : '+', betrag: (Math.abs(last.betrag) / 100).toFixed(2), kategorieId: kat && kat.art === db.artOfKontakt(kontakt) ? kat.id : '' };
 }
 
+/** Warnung bei Betrag 0: true = trotzdem speichern, false = abbrechen. */
+export const confirmNullBetrag = () => confirmDlg('Der Betrag ist 0.00. Soll die Buchung trotzdem gespeichert werden?', { title: 'Betrag 0', ok: 'Trotzdem speichern', cancel: 'Abbrechen' });
+
 /** Dublettenprüfung für eine Buchung: true = speichern (kein Treffer oder trotzdem bestätigt). */
 export async function confirmBuchungDup(b) {
   const dups = db.findDuplicateBuchungen(b);

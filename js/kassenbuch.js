@@ -3,7 +3,7 @@ import * as db from './db.js';
 import { h, uuid, chf, parseBetrag, today, fmtDate, monthOf, lastDayOfMonth, normalize } from './util.js';
 import { showModal, confirmDlg, field, toast, printNode } from './ui.js';
 import { periodBar } from './periodbar.js';
-import { kontaktPicker, betragFields, kategorienFor, prefillFor, confirmBuchungDup } from './kontaktpick.js';
+import { kontaktPicker, betragFields, kategorienFor, prefillFor, confirmBuchungDup, confirmNullBetrag } from './kontaktpick.js';
 import { beenden } from './backup.js';
 import { nav } from './nav.js';
 import { printQuittung } from './quittung.js';
@@ -129,8 +129,9 @@ export async function openBuchung(existing) {
     if (!datum.value) { toast('Bitte ein Datum wählen.', 'err'); return false; }
     const k = db.data.kontakt.get(kontaktId);
     if (!k) { toast('Bitte einen Kunden oder Lieferanten wählen.', 'err'); return false; }
-    if (!cents) { toast('Bitte einen Betrag grösser als 0 erfassen (z. B. 65.00).', 'err'); bf.input.focus(); return false; }
+    if (cents === null) { toast('Bitte einen Betrag erfassen (z. B. 65.00).', 'err'); bf.input.focus(); return false; }
     if (!katSel.value) { toast('Bitte eine Buchungskategorie wählen.', 'err'); return false; }
+    if (cents === 0 && !(await confirmNullBetrag())) return false;
     const b = { id: ex ? ex.id : uuid(), datum: datum.value, betrag: bf.signSel.value === '-' ? -cents : cents, kontaktId, kategorieId: katSel.value, text: text.value.trim(), created: ex ? ex.created : Date.now() };
     if (ex && ex.test) b.test = true;
     if (!(await confirmBuchungDup(b))) return false;
