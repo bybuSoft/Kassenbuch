@@ -6,7 +6,7 @@ import { nav } from './nav.js';
 import { printQuittung } from './quittung.js';
 import { printKontakt } from './kontaktdruck.js';
 import { fmtDate, fmtDateTime, chf, today, parseBetrag } from './util.js';
-import { betragFields, kategorienFor, prefillFor, confirmBuchungDup } from './kontaktpick.js';
+import { betragFields, kategorienFor, prefillFor, confirmBuchungDup, confirmNullBetrag } from './kontaktpick.js';
 
 const HEALTH = [['diabetes', 'Diabetes'], ['antikoaguliert', 'Antikoaguliert'], ['allergien', 'Allergien'], ['hiv', 'HIV-positiv'], ['haemophilie', 'Hämophilie']];
 const listState = { kunde: { q: '', kat: '' }, lieferant: { q: '' } };
@@ -75,9 +75,10 @@ function showKontaktBuchungen(k) {
       const cents = parseBetrag(bf.input.value);
       const dv = df.value;
       if (!dv) { toast('Bitte ein gültiges Datum erfassen (TT.MM.JJJJ).', 'err'); datum.focus(); return; }
-      if (!cents) { toast('Bitte einen Betrag grösser als 0 erfassen.', 'err'); bf.input.focus(); return; }
+      if (cents === null) { toast('Bitte einen Betrag erfassen.', 'err'); bf.input.focus(); return; }
       if (!kat.value) { toast('Bitte eine Buchungskategorie wählen.', 'err'); kat.focus(); return; }
       busy = true;
+      if (cents === 0 && !(await confirmNullBetrag())) { busy = false; return; }
       try {
         const nb = { id: uuid(), datum: dv, betrag: bf.signSel.value === '-' ? -cents : cents, kontaktId: k.id, kategorieId: kat.value, text: text.value.trim(), created: Date.now() };
         if (!(await confirmBuchungDup(nb))) { busy = false; return; }

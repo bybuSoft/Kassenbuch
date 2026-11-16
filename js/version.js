@@ -3,7 +3,7 @@
 // BRANCH_CODE wird beim Commit automatisch gesetzt (tools/set-version.sh, Hook in .githooks/).
 export const MAJOR = 0;
 export const MINOR = 32;
-export const BRANCH_CODE = 'okdjcf';
+export const BRANCH_CODE = 'zx8m7o';
 export const VERSION = `${MAJOR}.${MINOR}.${BRANCH_CODE}`;
 
 // Kurze Beschreibung je Änderung (neueste zuerst)
