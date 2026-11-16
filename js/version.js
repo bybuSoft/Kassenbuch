@@ -2,12 +2,13 @@
 // (die Zeichen nach dem letzten "-" im Branch-Namen, z. B. claude/festive-cray-4a3xvr -> 4a3xvr).
 // BRANCH_CODE wird beim Commit automatisch gesetzt (tools/set-version.sh, Hook in .githooks/).
 export const MAJOR = 0;
-export const MINOR = 33;
+export const MINOR = 34;
 export const BRANCH_CODE = 'zx8m7o';
 export const VERSION = `${MAJOR}.${MINOR}.${BRANCH_CODE}`;
 
 // Kurze Beschreibung je Änderung (neueste zuerst)
 export const CHANGES = [
+  { v: '0.34', text: 'Hilfe: Hinweis zur Warnung bei Betrag 0 ergänzt.' },
   { v: '0.33', text: 'Buchung mit Betrag 0: Warnung mit Abbrechen / Trotzdem speichern.' },
   { v: '0.32', text: 'Notizen (Infos → Notizen): Punkte erfassen, Bilder/Screenshots einfügen, Notiz an die in den Einstellungen hinterlegte E-Mail-Adresse senden. Notizen sind Teil der Datensicherung.' },
   { v: '0.31', text: 'Kontakte: Geburtsdatum tippbar, „Speichern und neu“, Dublettenprüfung auch bei reinen Namenseinträgen, Druck mit allen Feldern, Datum im Buchungsdialog ganz markiert.' },
