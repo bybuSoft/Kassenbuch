@@ -93,6 +93,9 @@ export const put = (store, obj, touch = true) => batch([{ op: 'put', store, obj 
 export const del = (store, id, touch = true) => batch([{ op: 'del', store, id }], touch);
 export const deviceName = () => data.meta.deviceName || '';
 export const setMeta = (key, value, touch = false) => put('meta', { key, value }, touch);
+/** Filtereinstellungen je Bildschirm (Kassenbuch, Auswertungen): liegen in meta.filters, gehen in die Sicherung und werden beim Restore wiederhergestellt. */
+export const getFilter = (name) => ({ ...(data.meta.filters?.[name] || {}) });
+export const saveFilter = (name, obj) => setMeta('filters', { ...(data.meta.filters || {}), [name]: obj });
 
 // ---- Stammdaten / Seed --------------------------------------------------
 export const DEFAULT_KUNDENKATEGORIEN = ['Maria', 'Michael', 'Externe'];
@@ -200,7 +203,7 @@ export const notizenList = () => [...data.notiz.values()].sort((a, b) => (b.modi
 export function snapshot() {
   const stores = {};
   STORES.forEach((s) => { stores[s] = [...data[s].values()]; });
-  return { app: 'kassenbuch', schema: 1, createdAt: Date.now(), lastChange: data.meta.lastChange || 0, stores };
+  return { app: 'kassenbuch', schema: 1, createdAt: Date.now(), lastChange: data.meta.lastChange || 0, filters: data.meta.filters || {}, stores };
 }
 
 export function validateSnapshot(snap) {
@@ -227,6 +230,7 @@ export async function replaceAll(snap) {
   m.put({ key: 'lastChange', value: snap.lastChange || 0 });
   m.put({ key: 'lastBackup', value: Date.now() });
   m.put({ key: 'seeded', value: true });
+  m.put({ key: 'filters', value: snap.filters && typeof snap.filters === 'object' ? snap.filters : {} });
   await done;
   await loadAll();
   const ops = systemKontaktOps();

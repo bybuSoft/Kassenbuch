@@ -1,6 +1,6 @@
 // Kassenbuch: Buchungsliste, Buchungsdialog, Quittung
 import * as db from './db.js';
-import { h, uuid, chf, parseBetrag, today, fmtDate, monthOf, lastDayOfMonth, normalize } from './util.js';
+import { h, uuid, chf, parseBetrag, today, fmtDate, normalize } from './util.js';
 import { showModal, confirmDlg, field, toast, printNode } from './ui.js';
 import { periodBar } from './periodbar.js';
 import { kontaktPicker, betragFields, kategorienFor, prefillFor, confirmBuchungDup, confirmNullBetrag } from './kontaktpick.js';
@@ -8,12 +8,13 @@ import { beenden } from './backup.js';
 import { nav } from './nav.js';
 import { printQuittung } from './quittung.js';
 
-const FIRST = () => `${monthOf(today())}-01`;
-const monthRange = () => ({ from: FIRST(), to: lastDayOfMonth(monthOf(today())) });
-const view = { open: false, custom: false, ...monthRange(), q: '', kat: '', art: '' };
+// Vorgabe: alles (alle Zeiträume, Einnahmen und Ausgaben, alle Kategorien). Filter werden gespeichert und mitgesichert.
+const ALL = { from: '0000-01-01', to: '9999-12-31' };
+const view = { open: false, ...ALL, q: '', kat: '', art: '' };
+const saveView = () => db.saveFilter('kassenbuch', { from: view.from, to: view.to, kat: view.kat, art: view.art });
 
 export function kassenbuchScreen() {
-  if (!view.custom) Object.assign(view, monthRange()); // nach Monatswechsel wieder der aktuelle Monat
+  Object.assign(view, { ...ALL, kat: '', art: '' }, db.getFilter('kassenbuch'));
   // ---- Filter (aufklappbar): Suche bleibt sichtbar
   const q = h('input', { type: 'search', placeholder: 'Suchen (Name, Text, Kategorie, Betrag)…', value: view.q, 'aria-label': 'Suchen' });
   const katSel = h('select', { 'aria-label': 'Buchungskategorie' });
@@ -26,10 +27,10 @@ export function kassenbuchScreen() {
     katSel.value = view.kat;
   };
   drawKatOpts();
-  const bar = periodBar({ from: view.from, to: view.to, all: true, onSet: (a, b) => { view.from = a; view.to = b; view.custom = true; nav.refresh(); } });
+  const bar = periodBar({ from: view.from, to: view.to, all: true, onSet: (a, b) => { view.from = a; view.to = b; saveView(); nav.refresh(); } });
   const panel = h('div', { class: 'stack filterpanel' }, bar, h('div', { class: 'grid2' }, artSel, katSel));
   panel.hidden = !view.open;
-  const active = () => !!(view.art || view.kat) || view.custom;
+  const active = () => !!(view.art || view.kat) || view.from !== ALL.from || view.to !== ALL.to;
   const toggle = h('button', { type: 'button', class: 'btn', 'aria-expanded': String(!!view.open), onclick: () => { view.open = !view.open; panel.hidden = !view.open; toggle.setAttribute('aria-expanded', String(view.open)); } },
     'Filter ', view.open ? '▴' : '▾', active() ? h('span', { class: 'dot' }) : null);
   const filters = h('div', { class: 'stack' }, h('div', { class: 'searchrow' }, q, toggle), panel);
@@ -59,8 +60,8 @@ export function kassenbuchScreen() {
     result.replaceChildren(summary, h('p', { class: 'muted small' }, `${all.length} Buchung${all.length === 1 ? '' : 'en'} · ${fmtDate(view.from)} – ${fmtDate(view.to)}`), list);
   };
   q.addEventListener('input', draw);
-  katSel.addEventListener('change', () => { view.kat = katSel.value; draw(); });
-  artSel.addEventListener('change', () => { view.art = artSel.value; drawKatOpts(); draw(); });
+  katSel.addEventListener('change', () => { view.kat = katSel.value; saveView(); draw(); });
+  artSel.addEventListener('change', () => { view.art = artSel.value; drawKatOpts(); saveView(); draw(); });
   draw();
 
   return {

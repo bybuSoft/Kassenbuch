@@ -69,6 +69,16 @@ test('Snapshot/Restore: Roundtrip und Konsistenzprüfung', async () => {
   assert.throws(() => db.validateSnapshot({ app: 'x' }), /keine Kassenbuch/);
 });
 
+test('Filtereinstellungen gehen in die Sicherung und werden wiederhergestellt', async () => {
+  const db = await freshDb();
+  await db.saveFilter('kassenbuch', { from: '2026-01-01', to: '2026-12-31', kat: '', art: 'einnahme' });
+  const snap = JSON.parse(JSON.stringify(db.snapshot()));
+  assert.equal(snap.filters.kassenbuch.art, 'einnahme');
+  await db.saveFilter('kassenbuch', { art: 'ausgabe' });
+  await db.replaceAll(snap);
+  assert.equal(db.getFilter('kassenbuch').art, 'einnahme');
+});
+
 test('Vorbelegung nach Kontaktwahl: letzte Buchung bzw. Standard je Typ', async () => {
   const db = await freshDb();
   const k = db.newKontakt({ name: 'K' }); await db.put('kontakt', k);

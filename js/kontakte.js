@@ -19,7 +19,7 @@ export function kontakteScreen(typ) {
   const katSel = lief ? null : h('select', { 'aria-label': 'Kategorie' },
     h('option', { value: '' }, 'Alle Kategorien'),
     ...db.kategorienList('kundenkategorie').map((c) => h('option', { value: c.id }, c.name)));
-  if (katSel) katSel.value = st.kat;
+  if (katSel) { st.kat = db.getFilter('kunden').kat || st.kat; katSel.value = st.kat; }
   const list = h('div', { class: 'list' });
 
   const draw = () => {
@@ -43,7 +43,7 @@ export function kontakteScreen(typ) {
     }) : [h('p', { class: 'muted pad' }, 'Keine Einträge.')]));
   };
   q.addEventListener('input', draw);
-  katSel?.addEventListener('change', draw);
+  katSel?.addEventListener('change', () => { db.saveFilter('kunden', { kat: katSel.value }); draw(); });
   draw();
 
   return {
