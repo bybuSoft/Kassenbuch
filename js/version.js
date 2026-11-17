@@ -2,12 +2,14 @@
 // (die Zeichen nach dem letzten "-" im Branch-Namen, z. B. claude/festive-cray-4a3xvr -> 4a3xvr).
 // BRANCH_CODE wird beim Commit automatisch gesetzt (tools/set-version.sh, Hook in .githooks/).
 export const MAJOR = 0;
-export const MINOR = 35;
+export const MINOR = 37;
 export const BRANCH_CODE = '9qlxbm';
 export const VERSION = `${MAJOR}.${MINOR}.${BRANCH_CODE}`;
 
 // Kurze Beschreibung je Änderung (neueste zuerst)
 export const CHANGES = [
+  { v: '0.37', text: 'Hilfe: ab Abschnitt 4 gekürzt auf Nicht-Offensichtliches, Nummerierung (1–13) und Rechtschreibung geprüft.' },
+  { v: '0.36', text: 'Offline-Start: Service Worker mit Zeitlimit und sauberem Cache-Rückfall (kein weisser Screen mehr ohne Internet).' },
   { v: '0.35', text: 'PIN-Abfrage: Cursor sofort im Feld. Hilfe: Datenübernahme und Tageserfassung begründet und detailliert, „Installieren“ als letzter Punkt. Daten prüfen: Hinweis bei fehlendem Internet (Überspringen weiter möglich).' },
   { v: '0.34', text: 'Hilfe: Hinweis zur Warnung bei Betrag 0 ergänzt.' },
   { v: '0.33', text: 'Buchung mit Betrag 0: Warnung mit Abbrechen / Trotzdem speichern.' },
