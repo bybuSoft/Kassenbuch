@@ -3,7 +3,7 @@ import * as db from './db.js';
 import { h, fmtDateTime } from './util.js';
 import { nav } from './nav.js';
 import { lockScreen } from './lock.js';
-import { toast, confirmDlg, alertDlg } from './ui.js';
+import { toast, confirmDlg } from './ui.js';
 import { startRestore, startBackup, latestBackupInfo, compareWithLocal } from './backup.js';
 import { kassenbuchScreen } from './kassenbuch.js';
 import { buchungScreen } from './buchung.js';
@@ -14,7 +14,7 @@ import { kontakteScreen } from './kontakte.js';
 import { auswertungenScreen } from './auswertungen.js';
 import { einstellungenScreen, infosScreen } from './einstellungen.js';
 import { VERSION } from './version.js';
-import { offline, probeNet, watchNet } from './net.js';
+import { offline, watchNet } from './net.js';
 
 const app = document.getElementById('app');
 let current = { name: 'lock' };
@@ -22,7 +22,7 @@ let unlocked = false;
 let hiddenAt = 0;
 const LOCK_AFTER_MS = 5 * 60 * 1000;
 
-const NO_NET = 'Kein Internet verfügbar. Die Prüfung kann unvollständig sein (z. B. wenn die Sicherungen in iCloud Drive liegen und noch nicht geladen sind). „Überspringen“ ist trotzdem möglich.';
+const NO_NET = 'Kein Internet verfügbar. „Daten prüfen“ ist ohne Internet nicht möglich (die Sicherungen können z. B. in iCloud Drive liegen und nicht geladen werden). „Überspringen“ ist trotzdem möglich.';
 
 let startCheck = null; // Ergebnis von „Daten prüfen“ (nur auf dem Willkommensscreen)
 
@@ -43,8 +43,7 @@ function startScreen() {
         : `Lokale Daten: ${db.data.buchung.size} Buchungen, ${n} Kontakte\nLetzte Änderung: ${fmtDateTime(db.data.meta.lastChange)}\nLetzte Datensicherung: ${fmtDateTime(db.data.meta.lastBackup)}`),
       offline() ? h('p', { class: 'status warn' }, NO_NET) : null,
       startCheck ? h('p', { class: `status pre ${lvl}` }, startCheck.text) : null,
-      h('button', { class: `btn big ${startCheck ? '' : 'primary'}`, onclick: async () => {
-        if (!(await probeNet(true))) await alertDlg('Es ist kein Internet verfügbar. Die Prüfung kann unvollständig sein oder fehlschlagen (z. B. bei Sicherungen in iCloud Drive).\n\nDu kannst es trotzdem versuchen oder die Prüfung überspringen.', { title: 'Kein Internet' });
+      h('button', { class: `btn big ${startCheck ? '' : 'primary'}`, disabled: offline(), onclick: async () => {
         let info = await latestBackupInfo();
         if (!info) { if (!db.isEmpty()) return; info = { none: true }; } // Abbruch bei leerer App: ohne Restore starten möglich
         startCheck = compareWithLocal(info);

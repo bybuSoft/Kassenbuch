@@ -16,7 +16,7 @@ export function helpContent() {
     sec('1. Erste Schritte',
       ul(
         h('span', {}, b('PIN: '), 'Beim ersten Start legst du eine PIN (4–12 Ziffern) fest. Die App sperrt sich nach 5 Minuten im Hintergrund und verlangt dann die PIN. Die PIN ist eine Sperre, keine Verschlüsselung der lokalen Daten.'),
-        h('span', {}, b('Daten prüfen: '), 'Auf dem Willkommensscreen prüfst du, ob die Daten auf diesem Gerät aktuell sind (siehe Abschnitt 7). Mit „Überspringen“ (nach Warnung) lässt sich die Prüfung auslassen. Ist kein Internet verfügbar, erscheint ein Hinweis (die Prüfung kann dann unvollständig sein, z. B. bei Sicherungen in iCloud Drive); Prüfen und Überspringen bleiben trotzdem möglich.'),
+        h('span', {}, b('Daten prüfen: '), 'Auf dem Willkommensscreen prüfst du, ob die Daten auf diesem Gerät aktuell sind (siehe Abschnitt 7). Mit „Überspringen“ (nach Warnung) lässt sich die Prüfung auslassen. Ist kein Internet verfügbar, erscheint sofort ein Hinweis und „Daten prüfen“ ist ausgegraut; „Überspringen“ bleibt möglich.'),
       )),
 
     sec('2. Datenerfassung: Datenübernahme und tägliche Erfassung',
@@ -77,7 +77,7 @@ export function helpContent() {
         h('span', {}, b('Passwort: '), 'Die Sicherung ist verschlüsselt. Das Passwort wird nirgends gespeichert; ohne Passwort ist die Sicherung nicht lesbar. Bitte sicher aufbewahren.'),
         h('span', {}, b('Dateiname: '), 'JJJJMMTT-HHMMSS-Gerät-vVersion.enc. Der Gerätename wird in den Einstellungen festgelegt und steht nur im Dateinamen.'),
         h('span', {}, b('Speicherort: '), 'iPhone/iPad: Teilen-Dialog → „In Dateien sichern“ (z. B. iCloud Drive). Desktop (Chrome/Edge): Standardordner in den Einstellungen wählen; ältere Sicherungen können automatisch gelöscht werden.'),
-        h('span', {}, b('Ohne Internet: '), 'Ist kein Internet verfügbar, sind alle Sicherungs- und Restore-Buttons ausgegraut (Menü, Einstellungen, Willkommensscreen, Beenden, Rückfrage nach dem Speichern). Sie werden automatisch wieder aktiv, sobald eine Verbindung besteht.'),
+        h('span', {}, b('Ohne Internet: '), 'Ist kein Internet verfügbar, sind „Daten prüfen“ sowie alle Sicherungs- und Restore-Buttons ausgegraut (Willkommensscreen, Menü, Einstellungen, Beenden, Rückfrage nach dem Speichern). Sie werden automatisch wieder aktiv, sobald eine Verbindung besteht.'),
         h('span', {}, b('Restore: '), 'Die lokalen Daten werden vollständig durch die Sicherung ersetzt.'),
         h('span', {}, b('Daten prüfen: '), 'Vergleicht die jüngste Sicherung (nur Dateiname) mit dem lokalen Stand. Grün = aktuell. Gelb = neuere Sicherung vorhanden (Restore empfohlen) oder ungesicherte lokale Änderungen (jetzt sichern). Rot = beides: Ein Restore würde die lokalen Änderungen überschreiben, daher zuerst sichern.'),
       )),
