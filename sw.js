@@ -1,6 +1,6 @@
 // Service Worker: macht die App offlinefähig. Strategie „Netz zuerst, Cache als Rückfall“:
 // Online wird immer die aktuelle Fassung geladen (und im Cache abgelegt), offline kommt die zuletzt geladene Fassung aus dem Cache.
-const CACHE = 'kassenbuch-v5';
+const CACHE = 'kassenbuch-v6';
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css',
   'icons/icon.svg', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png',
@@ -24,18 +24,27 @@ async function clean(res) {
 }
 
 // Netz mit Zeitlimit: ohne (oder mit hängender) Verbindung nicht ewig warten, sondern auf den Cache zurückfallen
+let slowUntil = 0; // nach einer Zeitüberschreitung 30 s lang nicht mehr aufs Netz warten
 const fetchTimeout = (req, ms = 4000) => new Promise((resolve, reject) => {
   const ctl = new AbortController();
-  const t = setTimeout(() => { ctl.abort(); reject(new Error('timeout')); }, ms);
+  const t = setTimeout(() => { ctl.abort(); slowUntil = Date.now() + 30000; reject(new Error('timeout')); }, ms);
   fetch(req, { cache: 'no-cache', signal: ctl.signal }).then((r) => { clearTimeout(t); resolve(r); }, (e) => { clearTimeout(t); reject(e); });
 });
 
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+  if (new URL(req.url).searchParams.has('ping')) { e.respondWith(fetchTimeout(req, 3000)); return; } // Verbindungstest der App: nur Netz, kein Cache-Rückfall
   e.respondWith((async () => {
+    // Offline erkannt (oder kürzlich Zeitüberschreitung): sofort aus dem Cache, sonst summieren sich die Wartezeiten je Datei
+    if (!self.navigator.onLine || Date.now() < slowUntil) {
+      const quick = req.mode === 'navigate'
+        ? (await caches.match(req, { ignoreSearch: true })) || (await caches.match('index.html')) || (await caches.match('./'))
+        : await caches.match(req, { ignoreSearch: true });
+      if (quick) return clean(quick);
+    }
     try {
-      const res = await fetchTimeout(req); // immer beim Server nachfragen, damit Updates sofort ankommen
+      const res = await fetchTimeout(req, 2500); // immer beim Server nachfragen, damit Updates sofort ankommen
       if (res.ok && res.status === 200) { const c = await caches.open(CACHE); c.put(req, res.clone()); }
       return res;
     } catch {
