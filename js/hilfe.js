@@ -16,14 +16,39 @@ export function helpContent() {
     sec('1. Erste Schritte',
       ul(
         h('span', {}, b('PIN: '), 'Beim ersten Start legst du eine PIN (4–12 Ziffern) fest. Die App sperrt sich nach 5 Minuten im Hintergrund und verlangt dann die PIN. Die PIN ist eine Sperre, keine Verschlüsselung der lokalen Daten.'),
-        h('span', {}, b('Daten prüfen: '), 'Auf dem Willkommensscreen prüfst du, ob die Daten auf diesem Gerät aktuell sind (siehe Abschnitt 6). Mit „Überspringen“ (nach Warnung) lässt sich die Prüfung auslassen.'),
-        h('span', {}, b('Installieren (iPhone/iPad): '), 'In Safari öffnen, Teilen → „Zum Home-Bildschirm“. So bleiben die Daten zuverlässig erhalten, und die App funktioniert auch ohne Netz.'),
+        h('span', {}, b('Daten prüfen: '), 'Auf dem Willkommensscreen prüfst du, ob die Daten auf diesem Gerät aktuell sind (siehe Abschnitt 7). Mit „Überspringen“ (nach Warnung) lässt sich die Prüfung auslassen. Ist kein Internet verfügbar, erscheint ein Hinweis (die Prüfung kann dann unvollständig sein, z. B. bei Sicherungen in iCloud Drive); Prüfen und Überspringen bleiben trotzdem möglich.'),
       )),
 
-    sec('2. Menü',
+    sec('2. Datenerfassung: Datenübernahme und tägliche Erfassung',
+      h('p', {}, 'Es gibt zwei Erfassungswege. Sie unterscheiden sich, weil die Ausgangslage und die Arbeitsweise verschieden sind:'),
+      ul(
+        h('span', {}, b('Datenübernahme (Altdaten): '), 'Du gehst vom Kontakt aus. Bei bestehenden Kunden liegen die Unterlagen meist pro Kunde vor (Karteikarte, Liste). Wenn du zuerst den Kunden vollständig erfasst und danach alle seine Buchungen am Stück, musst du den Kontakt nur einmal wählen, die Vorbelegung (Betrag, Kategorie aus der jüngsten Buchung) spart Tipparbeit, und du kannst pro Kunde auf Vollständigkeit prüfen.'),
+        h('span', {}, b('Tägliche Erfassung: '), 'Du gehst vom Tag aus. Im Alltag fallen die Behandlungen eines Tages in zeitlicher Reihenfolge an und kommen aus Tageskasse oder Terminliste. Über „Buchung“ erfasst du sie direkt mit dem Datum des Tages, Kunde für Kunde, ohne jedes Mal den Kontakt öffnen zu müssen. So bleibt nichts liegen, und Dubletten werden sofort erkannt.'),
+      ),
+      h('h4', {}, 'Vorgehen Datenübernahme'),
+      ul(
+        'Menü → „Kunden“ (bzw. „Lieferanten“) → „+ Neu“: Kontakt mit Name, Adresse, Anrede, Telefon/E-Mail und Kategorie erfassen. Mit „Speichern und neu“ folgt gleich der nächste Kontakt.',
+        'Kontakt in der Liste antippen und auf „Buchungen“ tippen. Oben erscheint die Erfassungszeile für eine neue Buchung.',
+        'Datum der ersten Altbuchung eintragen (tippen oder 📅). Das Datum bleibt nach „Buchen“ stehen, bei der nächsten Buchung änderst du es nur bei Bedarf.',
+        'Betrag und Kategorie prüfen bzw. anpassen, optional Text. „Buchen“ speichert, der Dialog bleibt für die nächste Buchung dieses Kontakts offen.',
+        'Alle Buchungen des Kontakts nacheinander erfassen, dann schliessen und den nächsten Kontakt öffnen. Die Liste „Buchungen“ zeigt zur Kontrolle alle Einträge, neueste zuerst.',
+        'Warnungen bei Dubletten oder Betrag 0 genau lesen: nur „Trotzdem speichern“, wenn die Buchung wirklich doppelt bzw. gewollt ist.',
+        'Zum Schluss Summen im Kassenbuch und unter Auswertungen mit den Altunterlagen vergleichen und eine Datensicherung erstellen.',
+      ),
+      h('h4', {}, 'Vorgehen Tageserfassung'),
+      ul(
+        'Menü → „Buchung“. Datum ist der heutige Tag (bei Nacherfassung ändern).',
+        'Kunden-Namen oder Vornamen eintippen und den Treffer antippen. Neu: „+ Neuer Kunde“. Betrag, Vorzeichen und Kategorie sind aus der letzten Buchung vorbelegt; Betrag direkt überschreiben, Behandlung/Kategorie wählen, bei Bedarf Text.',
+        '„Speichern & neu“ für die nächste Behandlung des Tages; nach der letzten „Speichern“ und die Sicherung bestätigen.',
+        'Ausgaben: Lieferant statt Kunde wählen, Vorzeichen − (Ausgabe) und passende Kategorie.',
+        'Kontrolle: Unter dem Formular stehen die zuletzt erfassten Buchungen (antippen = ändern). Am Tagesende im Kassenbuch die Tagessumme mit der Kasse abgleichen.',
+        'Quittung: Bei Einnahmen über das Druck-Icon.',
+      )),
+
+    sec('3. Menü',
       h('p', {}, 'Das Menü zeigt grosse Buttons: Buchung, Kassenbuch, Kunden, Lieferanten, Auswertungen, Datensicherung, Einstellungen, Infos. Ein roter Punkt bei „Datensicherung“ bedeutet: es gibt ungesicherte Änderungen. Mit „‹ Zurück“ gelangst du von jeder Seite zum Menü.')),
 
-    sec('3. Buchung erfassen',
+    sec('4. Buchung erfassen',
       ul(
         h('span', {}, b('Datum: '), 'Vorgabe ist der heutige Tag, solange du es nicht änderst.'),
         h('span', {}, b('Kunde/Lieferant: '), 'Name oder Vorname eintippen, in der Trefferliste den Kontakt antippen. Gesucht wird nur in den Namen. Gibt es den Kontakt noch nicht: „+ Neuer Kunde“ bzw. „+ Neuer Lieferant“.'),
@@ -34,14 +59,14 @@ export function helpContent() {
         h('span', {}, b('Zuletzt erfasst: '), 'Unter dem Formular stehen die zuletzt erfassten Buchungen; antippen zum Bearbeiten, bei positiven Einnahmen mit Druck-Icon für die Quittung.'),
       )),
 
-    sec('4. Kassenbuch',
+    sec('5. Kassenbuch',
       ul(
         'Liste der Buchungen nach Datum, mit Summen für Einnahmen, Ausgaben und Saldo.',
         'Die Suche bleibt sichtbar (Name, Text, Kategorie, Betrag). Mit „Filter“ klappst du Periode (Monat, Vormonat, Jahr, Vorjahr, Alles oder Von/Bis), Art und Kategorie auf. Ein roter Punkt am Filter-Button zeigt einen aktiven Filter.',
         'Eine Buchung antippen: bearbeiten oder löschen. Bei positiven Einnahmen gibt es in der Liste rechts neben dem Betrag das Druck-Icon für die Quittung (Druckansicht; auf iPhone/iPad: Drucken → Als PDF sichern).',
       )),
 
-    sec('5. Kunden und Lieferanten',
+    sec('6. Kunden und Lieferanten',
       ul(
         'Suche und Kategorie-Filter; „+ Neu“ legt einen Kontakt an, antippen öffnet ihn. Die Liste zeigt pro Kontakt Name, Adresse, Kategorie, bevorzugte Kommunikation und den Erstellungszeitpunkt (bei älteren Kontakten leer).',
         'Pro Kontakt: Adresse, Geschlecht/Firma, Anrede (Du/Sie), mehrere Telefonnummern/E-Mails (je eine Zeile; per „+ Telefon“ bzw. „+ E-Mail“ hinzufügen, direkt im Feld ändern, mit × löschen; genau eine ist „bevorzugt“, das Icon öffnet die Telefon-/Mail-App), Kundenkategorie, Gesundheitsangaben und Notizen.',
@@ -53,7 +78,7 @@ export function helpContent() {
                 'Löschen: Die Buchungen bleiben erhalten und werden „Gelöschter Kunde“ bzw. „Gelöschter Lieferant“ zugeordnet.',
       )),
 
-    sec('6. Datensicherung, Restore und „Daten prüfen“',
+    sec('7. Datensicherung, Restore und „Daten prüfen“',
       ul(
         h('span', {}, b('Sichern: '), 'Menü → Datensicherung. Die Datei ist mit einem Passwort verschlüsselt. Das Passwort wird nirgends gespeichert – ohne Passwort ist die Sicherung nicht lesbar. Bitte sicher aufbewahren. Die erste Sicherung nach dem Start verlangt das Passwort zweimal, danach einmal (mit Warnung bei Tippfehler).'),
         h('span', {}, b('Dateiname: '), 'JJJJMMTT-HHMMSS-Gerät-vVersion.enc. Den Gerätenamen legst du in den Einstellungen fest. Er steht nur im Dateinamen, nicht in der Sicherung.'),
@@ -62,7 +87,7 @@ export function helpContent() {
         h('span', {}, b('Daten prüfen: '), 'Liest die Dateinamen der Sicherungen (Standardordner bzw. Dateiauswahl) und vergleicht die jüngste mit dem lokalen Stand. Grün = aktuell, weiter (zum Menü bzw. zur Buchung, je nach Einstellung „Start“). Gelb = neuere Sicherung vorhanden (Restore empfohlen) oder ungesicherte lokale Änderungen (jetzt sichern). Rot = neuere Sicherung und ungesicherte Änderungen: ein Restore würde die lokalen Änderungen überschreiben, zuerst sichern.'),
       )),
 
-    sec('7. Auswertungen',
+    sec('8. Auswertungen',
       ul(
         'Reiter: Perioden, Kategorien, Kundenliste, Treuhänder. Reiter und Periode bleiben beim Scrollen oben stehen.',
         'Periode mit Von/Bis oder den Schnellwahlen (Monat, Vormonat, Jahr, Vorjahr). „VJ-Vergleich“ zeigt zusätzlich die Vorjahreswerte und die Differenz.',
@@ -71,7 +96,7 @@ export function helpContent() {
         'Treuhänder: Jahr wählen (Vorgabe: Vorjahr; es wird immer ein ganzes Jahr exportiert) und die Zusammenfassungsebene (Einzelbuchung, Tag, Monat – Vorgabe –, Jahr). Excel-Datei: Tab 1 mit Firma, Adresse, Zeitraum, Erzeugungszeitpunkt und Ebene; Tab 2 mit den Buchungen (Datum, Lieferant, Kundenkategorie, Buchungskategorie, Betrag), ohne Summen. Das Datum ist ein echtes Excel-Datum für den Import; bei der Ebene Monat steht der letzte Tag des Monats, bei Jahr der 31.12. Bei Kunden stehen weder Name noch Buchungstext in der Datei, bei Lieferanten der Name. Ein Hinweis erscheint, wenn eine Buchung nicht zum Kontakttyp passt.',
       )),
 
-    sec('8. Einstellungen',
+    sec('9. Einstellungen',
       ul(
         'Eigene Firma: erscheint auf Quittungen und kann bei Ausgaben als Kontakt gewählt werden.',
         'Start: Nach „Daten prüfen“ öffnet sich das Menü oder die Buchung.',
@@ -81,7 +106,7 @@ export function helpContent() {
         'Kategorien für Kunden, Einnahmen und Ausgaben (zuunterst): neu, ändern, löschen (löschen nur, wenn sie nirgends verwendet werden).',
       )),
 
-    sec('8a. Notizen',
+    sec('9a. Notizen',
       ul(
         'Infos → „Notizen“ (neben „Hilfe“): freie Notizen mit Titel und Text. „• Punkt einfügen“ setzt einen Aufzählungspunkt; Enter in einer Punktzeile beginnt den nächsten Punkt, ein leerer Punkt beendet die Liste.',
         'Bilder/Screenshots: „Bild / Screenshot wählen“ (iPhone/iPad: Fotos, dort liegen auch Bildschirmfotos), „Bild aus Zwischenablage“ oder per Einfügen (Strg+V bzw. langes Tippen → Einfügen) ins Textfeld. Bilder werden verkleinert gespeichert (höchstens 12 pro Notiz); antippen vergrössert, × entfernt.',
@@ -89,15 +114,19 @@ export function helpContent() {
         'Notizen sind Teil der Datensicherung (die Empfängeradresse nicht).',
       )),
 
-    sec('9. Beenden',
+    sec('10. Beenden',
       h('p', {}, 'Im Menü „Beenden“: Sind alle Änderungen gesichert, bestätigst du mit OK. Gibt es ungesicherte Änderungen, kannst du vorher sichern. Danach ist die App gesperrt. Eine Web-App kann sich nicht selbst schliessen: auf iPhone/iPad nach oben wischen.')),
 
-    sec('10. Tipps',
+    sec('11. Tipps',
       ul(
         'Regelmässig sichern, am besten nach jeder Erfassungsrunde – das geht direkt nach „Speichern“.',
         'Mehrere Geräte: Auf dem Willkommensscreen „Daten prüfen“ zeigt, ob eine neuere Sicherung von einem anderen Gerät vorliegt. Immer zuerst Restore, dann weiterarbeiten.',
         'Ohne Netz funktioniert die App weiter. Updates werden beim nächsten Start mit Netz geladen (Version in der Fusszeile).',
-      )));
+      )),
+
+    sec('12. Installieren (iPhone/iPad)',
+      h('p', {}, 'In Safari öffnen, Teilen → „Zum Home-Bildschirm“. So bleiben die Daten zuverlässig erhalten, und die App funktioniert auch ohne Netz.')),
+  );
 }
 
 export function hilfeScreen() {
