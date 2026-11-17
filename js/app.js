@@ -21,9 +21,26 @@ let unlocked = false;
 let hiddenAt = 0;
 const LOCK_AFTER_MS = 5 * 60 * 1000;
 
+// Echter Verbindungstest (navigator.onLine ist unzuverlässig): kleine Datei am Server abfragen, der Service Worker greift hier nicht auf den Cache zurück
+let netOk = null, netAt = 0;
+async function probeNet(force = false) {
+  if (!force && Date.now() - netAt < 10000) return netOk;
+  netAt = Date.now();
+  let ok = navigator.onLine;
+  if (ok) {
+    try { const r = await fetch(`sw.js?ping=${Date.now()}`, { cache: 'no-store' }); ok = r.ok; } catch { ok = false; }
+  }
+  const changed = ok !== netOk;
+  netOk = ok;
+  if (changed && document.querySelector('.start')) nav.refresh();
+  return ok;
+}
+const NO_NET = 'Kein Internet verfügbar. Die Prüfung kann unvollständig sein (z. B. wenn die Sicherungen in iCloud Drive liegen und noch nicht geladen sind). „Überspringen“ ist trotzdem möglich.';
+
 let startCheck = null; // Ergebnis von „Daten prüfen“ (nur auf dem Willkommensscreen)
 
 function startScreen() {
+  probeNet();
   const n = [...db.data.kontakt.values()].filter((k) => !k.sys).length;
   const empty = db.isEmpty();
   const lvl = startCheck?.level;
@@ -38,13 +55,14 @@ function startScreen() {
       h('p', { class: 'muted pre' }, empty
         ? 'Auf diesem Gerät sind noch keine Daten vorhanden.\nPrüfe, ob eine Datensicherung vorhanden ist.'
         : `Lokale Daten: ${db.data.buchung.size} Buchungen, ${n} Kontakte\nLetzte Änderung: ${fmtDateTime(db.data.meta.lastChange)}\nLetzte Datensicherung: ${fmtDateTime(db.data.meta.lastBackup)}`),
-      !navigator.onLine ? h('p', { class: 'status warn' }, 'Kein Internet verfügbar. Die Prüfung kann unvollständig sein (z. B. wenn die Sicherungen in iCloud Drive liegen und noch nicht geladen sind). „Überspringen“ ist trotzdem möglich.') : null,
-      startCheck ? h('p', { class: `status ${lvl}` }, startCheck.text) : null,
+      netOk === false ? h('p', { class: 'status warn' }, NO_NET) : null,
+      startCheck ? h('p', { class: `status pre ${lvl}` }, startCheck.text) : null,
       h('button', { class: `btn big ${startCheck ? '' : 'primary'}`, onclick: async () => {
-        if (!navigator.onLine) await alertDlg('Es ist kein Internet verfügbar. Die Prüfung kann unvollständig sein oder fehlschlagen (z. B. bei Sicherungen in iCloud Drive).\n\nDu kannst es trotzdem versuchen oder die Prüfung überspringen.', { title: 'Kein Internet' });
+        if (!(await probeNet(true))) await alertDlg('Es ist kein Internet verfügbar. Die Prüfung kann unvollständig sein oder fehlschlagen (z. B. bei Sicherungen in iCloud Drive).\n\nDu kannst es trotzdem versuchen oder die Prüfung überspringen.', { title: 'Kein Internet' });
         let info = await latestBackupInfo();
         if (!info) { if (!db.isEmpty()) return; info = { none: true }; } // Abbruch bei leerer App: ohne Restore starten möglich
         startCheck = compareWithLocal(info);
+        if (netOk === false) startCheck.text += '\n\nHinweis: Es ist kein Internet verfügbar, das Ergebnis kann deshalb unvollständig sein.';
         nav.refresh();
       } }, startCheck ? 'Erneut prüfen' : 'Daten prüfen'),
       !startCheck ? h('button', { class: 'btn big danger', onclick: async () => {
@@ -141,4 +159,4 @@ window.addEventListener('unhandledrejection', (e) => { console.error(e.reason); 
 })();
 
 // Hinweis „Kein Internet“ auf dem Willkommensscreen aktuell halten
-for (const ev of ['online', 'offline']) window.addEventListener(ev, () => { if (unlocked && document.querySelector('.start')) nav.refresh(); });
+for (const ev of ['online', 'offline']) window.addEventListener(ev, () => { if (unlocked && document.querySelector('.start')) probeNet(true); });
