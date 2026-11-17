@@ -11,6 +11,8 @@ const state = {
   custom: false, from: '', to: '',
   senKat: '', vj: false, level: 'monat', year: '',
 };
+const FKEYS = ['tab', 'custom', 'from', 'to', 'senKat', 'vj', 'level', 'year'];
+const saveState = () => db.saveFilter('auswertungen', Object.fromEntries(FKEYS.map((k) => [k, state[k]]))); // Filter werden mitgesichert
 const opened = new Set(); // aufgeklappte Drilldown-Zeilen (Schlüssel = Lieferant)
 const REPORTS = [
   ['perioden', 'Perioden'], ['kategorien', 'Kategorien'], ['senioren', 'Kundenliste'], ['treuhaender', 'Treuhänder'],
@@ -21,13 +23,14 @@ const sum = (arr) => arr.reduce((s, b) => s + b.betrag, 0);
 const th = (...c) => h('thead', {}, h('tr', {}, ...c.map((x, i) => h('th', { class: x.num ? 'num' : '' }, x.t ?? x))));
 
 export function auswertungenScreen() {
+  Object.assign(state, db.getFilter('auswertungen'));
   if (!state.custom) { state.from = `${monthOf(today())}-01`; state.to = lastDayOfMonth(monthOf(today())); } // nach Monatswechsel wieder der aktuelle Monat
-  const tabs = segmented(REPORTS.map(([value, label]) => ({ value, label })), state.tab, (v) => { state.tab = v; nav.refresh(); });
+  const tabs = segmented(REPORTS.map(([value, label]) => ({ value, label })), state.tab, (v) => { state.tab = v; saveState(); nav.refresh(); });
   tabs.classList.add('compact');
   const body = { perioden, kategorien, senioren, treuhaender }[state.tab]();
   const vjBtn = state.tab === 'perioden' || state.tab === 'kategorien'
-    ? h('button', { type: 'button', class: `btn small toggle${state.vj ? ' on' : ''}`, 'aria-pressed': String(state.vj), title: 'Vorjahresvergleich', onclick: () => { state.vj = !state.vj; nav.refresh(); } }, 'VJ-Vergleich') : null;
-  const bar = state.tab === 'treuhaender' ? yearBar() : periodBar({ from: state.from, to: state.to, extra: vjBtn, onSet: (f, t) => { state.from = f; state.to = t; state.custom = true; nav.refresh(); } });
+    ? h('button', { type: 'button', class: `btn small toggle${state.vj ? ' on' : ''}`, 'aria-pressed': String(state.vj), title: 'Vorjahresvergleich', onclick: () => { state.vj = !state.vj; saveState(); nav.refresh(); } }, 'VJ-Vergleich') : null;
+  const bar = state.tab === 'treuhaender' ? yearBar() : periodBar({ from: state.from, to: state.to, extra: vjBtn, onSet: (f, t) => { state.from = f; state.to = t; state.custom = true; saveState(); nav.refresh(); } });
   // Kopfbereich (Reiter + Periode) bleibt beim Scrollen stehen
   return {
     title: 'Auswertungen', back: 'menu',
@@ -40,7 +43,7 @@ export function auswertungenScreen() {
 function yearBar() {
   const cy = new Date().getFullYear();
   const years = new Set([cy, cy - 1, +selYear(), ...db.buchungenList().map((b) => +b.datum.slice(0, 4))]);
-  const sel = h('select', { 'aria-label': 'Jahr', onchange: () => { state.year = sel.value; nav.refresh(); } }, ...[...years].sort((a, b) => b - a).map((y) => h('option', { value: String(y) }, String(y))));
+  const sel = h('select', { 'aria-label': 'Jahr', onchange: () => { state.year = sel.value; saveState(); nav.refresh(); } }, ...[...years].sort((a, b) => b - a).map((y) => h('option', { value: String(y) }, String(y))));
   sel.value = selYear();
   return field('Jahr', sel);
 }
@@ -144,7 +147,7 @@ function kategorien() {
 function senioren() {
   const kats = db.kategorienList('kundenkategorie');
   if (state.senKat && !db.data.kundenkategorie.has(state.senKat)) state.senKat = '';
-  const sel = h('select', { 'aria-label': 'Kundenkategorie', onchange: () => { state.senKat = sel.value; nav.refresh(); } }, h('option', { value: '' }, '– Kategorie wählen –'), ...kats.map((c) => h('option', { value: c.id }, c.name)));
+  const sel = h('select', { 'aria-label': 'Kundenkategorie', onchange: () => { state.senKat = sel.value; saveState(); nav.refresh(); } }, h('option', { value: '' }, '– Kategorie wählen –'), ...kats.map((c) => h('option', { value: c.id }, c.name)));
   sel.value = state.senKat;
   const bs = !state.senKat ? [] : db.buchungenList().filter(inRange).filter((b) => db.artOf(b) === 'einnahme' && db.data.kontakt.get(b.kontaktId)?.kategorieId === state.senKat)
     .sort((a, b) => (a.datum < b.datum ? -1 : a.datum > b.datum ? 1 : 0));
@@ -218,7 +221,7 @@ function treuhaender() {
   const from = `${selYear()}-01-01`, to = `${selYear()}-12-31`;
   const { count, unstimmig } = treuhaenderRows(from, to, state.level);
   const eig = db.eigene();
-  const levels = segmented(LEVELS.map(([value, label]) => ({ value, label })), state.level, (v) => { state.level = v; nav.refresh(); });
+  const levels = segmented(LEVELS.map(([value, label]) => ({ value, label })), state.level, (v) => { state.level = v; saveState(); nav.refresh(); });
   return h('div', { class: 'stack' },
     h('div', { class: 'card stack' },
       h('h3', {}, 'Export für den Treuhänder (Excel)'),
