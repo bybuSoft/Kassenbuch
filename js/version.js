@@ -2,12 +2,14 @@
 // (die Zeichen nach dem letzten "-" im Branch-Namen, z. B. claude/festive-cray-4a3xvr -> 4a3xvr).
 // BRANCH_CODE wird beim Commit automatisch gesetzt (tools/set-version.sh, Hook in .githooks/).
 export const MAJOR = 0;
-export const MINOR = 38;
+export const MINOR = 40;
 export const BRANCH_CODE = '9qlxbm';
 export const VERSION = `${MAJOR}.${MINOR}.${BRANCH_CODE}`;
 
 // Kurze Beschreibung je Änderung (neueste zuerst)
 export const CHANGES = [
+  { v: '0.40', text: 'Ohne Internet auch „Sichern & beenden“ und die Rückfrage nach dem Speichern ausgegraut; Hilfe und README ergänzt.' },
+  { v: '0.39', text: 'Ohne Internet sind Sicherung und Restore (Menü, Einstellungen, Willkommensscreen) ausgegraut.' },
   { v: '0.38', text: 'Offline: App startet ohne Wartezeit (Service Worker nutzt sofort den Cache); echter Verbindungstest, Hinweis „Kein Internet“ bei „Daten prüfen“ auch im Ergebnis.' },
   { v: '0.37', text: 'Hilfe: ab Abschnitt 4 gekürzt auf Nicht-Offensichtliches, Nummerierung (1–13) und Rechtschreibung geprüft.' },
   { v: '0.36', text: 'Offline-Start: Service Worker mit Zeitlimit und sauberem Cache-Rückfall (kein weisser Screen mehr ohne Internet).' },

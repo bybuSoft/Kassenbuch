@@ -14,6 +14,7 @@ import { kontakteScreen } from './kontakte.js';
 import { auswertungenScreen } from './auswertungen.js';
 import { einstellungenScreen, infosScreen } from './einstellungen.js';
 import { VERSION } from './version.js';
+import { offline, probeNet, watchNet } from './net.js';
 
 const app = document.getElementById('app');
 let current = { name: 'lock' };
@@ -21,26 +22,11 @@ let unlocked = false;
 let hiddenAt = 0;
 const LOCK_AFTER_MS = 5 * 60 * 1000;
 
-// Echter Verbindungstest (navigator.onLine ist unzuverlässig): kleine Datei am Server abfragen, der Service Worker greift hier nicht auf den Cache zurück
-let netOk = null, netAt = 0;
-async function probeNet(force = false) {
-  if (!force && Date.now() - netAt < 10000) return netOk;
-  netAt = Date.now();
-  let ok = navigator.onLine;
-  if (ok) {
-    try { const r = await fetch(`sw.js?ping=${Date.now()}`, { cache: 'no-store' }); ok = r.ok; } catch { ok = false; }
-  }
-  const changed = ok !== netOk;
-  netOk = ok;
-  if (changed && document.querySelector('.start')) nav.refresh();
-  return ok;
-}
 const NO_NET = 'Kein Internet verfügbar. Die Prüfung kann unvollständig sein (z. B. wenn die Sicherungen in iCloud Drive liegen und noch nicht geladen sind). „Überspringen“ ist trotzdem möglich.';
 
 let startCheck = null; // Ergebnis von „Daten prüfen“ (nur auf dem Willkommensscreen)
 
 function startScreen() {
-  probeNet();
   const n = [...db.data.kontakt.values()].filter((k) => !k.sys).length;
   const empty = db.isEmpty();
   const lvl = startCheck?.level;
@@ -55,14 +41,14 @@ function startScreen() {
       h('p', { class: 'muted pre' }, empty
         ? 'Auf diesem Gerät sind noch keine Daten vorhanden.\nPrüfe, ob eine Datensicherung vorhanden ist.'
         : `Lokale Daten: ${db.data.buchung.size} Buchungen, ${n} Kontakte\nLetzte Änderung: ${fmtDateTime(db.data.meta.lastChange)}\nLetzte Datensicherung: ${fmtDateTime(db.data.meta.lastBackup)}`),
-      netOk === false ? h('p', { class: 'status warn' }, NO_NET) : null,
+      offline() ? h('p', { class: 'status warn' }, NO_NET) : null,
       startCheck ? h('p', { class: `status pre ${lvl}` }, startCheck.text) : null,
       h('button', { class: `btn big ${startCheck ? '' : 'primary'}`, onclick: async () => {
         if (!(await probeNet(true))) await alertDlg('Es ist kein Internet verfügbar. Die Prüfung kann unvollständig sein oder fehlschlagen (z. B. bei Sicherungen in iCloud Drive).\n\nDu kannst es trotzdem versuchen oder die Prüfung überspringen.', { title: 'Kein Internet' });
         let info = await latestBackupInfo();
         if (!info) { if (!db.isEmpty()) return; info = { none: true }; } // Abbruch bei leerer App: ohne Restore starten möglich
         startCheck = compareWithLocal(info);
-        if (netOk === false) startCheck.text += '\n\nHinweis: Es ist kein Internet verfügbar, das Ergebnis kann deshalb unvollständig sein.';
+        if (offline()) startCheck.text += '\n\nHinweis: Es ist kein Internet verfügbar, das Ergebnis kann deshalb unvollständig sein.';
         nav.refresh();
       } }, startCheck ? 'Erneut prüfen' : 'Daten prüfen'),
       !startCheck ? h('button', { class: 'btn big danger', onclick: async () => {
@@ -70,8 +56,8 @@ function startScreen() {
         if (ok) nav.go(db.data.meta.startScreen === 'menu' ? 'menu' : 'buchung');
       } }, 'Überspringen') : null,
       startCheck ? h('button', { class: `btn big ${weiterCls}`, onclick: () => nav.go(db.data.meta.startScreen === 'menu' ? 'menu' : 'buchung') }, lvl === 'none' ? 'Ohne Restore starten' : (db.data.meta.startScreen === 'menu' ? 'Weiter zum Menü' : 'Weiter zur Buchung')) : null,
-      showRestore ? h('button', { class: `btn big ${restoreCls}`, onclick: () => startRestore() }, 'Datensicherung einspielen (Restore)') : null,
-      startCheck?.dirty && !empty ? h('button', { class: 'btn big ok', onclick: async () => { if (await startBackup()) { startCheck = null; nav.refresh(); } } }, 'Jetzt sichern') : null),
+      showRestore ? h('button', { class: `btn big ${restoreCls}`, disabled: offline(), title: offline() ? 'Ohne Internet nicht möglich' : null, onclick: () => startRestore() }, 'Datensicherung einspielen (Restore)') : null,
+      startCheck?.dirty && !empty ? h('button', { class: 'btn big ok', disabled: offline(), title: offline() ? 'Ohne Internet nicht möglich' : null, onclick: async () => { if (await startBackup()) { startCheck = null; nav.refresh(); } } }, 'Jetzt sichern') : null),
   };
 }
 
@@ -151,12 +137,10 @@ window.addEventListener('unhandledrejection', (e) => { console.error(e.reason); 
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js').catch((e) => console.warn('Service Worker:', e));
     if (navigator.storage?.persist) navigator.storage.persist().catch(() => {});
     window.__kassenbuch = { db, nav, startBackup }; // für Tests/Debugging
+    watchNet();
     showLock();
   } catch (e) {
     console.error(e);
     app.replaceChildren(h('main', { class: 'center' }, h('div', { class: 'card' }, h('h1', {}, 'Fehler'), h('p', {}, e.message))));
   }
 })();
-
-// Hinweis „Kein Internet“ auf dem Willkommensscreen aktuell halten
-for (const ev of ['online', 'offline']) window.addEventListener(ev, () => { if (unlocked && document.querySelector('.start')) probeNet(true); });

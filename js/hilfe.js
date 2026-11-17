@@ -77,6 +77,7 @@ export function helpContent() {
         h('span', {}, b('Passwort: '), 'Die Sicherung ist verschlüsselt. Das Passwort wird nirgends gespeichert; ohne Passwort ist die Sicherung nicht lesbar. Bitte sicher aufbewahren.'),
         h('span', {}, b('Dateiname: '), 'JJJJMMTT-HHMMSS-Gerät-vVersion.enc. Der Gerätename wird in den Einstellungen festgelegt und steht nur im Dateinamen.'),
         h('span', {}, b('Speicherort: '), 'iPhone/iPad: Teilen-Dialog → „In Dateien sichern“ (z. B. iCloud Drive). Desktop (Chrome/Edge): Standardordner in den Einstellungen wählen; ältere Sicherungen können automatisch gelöscht werden.'),
+        h('span', {}, b('Ohne Internet: '), 'Ist kein Internet verfügbar, sind alle Sicherungs- und Restore-Buttons ausgegraut (Menü, Einstellungen, Willkommensscreen, Beenden, Rückfrage nach dem Speichern). Sie werden automatisch wieder aktiv, sobald eine Verbindung besteht.'),
         h('span', {}, b('Restore: '), 'Die lokalen Daten werden vollständig durch die Sicherung ersetzt.'),
         h('span', {}, b('Daten prüfen: '), 'Vergleicht die jüngste Sicherung (nur Dateiname) mit dem lokalen Stand. Grün = aktuell. Gelb = neuere Sicherung vorhanden (Restore empfohlen) oder ungesicherte lokale Änderungen (jetzt sichern). Rot = beides: Ein Restore würde die lokalen Änderungen überschreiben, daher zuerst sichern.'),
       )),

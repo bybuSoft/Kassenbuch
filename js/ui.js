@@ -23,7 +23,7 @@ export function showModal({ title, body, buttons = [], dismissable = true, wide 
     if (e.key === 'Escape' && dismissable && back === document.getElementById('modal-root').lastElementChild) { e.stopPropagation(); ctl.close(undefined); }
   };
   const btnEls = buttons.map((b) => {
-    const el = h('button', { type: 'button', class: `btn ${b.cls || ''}${b.left ? ' left' : ''}` }, b.label);
+    const el = h('button', { type: 'button', class: `btn ${b.cls || ''}${b.left ? ' left' : ''}`, disabled: !!b.disabled }, b.label);
     el.addEventListener('click', async () => {
       el.disabled = true;
       try {
@@ -54,10 +54,10 @@ export function showModal({ title, body, buttons = [], dismissable = true, wide 
   return ctl;
 }
 
-export async function confirmDlg(message, { title = 'Bestätigen', ok = 'OK', cancel = 'Abbrechen', danger = false } = {}) {
+export async function confirmDlg(message, { title = 'Bestätigen', ok = 'OK', cancel = 'Abbrechen', danger = false, okDisabled = false } = {}) {
   const ctl = showModal({
     title, body: h('p', { class: 'pre' }, message),
-    buttons: [{ label: cancel, value: false }, { label: ok, cls: danger ? 'danger' : 'primary', value: true }],
+    buttons: [{ label: cancel, value: false }, { label: ok, cls: danger ? 'danger' : 'primary', value: true, disabled: okDisabled }],
   });
   return (await ctl.closed) === true;
 }

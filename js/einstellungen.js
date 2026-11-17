@@ -6,6 +6,7 @@ import { editKontakt } from './kontakte.js';
 import { changePin } from './lock.js';
 import { createTestData, removeTestData, hasTestData } from './testdata.js';
 import { VERSION, CHANGES } from './version.js';
+import { offline } from './net.js';
 import { startBackup, startRestore, folderSupported, backupFolder, chooseBackupFolder, clearBackupFolder, pruneSettings } from './backup.js';
 import { nav } from './nav.js';
 import { validMail } from './notizen.js';
@@ -96,7 +97,8 @@ export function einstellungenScreen() {
               } })),
               pruneSettings().on ? field('Anzahl der jüngsten Sicherungen, die bleiben', h('input', { type: 'number', min: 1, max: 99, value: pruneSettings().keep, onchange: async (e) => { await db.setMeta('pruneKeep', Math.max(1, Math.round(Number(e.target.value) || 5))); nav.refresh(); } })) : null) : null)
           : h('p', { class: 'muted' }, 'Ein fester Standardordner kann auf iPhone/iPad nicht eingestellt werden (Einschränkung von Safari). Beim Sichern „In Dateien sichern“ wählen – iOS merkt sich meist den zuletzt benutzten Ordner. Auf Desktop-Chrome/Edge ist die Einstellung möglich.'),
-        h('div', { class: 'presets' }, h('button', { class: 'btn', onclick: () => startBackup() }, 'Sicherung erstellen'), h('button', { class: 'btn', onclick: () => startRestore() }, 'Restore aus Datei'))),
+        h('div', { class: 'presets' }, h('button', { class: 'btn', disabled: offline(), onclick: () => startBackup() }, 'Sicherung erstellen'), h('button', { class: 'btn', disabled: offline(), onclick: () => startRestore() }, 'Restore aus Datei')),
+        offline() ? h('p', { class: 'muted' }, 'Ohne Internet sind Sicherung und Restore nicht möglich.') : null),
       h('div', { class: 'card stack' }, h('h3', {}, 'PIN'),
         h('button', { class: 'btn', onclick: async () => {
           const o = h('input', { type: 'password', inputmode: 'numeric', autocomplete: 'off' }), n = h('input', { type: 'password', inputmode: 'numeric', autocomplete: 'off' });

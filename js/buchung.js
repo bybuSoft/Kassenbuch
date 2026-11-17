@@ -4,6 +4,7 @@ import { h, uuid, parseBetrag, today, fmtDate } from './util.js';
 import { field, toast, confirmDlg } from './ui.js';
 import { kontaktPicker, betragFields, kategorienFor, prefillFor, confirmBuchungDup, confirmNullBetrag } from './kontaktpick.js';
 import { startBackup, beenden } from './backup.js';
+import { offline } from './net.js';
 import { buchungRow } from './kassenbuch.js';
 import { nav } from './nav.js';
 
@@ -62,7 +63,7 @@ export function buchungScreen() {
     resetDraft();
     if (again) { nav.refresh(); return; }
     // „Speichern“: erst fragen, ob ein Backup erstellt werden soll, danach ins Kassenbuch
-    if (await confirmDlg('Die Buchung wurde gespeichert.\nSoll jetzt eine Datensicherung erstellt werden?', { title: 'Datensicherung', ok: 'Ja, sichern', cancel: 'Nein' })) await startBackup();
+    if (await confirmDlg('Die Buchung wurde gespeichert.\nSoll jetzt eine Datensicherung erstellt werden?' + (offline() ? '\n\nOhne Internet nicht möglich.' : ''), { title: 'Datensicherung', ok: 'Ja, sichern', cancel: 'Nein', okDisabled: offline() })) await startBackup();
     nav.go('menu');
   };
   const cancel = () => { resetDraft(); nav.go('menu'); };
