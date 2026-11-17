@@ -5,6 +5,7 @@ import { encryptJson, decryptJson } from './crypto.js';
 import { VERSION } from './version.js';
 import { passwordDlg, confirmDlg, alertDlg, toast, showModal } from './ui.js';
 import { nav } from './nav.js';
+import { offline } from './net.js';
 
 // Prüfwert (SHA-256) des in dieser Sitzung verwendeten Backup-Passworts – nur im Arbeitsspeicher, nie gespeichert.
 // Damit wird ab dem zweiten Backup (und nach einem Restore) ein Tippfehler erkannt, ohne das Passwort erneut bestätigen zu müssen.
@@ -168,8 +169,8 @@ export async function beenden() {
   }
   const ctl = showModal({
     title: 'Beenden',
-    body: h('p', { class: 'pre' }, 'Es gibt ungesicherte Änderungen.\n\nVor dem Beenden eine Datensicherung erstellen?'),
-    buttons: [{ label: 'Abbrechen', value: 'cancel' }, { label: 'Ohne Sicherung beenden', value: 'quit' }, { label: 'Sichern & beenden', cls: 'primary', value: 'backup' }],
+    body: h('p', { class: 'pre' }, 'Es gibt ungesicherte Änderungen.\n\nVor dem Beenden eine Datensicherung erstellen?' + (offline() ? '\n\nOhne Internet nicht möglich.' : '')),
+    buttons: [{ label: 'Abbrechen', value: 'cancel' }, { label: 'Ohne Sicherung beenden', value: 'quit' }, { label: 'Sichern & beenden', cls: 'primary', value: 'backup', disabled: offline() }],
   });
   const r = await ctl.closed;
   if (r === 'quit') nav.exit();
