@@ -9,7 +9,7 @@ export const hasPin = () => !!db.data.meta.pin;
 /** Liefert den Sperr-Screen. onUnlock() wird nach Erfolg aufgerufen. */
 export function lockScreen(onUnlock) {
   const setup = !hasPin();
-  const p1 = h('input', { type: 'password', inputmode: 'numeric', pattern: '[0-9]*', autocomplete: 'off', placeholder: 'PIN', 'aria-label': 'PIN' });
+  const p1 = h('input', { type: 'password', inputmode: 'numeric', pattern: '[0-9]*', autocomplete: 'off', placeholder: 'PIN', 'aria-label': 'PIN', autofocus: '' });
   const p2 = h('input', { type: 'password', inputmode: 'numeric', pattern: '[0-9]*', autocomplete: 'off', placeholder: 'PIN wiederholen', 'aria-label': 'PIN wiederholen' });
   const err = h('div', { class: 'err', role: 'alert' });
   let fails = 0;
@@ -37,7 +37,8 @@ export function lockScreen(onUnlock) {
   h('h1', {}, 'Kassenbuch'),
   h('p', { class: 'muted' }, setup ? 'Bitte lege eine PIN für den Zugriffsschutz fest.' : 'Bitte PIN eingeben.'),
   field(setup ? 'Neue PIN' : 'PIN', p1), setup ? field('PIN wiederholen', p2) : null, err, btn);
-  setTimeout(() => p1.focus(), 50);
+  // Fokus erst nach dem Einhängen ins DOM setzen (mehrere Versuche, da der Screen verzögert eingefügt wird)
+  [0, 50, 250].forEach((ms) => setTimeout(() => { if (p1.isConnected) p1.focus(); }, ms));
   return form;
 }
 

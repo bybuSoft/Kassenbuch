@@ -3,7 +3,7 @@ import * as db from './db.js';
 import { h, fmtDateTime } from './util.js';
 import { nav } from './nav.js';
 import { lockScreen } from './lock.js';
-import { toast, confirmDlg } from './ui.js';
+import { toast, confirmDlg, alertDlg } from './ui.js';
 import { startRestore, startBackup, latestBackupInfo, compareWithLocal } from './backup.js';
 import { kassenbuchScreen } from './kassenbuch.js';
 import { buchungScreen } from './buchung.js';
@@ -38,8 +38,10 @@ function startScreen() {
       h('p', { class: 'muted pre' }, empty
         ? 'Auf diesem Gerät sind noch keine Daten vorhanden.\nPrüfe, ob eine Datensicherung vorhanden ist.'
         : `Lokale Daten: ${db.data.buchung.size} Buchungen, ${n} Kontakte\nLetzte Änderung: ${fmtDateTime(db.data.meta.lastChange)}\nLetzte Datensicherung: ${fmtDateTime(db.data.meta.lastBackup)}`),
+      !navigator.onLine ? h('p', { class: 'status warn' }, 'Kein Internet verfügbar. Die Prüfung kann unvollständig sein (z. B. wenn die Sicherungen in iCloud Drive liegen und noch nicht geladen sind). „Überspringen“ ist trotzdem möglich.') : null,
       startCheck ? h('p', { class: `status ${lvl}` }, startCheck.text) : null,
       h('button', { class: `btn big ${startCheck ? '' : 'primary'}`, onclick: async () => {
+        if (!navigator.onLine) await alertDlg('Es ist kein Internet verfügbar. Die Prüfung kann unvollständig sein oder fehlschlagen (z. B. bei Sicherungen in iCloud Drive).\n\nDu kannst es trotzdem versuchen oder die Prüfung überspringen.', { title: 'Kein Internet' });
         let info = await latestBackupInfo();
         if (!info) { if (!db.isEmpty()) return; info = { none: true }; } // Abbruch bei leerer App: ohne Restore starten möglich
         startCheck = compareWithLocal(info);
@@ -137,3 +139,6 @@ window.addEventListener('unhandledrejection', (e) => { console.error(e.reason); 
     app.replaceChildren(h('main', { class: 'center' }, h('div', { class: 'card' }, h('h1', {}, 'Fehler'), h('p', {}, e.message))));
   }
 })();
+
+// Hinweis „Kein Internet“ auf dem Willkommensscreen aktuell halten
+for (const ev of ['online', 'offline']) window.addEventListener(ev, () => { if (unlocked && document.querySelector('.start')) nav.refresh(); });
