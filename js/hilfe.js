@@ -70,7 +70,11 @@ export function helpContent() {
         'Der Button „Buchungen“ zeigt alle Buchungen des Kontakts und erlaubt die direkte Erfassung (siehe Abschnitt 2). Datum und Kategorie bleiben nach „Buchen“ stehen.',
         'Dublettenprüfung: Gleicher Name mit gleicher PLZ, Telefonnummer oder E-Mail-Adresse (oder ein Eintrag ohne weitere Daten) löst eine Warnung aus. Ebenso Buchungen mit gleichem Kontakt, Datum und Betrag.',
         'Speichern: „Speichern und buchen“ öffnet danach direkt die Buchungen des Kontakts (Vorgabe, in den Einstellungen änderbar); „Speichern und zurück“ schliesst den Dialog.',
+<<<<<<< HEAD
         'Ausgeben (im Kontakt): Zeitraum wählen (Vorgabe alles), dann drucken: alle Felder (kompakt) und die Buchungen, in der Regel Stammdaten und rund 20 Buchungen auf der ersten Seite, z. B. für Auskunftsbegehren nach Datenschutzrecht.',
+=======
+        'Ausgeben (im Kontakt): Zeitraum wählen (Vorgabe alles), dann drucken: alle Felder (kompakt) und die Buchungen, Stammdaten und rund 20 Buchungen auf der ersten Seite, z. B. für Auskunftsbegehren nach Datenschutzrecht.',
+>>>>>>> origin/master
         'Kunden haben zusätzlich die Felder „Kategorie“ und „Stock“ (Freitext, z. B. Stockwerk im Heim).',
         'PIN und Passwort: Mit „Eingabe anzeigen“ wird die Eingabe sichtbar (Sperrbildschirm, PIN ändern, Datensicherung).',
         'Löschen: Die Buchungen bleiben erhalten und werden „Gelöschter Kunde“ bzw. „Gelöschter Lieferant“ zugeordnet.',
