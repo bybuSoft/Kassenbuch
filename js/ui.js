@@ -144,12 +144,14 @@ export function segmented(options, value, onChange) {
 }
 
 /** Inhalt in den Druckbereich legen und drucken (auf iOS: Teilen > Sichern als PDF). */
+export const printing = { active: false, endedAt: 0 }; // Druckdialog offen: App darf sich dabei/danach nicht sperren
 export function printNode(node) {
   const area = document.getElementById('print-area');
   area.replaceChildren(node);
+  printing.active = true;
   setTimeout(() => window.print(), 60);
 }
-window.addEventListener('afterprint', () => document.getElementById('print-area')?.replaceChildren());
+window.addEventListener('afterprint', () => { printing.active = false; printing.endedAt = Date.now(); document.getElementById('print-area')?.replaceChildren(); });
 
 /** Datumsfeld, das auch auf dem Handy getippt werden kann (TT.MM.JJJJ, Tag beim Antippen markiert) und einen Kalender-Button hat. */
 export function datumField(iso, { selectAll = false } = {}) {

@@ -15,26 +15,27 @@ export function printKontakt(k, { from = '0000-01-01', to = '9999-12-31' } = {})
   const alles = from === '0000-01-01' && to === '9999-12-31';
   const bs = db.buchungenOf(k.id).filter((b) => b.datum >= from && b.datum <= to).sort((a, b) => (a.datum === b.datum ? (a.created || 0) - (b.created || 0) : a.datum < b.datum ? -1 : 1));
   const total = bs.reduce((s, b) => s + b.betrag, 0);
-  const row = (l, v) => h('tr', {}, h('th', {}, l), h('td', { class: 'pre' }, v || '–')); // alle Felder andrucken, leere mit «–»
-    const adr = (c) => [c.strasse, [c.plz, c.ort].filter(Boolean).join(' ')].filter(Boolean);
-
+  const adr = (c) => [c.strasse, [c.plz, c.ort].filter(Boolean).join(' ')].filter(Boolean);
+  const commText = (list) => list.map((c) => c.wert + (c.bevorzugt && list.length > 1 ? ' (bevorzugt)' : '')).join(', ');
   const mails = comms.filter((c) => c.typ === 'mail'); const tels = comms.filter((c) => c.typ !== 'mail');
-  const commRows = (list, l) => (list.length ? list.map((c, i) => row(list.length > 1 ? `${l} ${i + 1}` : l, c.wert + (c.bevorzugt ? ' (bevorzugt)' : ''))) : [row(l, '')]);
-  const stamm = h('table', { class: 'kd-tbl' },
-    row('Art', k.istLieferant ? 'Lieferant' : 'Kunde'),
+
+  // Stammdaten kompakt: zwei Felder pro Zeile (alle Felder, leere mit «–»), Gesundheit und Notizen über die ganze Breite
+  const items = [
+    ['Art', k.istLieferant ? 'Lieferant' : 'Kunde'], ['Erfasst am', k.created ? fmtDateTime(k.created) : ''],
     ...(k.istLieferant
-      ? [row('Name 1', k.name1), row('Name 2', k.name2)]
-      : [row('Vorname', k.vorname), row('Name', k.name), row('Geburtsdatum', fmtDate(k.geburtsdatum)), row('Kategorie', kat?.name), row('Stock', k.stock)]),
-    row('Geschlecht / Firma', GESCHLECHT[k.geschlecht]),
-    row('Anrede', ANREDE[k.anrede]),
-    row('Strasse', k.strasse),
-    row('PLZ', k.plz),
-    row('Ort', k.ort),
-    ...commRows(tels, 'Telefon'),
-    ...commRows(mails, 'E-Mail'),
-    ...(k.istLieferant ? [] : HEALTH.map(([key, label]) => row(label, k[key] ? 'Ja' : 'Nein'))),
-    row('Notizen', (k.notizen || '').trim()),
-    row('Erfasst am', k.created ? fmtDateTime(k.created) : ''));
+      ? [['Name 1', k.name1], ['Name 2', k.name2]]
+      : [['Vorname', k.vorname], ['Name', k.name], ['Geburtsdatum', fmtDate(k.geburtsdatum)], ['Kategorie / Stock', [kat?.name, k.stock].filter(Boolean).join(' / ')]]),
+    ['Geschlecht / Firma', GESCHLECHT[k.geschlecht]], ['Anrede', ANREDE[k.anrede]],
+    ['Strasse', k.strasse], ['PLZ / Ort', [k.plz, k.ort].filter(Boolean).join(' ')],
+    ['Telefon', commText(tels)], ['E-Mail', commText(mails)],
+  ];
+  const cell = (l, v) => [h('th', {}, l), h('td', {}, v || '–')];
+  const trs = [];
+  for (let i = 0; i < items.length; i += 2) trs.push(h('tr', {}, ...cell(...items[i]), ...(items[i + 1] ? cell(...items[i + 1]) : [h('th'), h('td')])));
+  const wide = (l, v) => h('tr', {}, h('th', {}, l), h('td', { colspan: 3, class: 'pre' }, v || '–'));
+  if (!k.istLieferant) trs.push(wide('Gesundheit', HEALTH.map(([key, label]) => `${label}: ${k[key] ? 'Ja' : 'Nein'}`).join(' · ')));
+  trs.push(wide('Notizen', (k.notizen || '').trim()));
+  const stamm = h('table', { class: 'kd-tbl' }, ...trs);
 
   const rows = bs.map((b) => h('tr', {}, h('td', {}, fmtDate(b.datum)),
     h('td', {}, [db.data.buchungskategorie.get(b.kategorieId)?.name, b.text].filter(Boolean).join(' – ')),
@@ -46,9 +47,8 @@ export function printKontakt(k, { from = '0000-01-01', to = '9999-12-31' } = {})
     : h('p', {}, 'Keine Buchungen vorhanden.');
 
   printNode(h('div', { class: 'kontaktdruck' },
-    h('div', { class: 'q-absender' }, h('strong', {}, db.kontaktName(eig)), ...adr(eig).map((l) => h('div', {}, l))),
+    h('div', { class: 'kd-head' }, h('div', { class: 'q-absender' }, h('strong', {}, db.kontaktName(eig)), ...adr(eig).map((l) => h('span', {}, ` · ${l}`))), h('span', { class: 'muted' }, `Erstellt: ${fmtDateTime(Date.now())}`)),
     h('h1', {}, `Gespeicherte Daten: ${db.kontaktName(k)}`),
-    h('p', { class: 'muted' }, `Erstellt: ${fmtDateTime(Date.now())}`),
     h('h3', {}, 'Stammdaten'), stamm,
     h('h3', {}, alles ? 'Buchungen' : `Buchungen ${fmtDate(from)} – ${fmtDate(to)}`), buchungen));
 }
