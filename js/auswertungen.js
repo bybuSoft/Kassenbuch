@@ -1,6 +1,6 @@
 // Auswertungen: Perioden, Kundenkategorien, Seniorenzentrum-Liste, Treuhänder-Export (Excel)
 import * as db from './db.js';
-import { h, chf, today, isoDate, fmtDate, fmtDateTime, monthOf, monthLabel, monthShort, lastDayOfMonth, saveBlob, collator } from './util.js';
+import { h, chf, today, isoDate, fmtDate, fmtDateTime, monthOf, monthLabel, monthShort, lastDayOfMonth, shiftMonth, saveBlob, collator } from './util.js';
 import { field, segmented, toast, printNode } from './ui.js';
 import { buildXlsx, XLSX_MIME } from './xlsx.js';
 import { periodBar } from './periodbar.js';
@@ -24,7 +24,10 @@ const th = (...c) => h('thead', {}, h('tr', {}, ...c.map((x, i) => h('th', { cla
 
 export function auswertungenScreen() {
   Object.assign(state, db.getFilter('auswertungen'));
-  if (!state.custom) { state.from = `${monthOf(today())}-01`; state.to = lastDayOfMonth(monthOf(today())); } // nach Monatswechsel wieder der aktuelle Monat
+  if (!state.custom) { // Vorgabe: aktueller Monat, bei der Kundenliste der Vormonat
+    const mo = state.tab === 'senioren' ? shiftMonth(monthOf(today()), -1) : monthOf(today());
+    state.from = `${mo}-01`; state.to = lastDayOfMonth(mo);
+  } // nach Monatswechsel wieder der aktuelle Monat
   const tabs = segmented(REPORTS.map(([value, label]) => ({ value, label })), state.tab, (v) => { state.tab = v; saveState(); nav.refresh(); });
   tabs.classList.add('compact');
   const body = { perioden, kategorien, senioren, treuhaender }[state.tab]();
