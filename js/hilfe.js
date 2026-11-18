@@ -82,7 +82,7 @@ export function helpContent() {
         h('span', {}, b('Dateiname: '), 'JJJJMMTT-HHMMSS-Gerät-vVersion.enc. Der Gerätename wird in den Einstellungen festgelegt und steht nur im Dateinamen.'),
         h('span', {}, b('Speicherort: '), 'iPhone/iPad: Teilen-Dialog → „In Dateien sichern“ (z. B. iCloud Drive). Desktop (Chrome/Edge): Standardordner in den Einstellungen wählen; ältere Sicherungen können automatisch gelöscht werden.'),
         h('span', {}, b('Ohne Internet: '), 'Ist kein Internet verfügbar, sind „Daten prüfen“ sowie alle Sicherungs- und Restore-Buttons ausgegraut (Willkommensscreen, Menü, Einstellungen, Beenden, Rückfrage nach dem Speichern). Sie werden automatisch wieder aktiv, sobald eine Verbindung besteht.'),
-        h('span', {}, b('Restore: '), 'Die lokalen Daten werden vollständig durch die Sicherung ersetzt, inklusive der Filtereinstellungen.'),
+        h('span', {}, b('Restore: '), 'Die lokalen Daten werden vollständig durch die Sicherung ersetzt, inklusive der Filtereinstellungen. Der Restore wird ganz oder gar nicht ausgeführt: Bei einem Fehler bleiben (bzw. kommen) die bisherigen Daten unverändert zurück und es erscheint eine Meldung.'),
         h('span', {}, b('Filtereinstellungen: '), 'Die Filter im Kassenbuch, bei den Kunden und in den Auswertungen sind Teil der Sicherung und werden beim Restore wiederhergestellt.'),
         h('span', {}, b('Daten prüfen: '), 'Vergleicht die jüngste Sicherung (nur Dateiname) mit dem lokalen Stand. Grün = aktuell. Gelb = neuere Sicherung vorhanden (Restore empfohlen) oder ungesicherte lokale Änderungen (jetzt sichern). Rot = beides: Ein Restore würde die lokalen Änderungen überschreiben, daher zuerst sichern.'),
       )),
