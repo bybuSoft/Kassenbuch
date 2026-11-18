@@ -1,7 +1,7 @@
 // Einstellungen und Infos
 import * as db from './db.js';
 import { h, uuid, fmtDateTime } from './util.js';
-import { confirmDlg, promptDlg, showModal, field, checkField, toast, alertDlg } from './ui.js';
+import { confirmDlg, promptDlg, showModal, field, checkField, toast, alertDlg, revealCheck } from './ui.js';
 import { editKontakt } from './kontakte.js';
 import { changePin } from './lock.js';
 import { createTestData, removeTestData, hasTestData } from './testdata.js';
@@ -71,6 +71,9 @@ export function einstellungenScreen() {
       h('div', { class: 'card stack' }, h('h3', {}, 'Start'),
         field('Nach dem Start öffnen', (() => { const sel = h('select', { onchange: async () => { await db.setMeta('startScreen', sel.value); toast('Gespeichert'); } }, h('option', { value: 'menu' }, 'Menü'), h('option', { value: 'buchung' }, 'Buchung')); sel.value = db.data.meta.startScreen === 'menu' ? 'menu' : 'buchung'; return sel; })()),
         h('p', { class: 'muted' }, 'Gilt nach „Daten prüfen“ beim Start.')),
+      h('div', { class: 'card stack' }, h('h3', {}, 'Kunden / Lieferanten'),
+        field('Standard-Button beim Speichern', (() => { const sel = h('select', { onchange: async () => { await db.setMeta('kontaktSaveDefault', sel.value); toast('Gespeichert'); } }, h('option', { value: 'buchen' }, 'Speichern und buchen'), h('option', { value: 'zurueck' }, 'Speichern und zurück')); sel.value = db.kontaktSaveDefault(); return sel; })()),
+        h('p', { class: 'muted' }, 'Der hervorgehobene Button im Kunden-/Lieferantendialog.')),
       h('div', { class: 'card stack' }, h('h3', {}, 'Gerät'),
         field('Gerätename', h('input', { type: 'text', value: db.deviceName(), placeholder: 'z. B. iPhone-Marlene', autocomplete: 'off',
           onchange: async (e) => { await db.setMeta('deviceName', e.target.value.trim()); toast('Gerätename gespeichert'); } })),
@@ -102,7 +105,7 @@ export function einstellungenScreen() {
       h('div', { class: 'card stack' }, h('h3', {}, 'PIN'),
         h('button', { class: 'btn', onclick: async () => {
           const o = h('input', { type: 'password', inputmode: 'numeric', autocomplete: 'off' }), n = h('input', { type: 'password', inputmode: 'numeric', autocomplete: 'off' });
-          const ctl = showModal({ title: 'PIN ändern', body: [field('Aktuelle PIN', o), field('Neue PIN (4–12 Ziffern)', n)], buttons: [{ label: 'Abbrechen' }, { label: 'Ändern', cls: 'primary', onClick: async () => { await changePin(o.value, n.value); toast('PIN geändert'); } }] });
+          const ctl = showModal({ title: 'PIN ändern', body: [field('Aktuelle PIN', o), field('Neue PIN (4–12 Ziffern)', n), revealCheck(o, n)], buttons: [{ label: 'Abbrechen' }, { label: 'Ändern', cls: 'primary', onClick: async () => { await changePin(o.value, n.value); toast('PIN geändert'); } }] });
           await ctl.closed;
         } }, 'PIN ändern')),
       kategorieCard('Kundenkategorien', 'kundenkategorie'),

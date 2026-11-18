@@ -1,6 +1,6 @@
 // Auswertungen: Perioden, Kundenkategorien, Seniorenzentrum-Liste, Treuhänder-Export (Excel)
 import * as db from './db.js';
-import { h, chf, today, isoDate, fmtDate, fmtDateTime, monthOf, monthLabel, monthShort, lastDayOfMonth, saveBlob, collator } from './util.js';
+import { h, chf, today, isoDate, fmtDate, fmtDateTime, monthOf, monthLabel, monthShort, lastDayOfMonth, shiftMonth, saveBlob, collator } from './util.js';
 import { field, segmented, toast, printNode } from './ui.js';
 import { buildXlsx, XLSX_MIME } from './xlsx.js';
 import { periodBar } from './periodbar.js';
@@ -24,7 +24,10 @@ const th = (...c) => h('thead', {}, h('tr', {}, ...c.map((x, i) => h('th', { cla
 
 export function auswertungenScreen() {
   Object.assign(state, db.getFilter('auswertungen'));
-  if (!state.custom) { state.from = `${monthOf(today())}-01`; state.to = lastDayOfMonth(monthOf(today())); } // nach Monatswechsel wieder der aktuelle Monat
+  if (!state.custom) { // Vorgabe: aktueller Monat, bei der Kundenliste der Vormonat
+    const mo = state.tab === 'senioren' ? shiftMonth(monthOf(today()), -1) : monthOf(today());
+    state.from = `${mo}-01`; state.to = lastDayOfMonth(mo);
+  } // nach Monatswechsel wieder der aktuelle Monat
   const tabs = segmented(REPORTS.map(([value, label]) => ({ value, label })), state.tab, (v) => { state.tab = v; saveState(); nav.refresh(); });
   tabs.classList.add('compact');
   const body = { perioden, kategorien, senioren, treuhaender }[state.tab]();
@@ -145,34 +148,36 @@ function kategorien() {
 
 // ---- Kundenliste (z. B. Seniorenzentrum): Vorname, Name, Betrag, gruppiert nach Tag, Total pro Monat ---------
 function senioren() {
-  const kats = db.kategorienList('kundenkategorie');
-  if (state.senKat && !db.data.kundenkategorie.has(state.senKat)) state.senKat = '';
-  const sel = h('select', { 'aria-label': 'Kundenkategorie', onchange: () => { state.senKat = sel.value; saveState(); nav.refresh(); } }, h('option', { value: '' }, '– Kategorie wählen –'), ...kats.map((c) => h('option', { value: c.id }, c.name)));
+  const kats = db.kategorienList('buchungskategorie', 'einnahme');
+  if (!state.senKat || !kats.some((c) => c.id === state.senKat)) state.senKat = (kats.find((c) => c.name === 'Stiftung') || kats[0])?.id || ''; // Vorgabe: Stiftung
+  const sel = h('select', { 'aria-label': 'Buchungskategorie', onchange: () => { state.senKat = sel.value; saveState(); nav.refresh(); } }, ...kats.map((c) => h('option', { value: c.id }, c.name)));
   sel.value = state.senKat;
-  const bs = !state.senKat ? [] : db.buchungenList().filter(inRange).filter((b) => db.artOf(b) === 'einnahme' && db.data.kontakt.get(b.kontaktId)?.kategorieId === state.senKat)
+  const bs = db.buchungenList().filter(inRange).filter((b) => db.artOf(b) === 'einnahme' && b.kategorieId === state.senKat)
     .sort((a, b) => (a.datum < b.datum ? -1 : a.datum > b.datum ? 1 : 0));
   const out = h('div', { class: 'report' });
-  const catName = db.data.kundenkategorie.get(state.senKat)?.name || '';
+  const catName = db.data.buchungskategorie.get(state.senKat)?.name || '';
   const eig = db.eigene();
-  const adr = [eig.strasse, [eig.plz, eig.ort].filter(Boolean).join(' ')].filter(Boolean);
-  out.append(h('p', {}, h('strong', {}, db.kontaktName(eig)), ...adr.flatMap((l) => [h('br'), l])), h('h3', {}, `Kundenliste ${catName}`),
+  out.append(h('p', {}, h('strong', {}, db.kontaktName(eig))), h('h3', {}, `Kundenliste ${catName}`),
     h('p', { class: 'muted' }, `${fmtDate(state.from)} – ${fmtDate(state.to)}`, h('br'), `Erstellt: ${fmtDateTime(Date.now())}`));
-  if (!state.senKat) out.append(h('p', { class: 'muted' }, 'Bitte eine Kundenkategorie wählen.'));
-  else if (!bs.length) out.append(h('p', { class: 'muted' }, 'Keine Buchungen für diese Kategorie im gewählten Zeitraum.'));
-  const months = [...new Set(bs.map((b) => monthOf(b.datum)))];
-  for (const mo of months) {
-    out.append(h('h4', {}, monthLabel(mo)));
+  if (!bs.length) out.append(h('p', { class: 'muted' }, 'Keine Buchungen für diese Buchungskategorie im gewählten Zeitraum.'));
+  else {
+    // je Kunde eine Gruppe (Name, Vorname), darin Buchungen nach Datum aufsteigend, mit Zwischensumme
+    const groups = new Map();
+    bs.forEach((b) => { (groups.get(b.kontaktId) || groups.set(b.kontaktId, []).get(b.kontaktId)).push(b); });
+    const list = [...groups].map(([id, arr]) => ({ k: db.data.kontakt.get(id) || {}, arr }))
+      .sort((x, y) => collator.compare(`${x.k.name || ''} ${x.k.vorname || ''}`, `${y.k.name || ''} ${y.k.vorname || ''}`));
     const rows = [];
-    let lastDay = '';
-    for (const b of bs.filter((x) => monthOf(x.datum) === mo)) {
-      if (b.datum !== lastDay) { lastDay = b.datum; rows.push(h('tr', { class: 'daytr' }, h('td', { colspan: 3 }, fmtDate(b.datum)))); }
-      const k = db.data.kontakt.get(b.kontaktId);
-      rows.push(h('tr', {}, h('td', {}, k.vorname), h('td', {}, k.name), h('td', { class: 'num' }, chf(b.betrag))));
+    for (const { k, arr } of list) {
+      const kat = db.data.kundenkategorie.get(k.kategorieId)?.name;
+      const info = [kat, k.stock ? `Stock ${k.stock}` : ''].filter(Boolean).join(' · ');
+      rows.push(h('tr', { class: 'daytr' }, h('td', { colspan: 2 }, [[k.name, k.vorname].filter(Boolean).join(' ') || db.kontaktName(k), info].filter(Boolean).join(' – '))));
+      arr.forEach((b) => rows.push(h('tr', {}, h('td', {}, fmtDate(b.datum)), h('td', { class: 'num' }, chf(b.betrag)))));
+      rows.push(h('tr', { class: 'total' }, h('td', {}, 'Total'), h('td', { class: 'num' }, chf(sum(arr)))));
     }
-    rows.push(h('tr', { class: 'total' }, h('td', { colspan: 2 }, `Total ${monthLabel(mo)}`), h('td', { class: 'num' }, chf(sum(bs.filter((x) => monthOf(x.datum) === mo))))));
-    out.append(h('table', { class: 'tbl amt' }, th('Vorname', 'Name', { t: 'Betrag (CHF)', num: 1 }), h('tbody', {}, ...rows)));
+    rows.push(h('tr', { class: 'total' }, h('td', {}, `Gesamttotal (${list.length} Kunde${list.length === 1 ? '' : 'n'})`), h('td', { class: 'num' }, chf(sum(bs)))));
+    out.append(h('table', { class: 'tbl amt' }, th('Datum', { t: 'Betrag (CHF)', num: 1 }), h('tbody', {}, ...rows)));
   }
-  const node = h('div', { class: 'stack' }, field('Kundenkategorie', sel), h('div', { class: 'card' }, out));
+  const node = h('div', { class: 'stack' }, field('Buchungskategorie', sel), h('div', { class: 'card' }, out));
   if (state.senKat) node._print = () => printNode(out.cloneNode(true));
   return node;
 }

@@ -8,11 +8,12 @@ const GESCHLECHT = { w: 'weiblich', m: 'männlich', firma: 'Firma' };
 const ANREDE = { du: 'Du', sie: 'Sie' };
 
 /** Alle zum Kontakt gespeicherten Daten und Buchungen als Druckansicht (iOS: Drucken > Als PDF sichern). */
-export function printKontakt(k) {
+export function printKontakt(k, { from = '0000-01-01', to = '9999-12-31' } = {}) {
   const eig = db.eigene();
   const kat = db.data.kundenkategorie.get(k.kategorieId);
   const comms = db.commsOf(k.id).sort((a, b) => (b.bevorzugt ? 1 : 0) - (a.bevorzugt ? 1 : 0));
-  const bs = db.buchungenOf(k.id).sort((a, b) => (a.datum === b.datum ? (a.created || 0) - (b.created || 0) : a.datum < b.datum ? -1 : 1));
+  const alles = from === '0000-01-01' && to === '9999-12-31';
+  const bs = db.buchungenOf(k.id).filter((b) => b.datum >= from && b.datum <= to).sort((a, b) => (a.datum === b.datum ? (a.created || 0) - (b.created || 0) : a.datum < b.datum ? -1 : 1));
   const total = bs.reduce((s, b) => s + b.betrag, 0);
   const row = (l, v) => h('tr', {}, h('th', {}, l), h('td', { class: 'pre' }, v || '–')); // alle Felder andrucken, leere mit «–»
     const adr = (c) => [c.strasse, [c.plz, c.ort].filter(Boolean).join(' ')].filter(Boolean);
@@ -23,7 +24,7 @@ export function printKontakt(k) {
     row('Art', k.istLieferant ? 'Lieferant' : 'Kunde'),
     ...(k.istLieferant
       ? [row('Name 1', k.name1), row('Name 2', k.name2)]
-      : [row('Vorname', k.vorname), row('Name', k.name), row('Geburtsdatum', fmtDate(k.geburtsdatum)), row('Kundenkategorie', kat?.name)]),
+      : [row('Vorname', k.vorname), row('Name', k.name), row('Geburtsdatum', fmtDate(k.geburtsdatum)), row('Kategorie', kat?.name), row('Stock', k.stock)]),
     row('Geschlecht / Firma', GESCHLECHT[k.geschlecht]),
     row('Anrede', ANREDE[k.anrede]),
     row('Strasse', k.strasse),
@@ -49,5 +50,5 @@ export function printKontakt(k) {
     h('h1', {}, `Gespeicherte Daten: ${db.kontaktName(k)}`),
     h('p', { class: 'muted' }, `Erstellt: ${fmtDateTime(Date.now())}`),
     h('h3', {}, 'Stammdaten'), stamm,
-    h('h3', {}, 'Buchungen'), buchungen));
+    h('h3', {}, alles ? 'Buchungen' : `Buchungen ${fmtDate(from)} – ${fmtDate(to)}`), buchungen));
 }

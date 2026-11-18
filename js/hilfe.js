@@ -69,7 +69,8 @@ export function helpContent() {
         'Telefon und E-Mail: mehrere Einträge möglich, genau einer ist „bevorzugt“; ☎ und ✉ öffnen die Telefon- bzw. Mail-App.',
         'Der Button „Buchungen“ zeigt alle Buchungen des Kontakts und erlaubt die direkte Erfassung (siehe Abschnitt 2). Datum und Kategorie bleiben nach „Buchen“ stehen.',
         'Dublettenprüfung: Gleicher Name mit gleicher PLZ, Telefonnummer oder E-Mail-Adresse (oder ein Eintrag ohne weitere Daten) löst eine Warnung aus. Ebenso Buchungen mit gleichem Kontakt, Datum und Betrag.',
-        'Drucken (im Kontakt): alle Felder und Buchungen auf einem Blatt, z. B. für Auskunftsbegehren nach Datenschutzrecht.',
+        'Speichern: „Speichern und buchen“ öffnet danach direkt die Buchungen des Kontakts (Vorgabe, in den Einstellungen änderbar); „Speichern und zurück“ schliesst den Dialog.',
+        'Ausgeben (im Kontakt): Zeitraum wählen (Vorgabe alles), dann drucken: alle Felder und die Buchungen auf einem Blatt, z. B. für Auskunftsbegehren nach Datenschutzrecht.',
         'Löschen: Die Buchungen bleiben erhalten und werden „Gelöschter Kunde“ bzw. „Gelöschter Lieferant“ zugeordnet.',
       )),
 
@@ -88,13 +89,13 @@ export function helpContent() {
       ul(
         '„VJ-Vergleich“ zeigt zusätzlich die Vorjahreswerte und die Differenz.',
         'Kategorien: Eine Lieferantenzeile antippen zeigt die Aufteilung nach Buchungskategorie.',
-        'Kundenliste: zuerst die Kundenkategorie wählen; „Drucken / PDF“ ist erst dann möglich.',
+        'Kundenliste: nach Buchungskategorie (Vorgabe Stiftung), Vorgabe-Zeitraum Vormonat, gruppiert nach Name und Vorname mit Kategorie und Stock des Kunden, Buchungen aufsteigend nach Datum, Total je Kunde.',
         'Treuhänder: immer ein ganzes Jahr (Vorgabe: Vorjahr), Ebene Einzelbuchung, Tag, Monat (Vorgabe) oder Jahr. Bei Monat steht der letzte Tag des Monats, bei Jahr der 31.12. Bei Kunden werden weder Name noch Buchungstext exportiert, bei Lieferanten der Name. Ein Hinweis erscheint, wenn eine Buchung nicht zum Kontakttyp passt.',
       )),
 
     sec('9. Einstellungen',
       ul(
-        'Eigene Firma (erscheint auf Quittungen), Start (Menü oder Buchung nach „Daten prüfen“), Gerätename, Sicherungs-Optionen, PIN ändern.',
+        'Eigene Firma (erscheint auf Quittungen), Start (Menü oder Buchung nach „Daten prüfen“), Standard-Speicherbutton bei Kunden/Lieferanten, Gerätename, Sicherungs-Optionen, PIN ändern.',
         'Kategorien: neu, ändern, löschen; Löschen nur, wenn sie nirgends verwendet werden.',
       )),
 

@@ -2,7 +2,7 @@
 import * as db from './db.js';
 import { h } from './util.js';
 import { hashPin, verifyPin } from './crypto.js';
-import { field } from './ui.js';
+import { field, revealCheck } from './ui.js';
 
 export const hasPin = () => !!db.data.meta.pin;
 
@@ -36,7 +36,7 @@ export function lockScreen(onUnlock) {
   } },
   h('h1', {}, 'Kassenbuch'),
   h('p', { class: 'muted' }, setup ? 'Bitte lege eine PIN für den Zugriffsschutz fest.' : 'Bitte PIN eingeben.'),
-  field(setup ? 'Neue PIN' : 'PIN', p1), setup ? field('PIN wiederholen', p2) : null, err, btn);
+  field(setup ? 'Neue PIN' : 'PIN', p1), setup ? field('PIN wiederholen', p2) : null, revealCheck(p1, p2), err, btn);
   // Fokus erst nach dem Einhängen ins DOM setzen (mehrere Versuche, da der Screen verzögert eingefügt wird)
   [0, 50, 250].forEach((ms) => setTimeout(() => { if (p1.isConnected) p1.focus(); }, ms));
   return form;
