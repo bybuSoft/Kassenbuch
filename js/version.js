@@ -2,12 +2,13 @@
 // (die Zeichen nach dem letzten "-" im Branch-Namen, z. B. claude/festive-cray-4a3xvr -> 4a3xvr).
 // BRANCH_CODE wird beim Commit automatisch gesetzt (tools/set-version.sh, Hook in .githooks/).
 export const MAJOR = 0;
-export const MINOR = 44;
-export const BRANCH_CODE = 't53bd2';
+export const MINOR = 45;
+export const BRANCH_CODE = 'r5u86z';
 export const VERSION = `${MAJOR}.${MINOR}.${BRANCH_CODE}`;
 
 // Kurze Beschreibung je Änderung (neueste zuerst)
 export const CHANGES = [
+  { v: '0.45', text: 'Restore ist atomar: wird die Sicherung ganz oder gar nicht eingespielt. Bei Fehlern wird automatisch auf den bisherigen Stand zurückgesetzt (Rollback) und eine Meldung angezeigt.' },
   { v: '0.44', text: 'Kundenliste: Buchungskategorien als Mehrfachauswahl (nicht gespeichert, Vorgabe immer Stiftung; Alle = Liste über alles). Kontaktausgabe kompakt mit getrennten Feldern Kategorie und Stock. Druck-/PDF-Dialog löst keine Sperre mehr aus.' },
   { v: '0.43', text: 'Ausgabe Kunde/Lieferant kompakt (Stammdaten und 20 Buchungen auf einer Seite); keine Sperre nach dem Druckdialog. Kontaktdialog: Buttons in drei Zeilen (Speichern, Abbrechen, Aktionen). Kundenliste: Vorgabe Vormonat. Kundenliste: gruppiert nach Kunde mit Kategorie und Stock, Datum aufsteigend, ohne Adresse. Kunden/Lieferanten: „Speichern und buchen“ (Standard, in den Einstellungen wählbar) und „Speichern und zurück“; „Ausgeben“ mit Zeitraum statt Drucken; Kunden: Feld Stock, „Kategorie“. Kundenliste nach Buchungskategorie (Vorgabe Stiftung). PIN/Passwort: Eingabe anzeigen.' },
   { v: '0.42', text: 'Kassenbuch-Filter standardmässig auf alles; Filtereinstellungen werden gespeichert und in der Datensicherung mitgesichert.' },

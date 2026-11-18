@@ -69,6 +69,23 @@ test('Snapshot/Restore: Roundtrip und Konsistenzprüfung', async () => {
   assert.throws(() => db.validateSnapshot({ app: 'x' }), /keine Kassenbuch/);
 });
 
+test('Restore ist atomar: bei einem Fehler Rollback auf den bisherigen Stand', async () => {
+  const db = await freshDb();
+  const k = db.newKontakt({ name: 'K' }); await db.put('kontakt', k);
+  await db.put('buchung', buchung(db, k.id, cat(db, 'einnahme').id, 100, 'b1'));
+  const snap = db.snapshot();
+  await db.put('buchung', buchung(db, k.id, cat(db, 'einnahme').id, 200, 'b2'));
+  const lastChange = db.data.meta.lastChange;
+  const bad = structuredClone(snap);
+  bad.stores.buchung.push({ ...bad.stores.buchung[0], id: 'b9', boom: () => 1 }); // nicht speicherbar -> Fehler mitten im Schreiben
+  await assert.rejects(() => db.replaceAll(bad), /Restore fehlgeschlagen/);
+  assert.ok(db.data.buchung.has('b1') && db.data.buchung.has('b2') && !db.data.buchung.has('b9'));
+  assert.equal(db.data.meta.lastChange, lastChange);
+  db.closeDb(); // Neu laden aus der Datenbank: auch dort muss der alte Stand stehen
+  await db.init();
+  assert.ok(db.data.buchung.has('b1') && db.data.buchung.has('b2') && !db.data.buchung.has('b9'));
+});
+
 test('Filtereinstellungen gehen in die Sicherung und werden wiederhergestellt', async () => {
   const db = await freshDb();
   await db.saveFilter('kassenbuch', { from: '2026-01-01', to: '2026-12-31', kat: '', art: 'einnahme' });
