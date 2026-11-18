@@ -118,11 +118,7 @@ document.addEventListener('focusin', (e) => {
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) hiddenAt = Date.now();
-<<<<<<< HEAD
   else if (Date.now() < printing.until) { printing.until = 0; hiddenAt = 0; } // Rückkehr aus dem Druck-/PDF-Dialog: nicht sperren
-=======
-  else if (printing.active || Date.now() - printing.endedAt < 5000) printing.active = false; // Rückkehr aus dem Druck-/PDF-Dialog: nicht sperren
->>>>>>> origin/master
   else if (unlocked && hiddenAt && Date.now() - hiddenAt > LOCK_AFTER_MS) {
     unlocked = false; db.devMode.unlocked = false;
     document.getElementById('modal-root').replaceChildren();
