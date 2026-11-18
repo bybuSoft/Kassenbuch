@@ -37,11 +37,19 @@ export function showModal({ title, body, buttons = [], dismissable = true, wide 
     });
     return el;
   });
+  // Buttons mit {row: n} werden zeilenweise gruppiert (n aufsteigend), {grow: true} verteilt die Breite gleichmässig
+  const footer = () => {
+    if (!btnEls.length) return null;
+    if (!buttons.some((b) => b.row != null)) return h('div', { class: 'dlg-foot' }, btnEls);
+    btnEls.forEach((el, i) => { if (buttons[i].grow) el.classList.add('grow'); });
+    const rows = [...new Set(buttons.map((b) => b.row ?? 0))].sort((a, b) => a - b);
+    return h('div', { class: 'dlg-foot rows' }, ...rows.map((r) => h('div', { class: 'foot-row' }, btnEls.filter((_, i) => (buttons[i].row ?? 0) === r))));
+  };
   dlg = h('div', { class: `dialog${wide ? ' wide' : ''}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': title },
     h('div', { class: 'dlg-head' }, h('h2', {}, title),
       dismissable ? h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Schliessen', onclick: () => ctl.close(undefined) }, '×') : null),
     h('div', { class: 'dlg-body' }, body),
-    btnEls.length ? h('div', { class: 'dlg-foot' }, btnEls) : null);
+    footer());
   ctl.el = dlg;
   back.append(dlg);
   if (dismissable) back.addEventListener('mousedown', (e) => { if (e.target === back) ctl.close(undefined); });

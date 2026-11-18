@@ -219,7 +219,7 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
 
   const buttons = [];
   if (ex && !ex.sys) {
-    buttons.push({ label: 'Löschen', cls: 'danger left', onClick: async (ctl) => {
+    buttons.push({ label: 'Löschen', cls: 'danger left', row: 3, onClick: async (ctl) => {
       const n = db.buchungenOf(ex.id).length;
       const dummy = db.kontaktName(db.sysKontakt(ex.istLieferant ? 'dummyLieferant' : 'dummyKunde'));
       const ok = await confirmDlg(`„${db.kontaktName(ex)}“ wirklich löschen?` + (n ? `\n\n${n} Buchung${n === 1 ? '' : 'en'} bleiben erhalten und werden „${dummy}“ zugeordnet.` : ''), { title: 'Kontakt löschen', ok: 'Löschen', danger: true });
@@ -230,9 +230,9 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
       return false;
     } });
   }
-  if (ex) buttons.push({ label: 'Ausgeben', onClick: async () => { await ausgebenDlg(ex); return false; } });
-  if (ex) buttons.push({ label: 'Buchungen', onClick: async () => { await showKontaktBuchungen(ex); return false; } });
-  buttons.push({ label: 'Abbrechen', value: null });
+  if (ex) buttons.push({ label: 'Ausgeben', row: 3, onClick: async () => { await ausgebenDlg(ex); return false; } });
+  if (ex) buttons.push({ label: 'Buchungen', row: 3, onClick: async () => { await showKontaktBuchungen(ex); return false; } });
+  buttons.push({ label: 'Abbrechen', value: null, row: 2 });
   const saveFn = (mode) => async () => {
     const lief = chkLief.checked;
     const out = { ...k, istLieferant: lief, geschlecht: geschlecht.value, anrede: anrede.value, strasse: strasse.value.trim(), plz: plz.value.trim(), ort: ort.value.trim(), notizen: notizen.value };
@@ -261,10 +261,10 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
     toast('Gespeichert');
     return { saved: out.id, mode };
   };
-  if (!ex) buttons.push({ label: 'Speichern und neu', onClick: saveFn('neu') });
+  if (!ex) buttons.push({ label: 'Speichern und neu', row: 2, onClick: saveFn('neu') });
   const def = db.kontaktSaveDefault(); // Standard-Button (Einstellungen): hervorgehoben
-  buttons.push({ label: 'Speichern und zurück', cls: def === 'zurueck' ? 'primary' : '', onClick: saveFn('zurueck') });
-  buttons.push({ label: 'Speichern und buchen', cls: def === 'buchen' ? 'primary' : '', onClick: saveFn('buchen') });
+  buttons.push({ label: 'Speichern und zurück', row: 1, grow: true, cls: def === 'zurueck' ? 'primary' : '', onClick: saveFn('zurueck') });
+  buttons.push({ label: 'Speichern und buchen', row: 1, grow: true, cls: def === 'buchen' ? 'primary' : '', onClick: saveFn('buchen') });
 
   const ctl = showModal({ title: ex ? (k.istLieferant ? 'Lieferant bearbeiten' : 'Kunde bearbeiten') : (k.istLieferant ? 'Neuer Lieferant' : 'Neuer Kunde'), body, buttons, wide: true });
   const r = await ctl.closed;

@@ -71,7 +71,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--pri);outline-off
 .dlg-head{display:flex;align-items:center;justify-content:space-between;padding:8px 8px 8px 16px;border-bottom:1px solid var(--line)}
 .dlg-body{padding:14px 16px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;-webkit-overflow-scrolling:touch}
 .dlg-foot{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;padding:10px 16px;padding-bottom:max(10px,env(safe-area-inset-bottom));border-top:1px solid var(--line)}
-.dlg-foot .left{margin-right:auto}
+.dlg-foot .left{margin-right:auto}.dlg-foot.rows{flex-direction:column;flex-wrap:nowrap;align-items:stretch}.foot-row{display:flex;gap:8px;justify-content:flex-end}.foot-row .grow{flex:1}
 .dlg-body p{margin:0}
 .chip{display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:var(--bg);border-radius:10px;padding:6px 10px}.chip strong{flex:1;min-width:8ch}
 .kontaktpick{display:flex;flex-direction:column;gap:4px}.kp-row{display:flex;gap:8px}.kp-row input{flex:1}
