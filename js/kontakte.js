@@ -159,7 +159,7 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
 
   const kundeTop = h('div', { class: 'stack' },
     h('div', { class: 'grid2' }, field('Vorname', vorname), field('Name', name)),
-    h('div', { class: 'grid3 gb' }, field('Geburtsdatum', geb), field('Kategorie', kat), field('Stock', stock)));
+    h('div', { class: 'grid2' }, field('Geburtsdatum', geb), h('div', { class: 'grid2 katstock' }, field('Kategorie', kat), field('Stock', stock))));
   const kundeHealth = h('fieldset', { class: 'fs' }, h('legend', {}, 'Gesundheit'),
     h('div', { class: 'checks' }, ...HEALTH.map(([key, label]) => checkField(label, health[key]))));
   const geschlecht = h('select', { 'aria-label': 'Geschlecht / Firma' }, h('option', { value: '' }, '– keine Angabe –'),
