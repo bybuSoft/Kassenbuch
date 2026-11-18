@@ -1,7 +1,7 @@
 // Auswertungen: Perioden, Kundenkategorien, Seniorenzentrum-Liste, Treuhänder-Export (Excel)
 import * as db from './db.js';
 import { h, chf, today, isoDate, fmtDate, fmtDateTime, monthOf, monthLabel, monthShort, lastDayOfMonth, shiftMonth, saveBlob, collator } from './util.js';
-import { field, segmented, toast, printNode } from './ui.js';
+import { field, checkField, segmented, toast, printNode } from './ui.js';
 import { buildXlsx, XLSX_MIME } from './xlsx.js';
 import { periodBar } from './periodbar.js';
 import { nav } from './nav.js';
@@ -9,9 +9,9 @@ import { nav } from './nav.js';
 const state = {
   tab: 'perioden',
   custom: false, from: '', to: '',
-  senKat: '', vj: false, level: 'monat', year: '',
+  senKats: undefined, vj: false, level: 'monat', year: '',
 };
-const FKEYS = ['tab', 'custom', 'from', 'to', 'senKat', 'vj', 'level', 'year'];
+const FKEYS = ['tab', 'custom', 'from', 'to', 'senKats', 'vj', 'level', 'year'];
 const saveState = () => db.saveFilter('auswertungen', Object.fromEntries(FKEYS.map((k) => [k, state[k]]))); // Filter werden mitgesichert
 const opened = new Set(); // aufgeklappte Drilldown-Zeilen (Schlüssel = Lieferant)
 const REPORTS = [
@@ -149,17 +149,24 @@ function kategorien() {
 // ---- Kundenliste (z. B. Seniorenzentrum): Vorname, Name, Betrag, gruppiert nach Tag, Total pro Monat ---------
 function senioren() {
   const kats = db.kategorienList('buchungskategorie', 'einnahme');
-  if (!state.senKat || !kats.some((c) => c.id === state.senKat)) state.senKat = (kats.find((c) => c.name === 'Stiftung') || kats[0])?.id || ''; // Vorgabe: Stiftung
-  const sel = h('select', { 'aria-label': 'Buchungskategorie', onchange: () => { state.senKat = sel.value; saveState(); nav.refresh(); } }, ...kats.map((c) => h('option', { value: c.id }, c.name)));
-  sel.value = state.senKat;
-  const bs = db.buchungenList().filter(inRange).filter((b) => db.artOf(b) === 'einnahme' && b.kategorieId === state.senKat)
+  // Mehrfachauswahl; Vorgabe (noch nie gewählt): Stiftung
+  if (!Array.isArray(state.senKats)) state.senKats = kats.filter((c) => c.name === 'Stiftung').map((c) => c.id);
+  state.senKats = state.senKats.filter((id) => kats.some((c) => c.id === id));
+  const chosen = new Set(state.senKats);
+  const setKats = (ids) => { state.senKats = ids; saveState(); nav.refresh(); };
+  const allOn = kats.length > 0 && kats.every((c) => chosen.has(c.id));
+  const kboxes = [checkField('Alle', h('input', { type: 'checkbox', checked: allOn, onchange: (e) => setKats(e.target.checked ? kats.map((c) => c.id) : []) })),
+    ...kats.map((c) => checkField(c.name, h('input', { type: 'checkbox', checked: chosen.has(c.id), onchange: (e) => setKats(kats.filter((x) => (x.id === c.id ? e.target.checked : chosen.has(x.id))).map((x) => x.id)) })))];
+  const multi = chosen.size > 1;
+  const bs = db.buchungenList().filter(inRange).filter((b) => db.artOf(b) === 'einnahme' && chosen.has(b.kategorieId))
     .sort((a, b) => (a.datum < b.datum ? -1 : a.datum > b.datum ? 1 : 0));
   const out = h('div', { class: 'report' });
-  const catName = db.data.buchungskategorie.get(state.senKat)?.name || '';
+  const catName = allOn ? 'alle Buchungskategorien' : kats.filter((c) => chosen.has(c.id)).map((c) => c.name).join(', ');
   const eig = db.eigene();
-  out.append(h('p', {}, h('strong', {}, db.kontaktName(eig))), h('h3', {}, `Kundenliste ${catName}`),
+  out.append(h('p', {}, h('strong', {}, db.kontaktName(eig))), h('h3', {}, `Kundenliste${catName ? ` ${catName}` : ''}`),
     h('p', { class: 'muted' }, `${fmtDate(state.from)} – ${fmtDate(state.to)}`, h('br'), `Erstellt: ${fmtDateTime(Date.now())}`));
-  if (!bs.length) out.append(h('p', { class: 'muted' }, 'Keine Buchungen für diese Buchungskategorie im gewählten Zeitraum.'));
+  if (!chosen.size) out.append(h('p', { class: 'muted' }, 'Bitte mindestens eine Buchungskategorie wählen.'));
+  else if (!bs.length) out.append(h('p', { class: 'muted' }, 'Keine Buchungen für die gewählten Buchungskategorien im gewählten Zeitraum.'));
   else {
     // je Kunde eine Gruppe (Name, Vorname), darin Buchungen nach Datum aufsteigend, mit Zwischensumme
     const groups = new Map();
@@ -170,15 +177,15 @@ function senioren() {
     for (const { k, arr } of list) {
       const kat = db.data.kundenkategorie.get(k.kategorieId)?.name;
       const info = [kat, k.stock ? `Stock ${k.stock}` : ''].filter(Boolean).join(' · ');
-      rows.push(h('tr', { class: 'daytr' }, h('td', { colspan: 2 }, [[k.name, k.vorname].filter(Boolean).join(' ') || db.kontaktName(k), info].filter(Boolean).join(' – '))));
-      arr.forEach((b) => rows.push(h('tr', {}, h('td', {}, fmtDate(b.datum)), h('td', { class: 'num' }, chf(b.betrag)))));
-      rows.push(h('tr', { class: 'total' }, h('td', {}, 'Total'), h('td', { class: 'num' }, chf(sum(arr)))));
+      rows.push(h('tr', { class: 'daytr' }, h('td', { colspan: multi ? 3 : 2 }, [[k.name, k.vorname].filter(Boolean).join(' ') || db.kontaktName(k), info].filter(Boolean).join(' – '))));
+      arr.forEach((b) => rows.push(h('tr', {}, h('td', {}, fmtDate(b.datum)), ...(multi ? [h('td', {}, db.data.buchungskategorie.get(b.kategorieId)?.name || '?')] : []), h('td', { class: 'num' }, chf(b.betrag)))));
+      rows.push(h('tr', { class: 'total' }, h('td', { colspan: multi ? 2 : 1 }, 'Total'), h('td', { class: 'num' }, chf(sum(arr)))));
     }
-    rows.push(h('tr', { class: 'total' }, h('td', {}, `Gesamttotal (${list.length} Kunde${list.length === 1 ? '' : 'n'})`), h('td', { class: 'num' }, chf(sum(bs)))));
-    out.append(h('table', { class: 'tbl amt' }, th('Datum', { t: 'Betrag (CHF)', num: 1 }), h('tbody', {}, ...rows)));
+    rows.push(h('tr', { class: 'total' }, h('td', { colspan: multi ? 2 : 1 }, `Gesamttotal (${list.length} Kunde${list.length === 1 ? '' : 'n'})`), h('td', { class: 'num' }, chf(sum(bs)))));
+    out.append(h('table', { class: 'tbl amt' }, th('Datum', ...(multi ? ['Buchungskategorie'] : []), { t: 'Betrag (CHF)', num: 1 }), h('tbody', {}, ...rows)));
   }
-  const node = h('div', { class: 'stack' }, field('Buchungskategorie', sel), h('div', { class: 'card' }, out));
-  if (state.senKat) node._print = () => printNode(out.cloneNode(true));
+  const node = h('div', { class: 'stack' }, h('fieldset', { class: 'fs' }, h('legend', {}, 'Buchungskategorien'), h('div', { class: 'checks' }, ...kboxes)), h('div', { class: 'card' }, out));
+  if (chosen.size) node._print = () => printNode(out.cloneNode(true));
   return node;
 }
 
