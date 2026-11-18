@@ -125,8 +125,7 @@ async function ensureSeed() {
 }
 
 /** Systemkontakte: eigene Firma (änderbar, nicht löschbar) und Dummies für gelöschte Kontakte. */
-function systemKontaktOps() {
-  const have = new Set([...data.kontakt.values()].map((k) => k.sys).filter(Boolean));
+function systemKontaktOps(have = new Set([...data.kontakt.values()].map((k) => k.sys).filter(Boolean))) {
   const ops = [];
   if (!have.has('eigene')) ops.push({ op: 'put', store: 'kontakt', obj: newKontakt({ sys: 'eigene', istLieferant: true, name1: 'Marlene Nebel Body & Care', strasse: 'Landstrasse 13', plz: '3904', ort: 'Naters' }) });
   if (!have.has('dummyKunde')) ops.push({ op: 'put', store: 'kontakt', obj: newKontakt({ sys: 'dummyKunde', name: 'Gelöschter Kunde' }) });
@@ -218,25 +217,64 @@ export function validateSnapshot(snap) {
   for (const k of snap.stores.kontakt) if (k.kategorieId && !kk.has(k.kategorieId)) throw new Error('Datensicherung inkonsistent (Kundenkategorie).');
 }
 
-/** Ersetzt alle lokalen Daten durch die Sicherung (PIN bleibt lokal erhalten). */
-export async function replaceAll(snap) {
-  validateSnapshot(snap);
+/** Schreibt Tabellen und Meta-Werte in EINER Transaktion: entweder ganz oder gar nicht (bei jedem Fehler Abbruch/Rollback). */
+async function writeAll(stores, metaPut, metaDel) {
   const tx = idb.transaction([...STORES, 'meta'], 'readwrite');
   const done = txP(tx);
-  for (const s of STORES) {
-    const os = tx.objectStore(s);
-    os.clear();
-    (snap.stores[s] || []).forEach((o) => os.put(o));
+  done.catch(() => {}); // Fehler wird unten ausgewertet, kein „unhandled rejection“
+  try {
+    for (const s of STORES) {
+      const os = tx.objectStore(s);
+      os.clear();
+      (stores[s] || []).forEach((o) => os.put(o));
+    }
+    const m = tx.objectStore('meta');
+    for (const [key, value] of Object.entries(metaPut)) m.put({ key, value });
+    for (const key of metaDel) m.delete(key);
+  } catch (e) {
+    try { tx.abort(); } catch { /* bereits beendet */ }
+    await done.catch(() => {});
+    throw e;
   }
-  const m = tx.objectStore('meta');
-  m.put({ key: 'lastChange', value: snap.lastChange || 0 });
-  m.put({ key: 'lastBackup', value: Date.now() });
-  m.put({ key: 'seeded', value: true });
-  m.put({ key: 'filters', value: snap.filters && typeof snap.filters === 'object' ? snap.filters : {} });
   await done;
-  await loadAll();
-  const ops = systemKontaktOps();
-  if (ops.length) await batch(ops, false);
+}
+
+/** Ersetzt alle lokalen Daten vollständig durch die Sicherung (PIN bleibt lokal erhalten).
+ *  Alles oder nichts: bei jedem Fehler bleibt der bisherige Stand (Datenbank und Arbeitsspeicher) unverändert. */
+export async function replaceAll(snap) {
+  validateSnapshot(snap);
+  const META_KEYS = ['lastChange', 'lastBackup', 'seeded', 'filters', 'syncedTo'];
+  // Stand vor dem Restore (für Rollback)
+  const prevStores = {};
+  STORES.forEach((s) => { prevStores[s] = [...data[s].values()]; });
+  const prevMeta = {};
+  META_KEYS.forEach((k) => { if (k in data.meta) prevMeta[k] = data.meta[k]; });
+  const prevDel = META_KEYS.filter((k) => !(k in prevMeta));
+  const restorePrev = async () => {
+    await writeAll(prevStores, prevMeta, prevDel);
+    await loadAll();
+  };
+  // Neuer Stand inkl. Systemkontakte, alles in einer Transaktion
+  const stores = {};
+  STORES.forEach((s) => { stores[s] = snap.stores[s] || []; });
+  const have = new Set(stores.kontakt.map((k) => k.sys).filter(Boolean));
+  stores.kontakt = [...stores.kontakt, ...systemKontaktOps(have).map((o) => o.obj)];
+  const metaPut = {
+    lastChange: snap.lastChange || 0, lastBackup: Date.now(), seeded: true,
+    filters: snap.filters && typeof snap.filters === 'object' ? snap.filters : {},
+    syncedTo: snap.createdAt,
+  };
+  try {
+    await writeAll(stores, metaPut, []);
+    await loadAll();
+  } catch (e) {
+    // Rollback auf den Stand vor dem Restore
+    try { await restorePrev(); } catch (e2) {
+      console.error('Rollback fehlgeschlagen', e2);
+      throw new Error(`Restore fehlgeschlagen (${e.message}) und Rollback nicht möglich (${e2.message}). Bitte App neu laden.`);
+    }
+    throw new Error(`Restore fehlgeschlagen, der bisherige Stand wurde wiederhergestellt (${e.message}).`);
+  }
 }
 
 export const isEmpty = () => data.buchung.size === 0 && ![...data.kontakt.values()].some((k) => !k.sys);

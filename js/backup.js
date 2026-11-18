@@ -234,8 +234,9 @@ export async function startRestore() {
     title: 'Restore', ok: warn.includes('ACHTUNG') ? 'Ja, lokale Daten überschreiben' : 'Restore durchführen', danger: !!warn,
   });
   if (!ok) return;
-  await db.replaceAll(snap);
-  await db.setMeta('syncedTo', snap.createdAt);
+  // Alles oder nichts: replaceAll schreibt in einer Transaktion und macht bei jedem Fehler einen Rollback
+  try { await db.replaceAll(snap); }
+  catch (e) { await alertDlg(e.message, { title: 'Restore fehlgeschlagen' }); return; }
   sessionPassHash = await sha256(pass);
   toast('Datensicherung wurde eingespielt');
   nav.go('buchung');
