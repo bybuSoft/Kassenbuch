@@ -124,14 +124,16 @@ async function ensureSeed() {
   if (ops.length) await batch(ops, false);
 }
 
-/** Systemkontakte: eigene Firma (änderbar, nicht löschbar) und Dummies für gelöschte Kontakte. */
-function systemKontaktOps(have = new Set([...data.kontakt.values()].map((k) => k.sys).filter(Boolean))) {
-  const ops = [];
-  if (!have.has('eigene')) ops.push({ op: 'put', store: 'kontakt', obj: newKontakt({ sys: 'eigene', istLieferant: true, name1: 'Marlene Nebel Body & Care', strasse: 'Landstrasse 13', plz: '3904', ort: 'Naters' }) });
-  if (!have.has('dummyKunde')) ops.push({ op: 'put', store: 'kontakt', obj: newKontakt({ sys: 'dummyKunde', name: 'Gelöschter Kunde' }) });
-  if (!have.has('dummyLieferant')) ops.push({ op: 'put', store: 'kontakt', obj: newKontakt({ sys: 'dummyLieferant', istLieferant: true, name1: 'Gelöschter Lieferant' }) });
-  return ops;
+/** Systemkontakte: eigene Firma (änderbar, nicht löschbar) und Dummies für gelöschte Kontakte. Liefert die fehlenden Kontakte. */
+function missingSystemKontakte(kontakte = data.kontakt.values()) {
+  const have = new Set([...kontakte].map((k) => k.sys).filter(Boolean));
+  const out = [];
+  if (!have.has('eigene')) out.push(newKontakt({ sys: 'eigene', istLieferant: true, name1: 'Marlene Nebel Body & Care', strasse: 'Landstrasse 13', plz: '3904', ort: 'Naters' }));
+  if (!have.has('dummyKunde')) out.push(newKontakt({ sys: 'dummyKunde', name: 'Gelöschter Kunde' }));
+  if (!have.has('dummyLieferant')) out.push(newKontakt({ sys: 'dummyLieferant', istLieferant: true, name1: 'Gelöschter Lieferant' }));
+  return out;
 }
+const systemKontaktOps = () => missingSystemKontakte().map((obj) => ({ op: 'put', store: 'kontakt', obj }));
 
 // ---- Abfragen -------------------------------------------------------------
 export const kontaktName = (k) => (k ? (k.istLieferant ? [k.name1, k.name2] : [k.vorname, k.name]).filter(Boolean).join(' ').trim() : '');
@@ -239,41 +241,44 @@ async function writeAll(stores, metaPut, metaDel) {
   await done;
 }
 
+/** Nur für Tests: wird nach dem Schreiben vor dem Neuladen aufgerufen (Fehler simulieren). */
+export const testHooks = { afterWrite: null };
+const reload = async () => { await testHooks.afterWrite?.(); await loadAll(); };
+
 /** Ersetzt alle lokalen Daten vollständig durch die Sicherung (PIN bleibt lokal erhalten).
- *  Alles oder nichts: bei jedem Fehler bleibt der bisherige Stand (Datenbank und Arbeitsspeicher) unverändert. */
+ *  Alles oder nichts: bei jedem Fehler bleibt der bisherige Stand (Datenbank und Arbeitsspeicher) erhalten.
+ *  Ein Fehler mit `fatal = true` bedeutet: Rollback nicht möglich, die App muss neu geladen werden. */
 export async function replaceAll(snap) {
   validateSnapshot(snap);
-  const META_KEYS = ['lastChange', 'lastBackup', 'seeded', 'filters', 'syncedTo'];
-  // Stand vor dem Restore (für Rollback)
-  const prevStores = {};
-  STORES.forEach((s) => { prevStores[s] = [...data[s].values()]; });
-  const prevMeta = {};
-  META_KEYS.forEach((k) => { if (k in data.meta) prevMeta[k] = data.meta[k]; });
-  const prevDel = META_KEYS.filter((k) => !(k in prevMeta));
-  const restorePrev = async () => {
-    await writeAll(prevStores, prevMeta, prevDel);
-    await loadAll();
-  };
   // Neuer Stand inkl. Systemkontakte, alles in einer Transaktion
   const stores = {};
   STORES.forEach((s) => { stores[s] = snap.stores[s] || []; });
-  const have = new Set(stores.kontakt.map((k) => k.sys).filter(Boolean));
-  stores.kontakt = [...stores.kontakt, ...systemKontaktOps(have).map((o) => o.obj)];
+  stores.kontakt = [...stores.kontakt, ...missingSystemKontakte(stores.kontakt)];
   const metaPut = {
     lastChange: snap.lastChange || 0, lastBackup: Date.now(), seeded: true,
     filters: snap.filters && typeof snap.filters === 'object' ? snap.filters : {},
     syncedTo: snap.createdAt,
   };
-  try {
-    await writeAll(stores, metaPut, []);
-    await loadAll();
-  } catch (e) {
-    // Rollback auf den Stand vor dem Restore
-    try { await restorePrev(); } catch (e2) {
+  // Stand vor dem Restore (für Rollback); die betroffenen Meta-Schlüssel ergeben sich aus metaPut
+  const prevStores = {};
+  STORES.forEach((s) => { prevStores[s] = [...data[s].values()]; });
+  const prevMeta = {}, prevDel = [];
+  for (const k of Object.keys(metaPut)) { if (k in data.meta) prevMeta[k] = data.meta[k]; else prevDel.push(k); }
+
+  try { await writeAll(stores, metaPut, []); }
+  catch (e) {
+    // Transaktion abgebrochen: Datenbank und Arbeitsspeicher sind unverändert, kein Rollback nötig
+    throw new Error(`Die Sicherung wurde nicht eingespielt, die bisherigen Daten sind unverändert (${e.message}).`);
+  }
+  try { await reload(); }
+  catch (e) {
+    // Neuer Stand ist geschrieben, aber nicht geladen: Rollback auf den Stand vor dem Restore
+    try { await writeAll(prevStores, prevMeta, prevDel); await reload(); }
+    catch (e2) {
       console.error('Rollback fehlgeschlagen', e2);
-      throw new Error(`Restore fehlgeschlagen (${e.message}) und Rollback nicht möglich (${e2.message}). Bitte App neu laden.`);
+      throw Object.assign(new Error(`Die Sicherung konnte nicht vollständig eingespielt werden (${e.message}) und der Rollback ist fehlgeschlagen (${e2.message}). Die App wird neu geladen.`), { fatal: true });
     }
-    throw new Error(`Restore fehlgeschlagen, der bisherige Stand wurde wiederhergestellt (${e.message}).`);
+    throw new Error(`Die Sicherung wurde nicht eingespielt, die bisherigen Daten wurden wiederhergestellt (${e.message}).`);
   }
 }
 

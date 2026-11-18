@@ -236,7 +236,11 @@ export async function startRestore() {
   if (!ok) return;
   // Alles oder nichts: replaceAll schreibt in einer Transaktion und macht bei jedem Fehler einen Rollback
   try { await db.replaceAll(snap); }
-  catch (e) { await alertDlg(e.message, { title: 'Restore fehlgeschlagen' }); return; }
+  catch (e) {
+    await alertDlg(e.message, { title: 'Restore fehlgeschlagen' });
+    if (e.fatal && typeof location !== 'undefined') location.reload(); // Speicherstand evtl. veraltet: nicht weiterarbeiten
+    return;
+  }
   sessionPassHash = await sha256(pass);
   toast('Datensicherung wurde eingespielt');
   nav.go('buchung');

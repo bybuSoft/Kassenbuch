@@ -69,21 +69,55 @@ test('Snapshot/Restore: Roundtrip und Konsistenzprüfung', async () => {
   assert.throws(() => db.validateSnapshot({ app: 'x' }), /keine Kassenbuch/);
 });
 
-test('Restore ist atomar: bei einem Fehler Rollback auf den bisherigen Stand', async () => {
+test('Restore setzt syncedTo und Systemkontakte', async () => {
+  const db = await freshDb();
+  const snap = structuredClone(db.snapshot());
+  snap.createdAt = 1234567;
+  snap.stores.kontakt = snap.stores.kontakt.filter((k) => !k.sys);
+  await db.replaceAll(snap);
+  assert.equal(db.data.meta.syncedTo, 1234567);
+  assert.ok(db.eigene() && db.sysKontakt('dummyKunde') && db.sysKontakt('dummyLieferant'));
+});
+
+const setup2 = async () => {
   const db = await freshDb();
   const k = db.newKontakt({ name: 'K' }); await db.put('kontakt', k);
   await db.put('buchung', buchung(db, k.id, cat(db, 'einnahme').id, 100, 'b1'));
-  const snap = db.snapshot();
+  const snap = structuredClone(db.snapshot());
   await db.put('buchung', buchung(db, k.id, cat(db, 'einnahme').id, 200, 'b2'));
-  const lastChange = db.data.meta.lastChange;
-  const bad = structuredClone(snap);
-  bad.stores.buchung.push({ ...bad.stores.buchung[0], id: 'b9', boom: () => 1 }); // nicht speicherbar -> Fehler mitten im Schreiben
-  await assert.rejects(() => db.replaceAll(bad), /Restore fehlgeschlagen/);
+  return { db, snap, lastChange: db.data.meta.lastChange };
+};
+const assertOld = async (db, lastChange) => {
   assert.ok(db.data.buchung.has('b1') && db.data.buchung.has('b2') && !db.data.buchung.has('b9'));
   assert.equal(db.data.meta.lastChange, lastChange);
-  db.closeDb(); // Neu laden aus der Datenbank: auch dort muss der alte Stand stehen
-  await db.init();
+  assert.equal(db.data.meta.syncedTo, undefined);
+  db.closeDb(); await db.init(); // auch die Datenbank selbst muss den alten Stand haben
   assert.ok(db.data.buchung.has('b1') && db.data.buchung.has('b2') && !db.data.buchung.has('b9'));
+  assert.equal(db.data.meta.lastChange, lastChange);
+  assert.equal(db.data.meta.syncedTo, undefined);
+};
+
+test('Restore atomar: Fehler beim Schreiben -> alter Stand unverändert', async () => {
+  const { db, snap, lastChange } = await setup2();
+  snap.stores.buchung.push({ ...snap.stores.buchung[0], id: 'b9', boom: () => 1 }); // nicht speicherbar
+  await assert.rejects(() => db.replaceAll(snap), (e) => /nicht eingespielt/.test(e.message) && !e.fatal);
+  await assertOld(db, lastChange);
+});
+
+test('Restore atomar: Fehler nach dem Schreiben -> Rollback auf alten Stand', async () => {
+  const { db, snap, lastChange } = await setup2();
+  let n = 0;
+  db.testHooks.afterWrite = () => { if (!n++) throw new Error('Neuladen kaputt'); };
+  try { await assert.rejects(() => db.replaceAll(snap), (e) => /wiederhergestellt/.test(e.message) && !e.fatal); }
+  finally { db.testHooks.afterWrite = null; }
+  await assertOld(db, lastChange);
+});
+
+test('Restore atomar: Rollback scheitert ebenfalls -> fatal', async () => {
+  const { db, snap } = await setup2();
+  db.testHooks.afterWrite = () => { throw new Error('immer kaputt'); };
+  try { await assert.rejects(() => db.replaceAll(snap), (e) => e.fatal === true && /neu geladen/.test(e.message)); }
+  finally { db.testHooks.afterWrite = null; }
 });
 
 test('Filtereinstellungen gehen in die Sicherung und werden wiederhergestellt', async () => {
