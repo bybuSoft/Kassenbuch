@@ -145,20 +145,19 @@ function kategorien() {
 
 // ---- Kundenliste (z. B. Seniorenzentrum): Vorname, Name, Betrag, gruppiert nach Tag, Total pro Monat ---------
 function senioren() {
-  const kats = db.kategorienList('kundenkategorie');
-  if (state.senKat && !db.data.kundenkategorie.has(state.senKat)) state.senKat = '';
-  const sel = h('select', { 'aria-label': 'Kundenkategorie', onchange: () => { state.senKat = sel.value; saveState(); nav.refresh(); } }, h('option', { value: '' }, '– Kategorie wählen –'), ...kats.map((c) => h('option', { value: c.id }, c.name)));
+  const kats = db.kategorienList('buchungskategorie', 'einnahme');
+  if (!state.senKat || !kats.some((c) => c.id === state.senKat)) state.senKat = (kats.find((c) => c.name === 'Stiftung') || kats[0])?.id || ''; // Vorgabe: Stiftung
+  const sel = h('select', { 'aria-label': 'Buchungskategorie', onchange: () => { state.senKat = sel.value; saveState(); nav.refresh(); } }, ...kats.map((c) => h('option', { value: c.id }, c.name)));
   sel.value = state.senKat;
-  const bs = !state.senKat ? [] : db.buchungenList().filter(inRange).filter((b) => db.artOf(b) === 'einnahme' && db.data.kontakt.get(b.kontaktId)?.kategorieId === state.senKat)
+  const bs = db.buchungenList().filter(inRange).filter((b) => db.artOf(b) === 'einnahme' && b.kategorieId === state.senKat)
     .sort((a, b) => (a.datum < b.datum ? -1 : a.datum > b.datum ? 1 : 0));
   const out = h('div', { class: 'report' });
-  const catName = db.data.kundenkategorie.get(state.senKat)?.name || '';
+  const catName = db.data.buchungskategorie.get(state.senKat)?.name || '';
   const eig = db.eigene();
   const adr = [eig.strasse, [eig.plz, eig.ort].filter(Boolean).join(' ')].filter(Boolean);
   out.append(h('p', {}, h('strong', {}, db.kontaktName(eig)), ...adr.flatMap((l) => [h('br'), l])), h('h3', {}, `Kundenliste ${catName}`),
     h('p', { class: 'muted' }, `${fmtDate(state.from)} – ${fmtDate(state.to)}`, h('br'), `Erstellt: ${fmtDateTime(Date.now())}`));
-  if (!state.senKat) out.append(h('p', { class: 'muted' }, 'Bitte eine Kundenkategorie wählen.'));
-  else if (!bs.length) out.append(h('p', { class: 'muted' }, 'Keine Buchungen für diese Kategorie im gewählten Zeitraum.'));
+  if (!bs.length) out.append(h('p', { class: 'muted' }, 'Keine Buchungen für diese Buchungskategorie im gewählten Zeitraum.'));
   const months = [...new Set(bs.map((b) => monthOf(b.datum)))];
   for (const mo of months) {
     out.append(h('h4', {}, monthLabel(mo)));
@@ -172,7 +171,7 @@ function senioren() {
     rows.push(h('tr', { class: 'total' }, h('td', { colspan: 2 }, `Total ${monthLabel(mo)}`), h('td', { class: 'num' }, chf(sum(bs.filter((x) => monthOf(x.datum) === mo))))));
     out.append(h('table', { class: 'tbl amt' }, th('Vorname', 'Name', { t: 'Betrag (CHF)', num: 1 }), h('tbody', {}, ...rows)));
   }
-  const node = h('div', { class: 'stack' }, field('Kundenkategorie', sel), h('div', { class: 'card' }, out));
+  const node = h('div', { class: 'stack' }, field('Buchungskategorie', sel), h('div', { class: 'card' }, out));
   if (state.senKat) node._print = () => printNode(out.cloneNode(true));
   return node;
 }

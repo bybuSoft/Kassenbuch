@@ -94,7 +94,7 @@ export async function passwordDlg({ title, hint, confirmField = false, ok = 'OK'
   const err = h('div', { class: 'err' });
   const ctl = showModal({
     title,
-    body: [hint ? h('p', { class: 'muted pre' }, hint) : null, field('Passwort', p1), confirmField ? field('Passwort wiederholen', p2) : null, err],
+    body: [hint ? h('p', { class: 'muted pre' }, hint) : null, field('Passwort', p1), confirmField ? field('Passwort wiederholen', p2) : null, revealCheck(p1, p2), err],
     buttons: [{ label: 'Abbrechen', value: null }, {
       label: ok, cls: 'primary',
       onClick: () => {
@@ -119,6 +119,12 @@ export function toast(msg, kind = '') {
 
 export const field = (label, input, cls = '') => h('label', { class: `field ${cls}` }, h('span', { class: 'lbl' }, label), input);
 export const checkField = (label, input) => h('label', { class: 'check' }, input, h('span', {}, label));
+
+/** Option «Eingabe anzeigen»: schaltet die übergebenen Passwort-/PIN-Felder zwischen verdeckt und sichtbar um. */
+export function revealCheck(...inputs) {
+  const cb = h('input', { type: 'checkbox', onchange: () => inputs.forEach((i) => { i.type = cb.checked ? 'text' : 'password'; }) });
+  return checkField('Eingabe anzeigen', cb);
+}
 
 /** Segmentiertes Auswahlfeld. options: [{value,label}] */
 export function segmented(options, value, onChange) {

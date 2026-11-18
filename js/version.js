@@ -2,12 +2,13 @@
 // (die Zeichen nach dem letzten "-" im Branch-Namen, z. B. claude/festive-cray-4a3xvr -> 4a3xvr).
 // BRANCH_CODE wird beim Commit automatisch gesetzt (tools/set-version.sh, Hook in .githooks/).
 export const MAJOR = 0;
-export const MINOR = 42;
-export const BRANCH_CODE = 'qxclnp';
+export const MINOR = 43;
+export const BRANCH_CODE = 't53bd2';
 export const VERSION = `${MAJOR}.${MINOR}.${BRANCH_CODE}`;
 
 // Kurze Beschreibung je Änderung (neueste zuerst)
 export const CHANGES = [
+  { v: '0.43', text: 'Kunden/Lieferanten: „Speichern und buchen“ (Standard, in den Einstellungen wählbar) und „Speichern und zurück“; „Ausgeben“ mit Zeitraum statt Drucken; Kunden: Feld Stock, „Kategorie“. Kundenliste nach Buchungskategorie (Vorgabe Stiftung). PIN/Passwort: Eingabe anzeigen.' },
   { v: '0.42', text: 'Kassenbuch-Filter standardmässig auf alles; Filtereinstellungen werden gespeichert und in der Datensicherung mitgesichert.' },
   { v: '0.41', text: 'Ohne Internet ist auch „Daten prüfen“ ausgegraut (Überspringen bleibt möglich); Hilfe und README angepasst.' },
   { v: '0.40', text: 'Ohne Internet auch „Sichern & beenden“ und die Rückfrage nach dem Speichern ausgegraut; Hilfe und README ergänzt.' },

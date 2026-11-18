@@ -5,6 +5,7 @@ import { showModal, confirmDlg, field, checkField, toast, datumField } from './u
 import { nav } from './nav.js';
 import { printQuittung } from './quittung.js';
 import { printKontakt } from './kontaktdruck.js';
+import { periodBar } from './periodbar.js';
 import { fmtDate, fmtDateTime, chf, today, parseBetrag } from './util.js';
 import { betragFields, kategorienFor, prefillFor, confirmBuchungDup, confirmNullBetrag } from './kontaktpick.js';
 
@@ -106,6 +107,20 @@ function showKontaktBuchungen(k) {
     buttons: [{ label: 'Schliessen' }, { label: 'Buchen', cls: 'primary', onClick: async () => { await doSave(); return false; } }] }).closed;
 }
 
+/** «Ausgeben»: Zeitraum wählen (wie bei den Auswertungen), dann Kontaktblatt drucken */
+async function ausgebenDlg(k) {
+  let from = '0000-01-01', to = '9999-12-31'; // Vorgabe: alles
+  const bar = h('div', {});
+  const range = h('p', { class: 'muted small' });
+  const draw = () => {
+    bar.replaceChildren(periodBar({ from: from === '0000-01-01' ? '' : from, to: to === '9999-12-31' ? '' : to, all: true, onSet: (f, t) => { from = f || '0000-01-01'; to = t || '9999-12-31'; draw(); } }));
+    range.textContent = from === '0000-01-01' && to === '9999-12-31' ? 'Zeitraum: alle Buchungen' : `Zeitraum: ${fmtDate(from)} – ${fmtDate(to)}`;
+  };
+  draw();
+  await showModal({ title: `Ausgeben: ${db.kontaktName(k)}`, body: h('div', { class: 'stack' }, bar, range),
+    buttons: [{ label: 'Schliessen' }, { label: '🖨 Drucken', cls: 'primary', onClick: async () => { printKontakt(k, { from, to }); return false; } }] }).closed;
+}
+
 /** Stellt sicher, dass (bei mindestens einem Eintrag) genau ein Eintrag bevorzugt ist. */
 function normPref(list) {
   const first = list.findIndex((c) => c.bevorzugt);
@@ -132,6 +147,7 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
   const kat = h('select', {}, h('option', { value: '' }, '– keine –'),
     ...db.kategorienList('kundenkategorie').map((c) => h('option', { value: c.id }, c.name)));
   kat.value = k.kategorieId || '';
+  const stock = h('input', { value: k.stock || '', autocomplete: 'off' });
   const health = Object.fromEntries(HEALTH.map(([key]) => [key, h('input', { type: 'checkbox', checked: !!k[key] })]));
   const name1 = h('input', { value: k.name1, autocomplete: 'off' });
   const name2 = h('input', { value: k.name2, autocomplete: 'off' });
@@ -143,7 +159,7 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
 
   const kundeTop = h('div', { class: 'stack' },
     h('div', { class: 'grid2' }, field('Vorname', vorname), field('Name', name)),
-    h('div', { class: 'grid2' }, field('Geburtsdatum', geb), field('Kundenkategorie', kat)));
+    h('div', { class: 'grid3 gb' }, field('Geburtsdatum', geb), field('Kategorie', kat), field('Stock', stock)));
   const kundeHealth = h('fieldset', { class: 'fs' }, h('legend', {}, 'Gesundheit'),
     h('div', { class: 'checks' }, ...HEALTH.map(([key, label]) => checkField(label, health[key]))));
   const geschlecht = h('select', { 'aria-label': 'Geschlecht / Firma' }, h('option', { value: '' }, '– keine Angabe –'),
@@ -214,10 +230,10 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
       return false;
     } });
   }
-  if (ex) buttons.push({ label: '🖨 Drucken', onClick: async () => { printKontakt(ex); return false; } });
+  if (ex) buttons.push({ label: 'Ausgeben', onClick: async () => { await ausgebenDlg(ex); return false; } });
   if (ex) buttons.push({ label: 'Buchungen', onClick: async () => { await showKontaktBuchungen(ex); return false; } });
   buttons.push({ label: 'Abbrechen', value: null });
-  const saveFn = (again) => async () => {
+  const saveFn = (mode) => async () => {
     const lief = chkLief.checked;
     const out = { ...k, istLieferant: lief, geschlecht: geschlecht.value, anrede: anrede.value, strasse: strasse.value.trim(), plz: plz.value.trim(), ort: ort.value.trim(), notizen: notizen.value };
     if (lief) {
@@ -227,7 +243,7 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
       out.vorname = vorname.value.trim(); out.name = name.value.trim();
       if (!out.name) { toast('Bitte einen Namen erfassen.', 'err'); name.focus(); return false; }
       if (gebF.input.value.trim() && !gebF.value) { toast('Ungültiges Geburtsdatum – bitte TT.MM.JJJJ erfassen.', 'err'); gebF.input.focus(); return false; }
-      out.geburtsdatum = gebF.value || ''; out.kategorieId = kat.value || null;
+      out.geburtsdatum = gebF.value || ''; out.kategorieId = kat.value || null; out.stock = stock.value.trim();
       HEALTH.forEach(([key]) => { out[key] = health[key].checked; });
     }
     const cl = comms.filter((c) => c.wert.trim()).map((c) => ({ ...c, wert: c.wert.trim() }));
@@ -243,15 +259,21 @@ export async function editKontakt({ id = null, prefill = {}, lockType = null } =
     cl.forEach((c) => ops.push({ op: 'put', store: 'kommunikation', obj: c }));
     await db.batch(ops);
     toast('Gespeichert');
-    return { saved: out.id, again };
+    return { saved: out.id, mode };
   };
-  if (!ex) buttons.push({ label: 'Speichern und neu', onClick: saveFn(true) });
-  buttons.push({ label: 'Speichern', cls: 'primary', onClick: saveFn(false) });
+  if (!ex) buttons.push({ label: 'Speichern und neu', onClick: saveFn('neu') });
+  const def = db.kontaktSaveDefault(); // Standard-Button (Einstellungen): hervorgehoben
+  buttons.push({ label: 'Speichern und zurück', cls: def === 'zurueck' ? 'primary' : '', onClick: saveFn('zurueck') });
+  buttons.push({ label: 'Speichern und buchen', cls: def === 'buchen' ? 'primary' : '', onClick: saveFn('buchen') });
 
   const ctl = showModal({ title: ex ? (k.istLieferant ? 'Lieferant bearbeiten' : 'Kunde bearbeiten') : (k.istLieferant ? 'Neuer Lieferant' : 'Neuer Kunde'), body, buttons, wide: true });
   const r = await ctl.closed;
   if (!(r && r.saved)) return null;
-  if (r.again) { // «Speichern und neu»: gleicher Typ, leeres Formular
+  if (r.mode === 'buchen') { // «Speichern und buchen»: danach direkt die Buchungen des Kontakts
+    await showKontaktBuchungen(db.data.kontakt.get(r.saved));
+    return r.saved;
+  }
+  if (r.mode === 'neu') { // «Speichern und neu»: gleicher Typ, leeres Formular
     const nextLock = lockType || (k.istLieferant ? 'lieferant' : 'kunde');
     return (await editKontakt({ prefill: { istLieferant: k.istLieferant }, lockType: nextLock })) || r.saved;
   }

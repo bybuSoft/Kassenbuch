@@ -92,6 +92,8 @@ export async function batch(ops, touch = true) {
 export const put = (store, obj, touch = true) => batch([{ op: 'put', store, obj }], touch);
 export const del = (store, id, touch = true) => batch([{ op: 'del', store, id }], touch);
 export const deviceName = () => data.meta.deviceName || '';
+/** Standard-Speicherbutton im Kontaktdialog: 'buchen' (Vorgabe) oder 'zurueck' */
+export const kontaktSaveDefault = () => (data.meta.kontaktSaveDefault === 'zurueck' ? 'zurueck' : 'buchen');
 export const setMeta = (key, value, touch = false) => put('meta', { key, value }, touch);
 /** Filtereinstellungen je Bildschirm (Kassenbuch, Auswertungen): liegen in meta.filters, gehen in die Sicherung und werden beim Restore wiederhergestellt. */
 export const getFilter = (name) => ({ ...(data.meta.filters?.[name] || {}) });
@@ -105,7 +107,7 @@ export const DEFAULT_AUSGABEN = ['Waren/Material', 'Miete Lokal', 'Miete Parkpla
 
 const blankKontakt = () => ({
   id: uuid(), istLieferant: false, geschlecht: '', anrede: '', vorname: '', name: '', name1: '', name2: '', geburtsdatum: '',
-  strasse: '', plz: '', ort: '', kategorieId: null, diabetes: false, antikoaguliert: false, allergien: false,
+  strasse: '', plz: '', ort: '', kategorieId: null, stock: '', diabetes: false, antikoaguliert: false, allergien: false,
   hiv: false, haemophilie: false, notizen: '', sys: null, created: Date.now(),
 });
 export const newKontakt = (over = {}) => ({ ...blankKontakt(), ...over });
