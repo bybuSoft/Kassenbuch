@@ -3,7 +3,7 @@ import * as db from './db.js';
 import { h, fmtDateTime } from './util.js';
 import { nav } from './nav.js';
 import { lockScreen } from './lock.js';
-import { toast, confirmDlg } from './ui.js';
+import { toast, confirmDlg, printing } from './ui.js';
 import { startRestore, startBackup, latestBackupInfo, compareWithLocal } from './backup.js';
 import { kassenbuchScreen } from './kassenbuch.js';
 import { buchungScreen } from './buchung.js';
@@ -118,6 +118,7 @@ document.addEventListener('focusin', (e) => {
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) hiddenAt = Date.now();
+  else if (printing.active || Date.now() - printing.endedAt < 5000) printing.active = false; // Rückkehr aus dem Druck-/PDF-Dialog: nicht sperren
   else if (unlocked && hiddenAt && Date.now() - hiddenAt > LOCK_AFTER_MS) {
     unlocked = false; db.devMode.unlocked = false;
     document.getElementById('modal-root').replaceChildren();
