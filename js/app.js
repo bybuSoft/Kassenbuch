@@ -11,7 +11,7 @@ import { menuScreen } from './menu.js';
 import { hilfeScreen } from './hilfe.js';
 import { notizenScreen } from './notizen.js';
 import { kontakteScreen } from './kontakte.js';
-import { auswertungenScreen } from './auswertungen.js';
+import { auswertungenScreen, resetAuswertungen } from './auswertungen.js';
 import { einstellungenScreen, infosScreen } from './einstellungen.js';
 import { VERSION } from './version.js';
 import { offline, watchNet } from './net.js';
@@ -91,7 +91,7 @@ function showLock() {
   app.replaceChildren(h('main', { class: 'center lockpos' }, lockScreen(() => { unlocked = true; startCheck = null; nav.go('start'); })));
 }
 
-nav.go = (name, params) => { current = { name, params }; render(); };
+nav.go = (name, params) => { if (name === 'auswertungen') resetAuswertungen(); current = { name, params }; render(); };
 nav.exit = () => {
   unlocked = false; db.devMode.unlocked = false;
   document.getElementById('modal-root').replaceChildren();

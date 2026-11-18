@@ -9,9 +9,12 @@ import { nav } from './nav.js';
 const state = {
   tab: 'perioden',
   custom: false, from: '', to: '',
-  senKats: undefined, vj: false, level: 'monat', year: '',
+  vj: false, level: 'monat', year: '',
 };
-const FKEYS = ['tab', 'custom', 'from', 'to', 'senKats', 'vj', 'level', 'year'];
+const FKEYS = ['tab', 'custom', 'from', 'to', 'vj', 'level', 'year'];
+let senKats = null; // Auswahl der Kundenliste: wird nicht gespeichert, Vorgabe immer Stiftung (null = Vorgabe)
+/** Beim Öffnen der Auswertungen und beim Reiterwechsel zurück auf die Vorgabe */
+export const resetAuswertungen = () => { senKats = null; };
 const saveState = () => db.saveFilter('auswertungen', Object.fromEntries(FKEYS.map((k) => [k, state[k]]))); // Filter werden mitgesichert
 const opened = new Set(); // aufgeklappte Drilldown-Zeilen (Schlüssel = Lieferant)
 const REPORTS = [
@@ -28,7 +31,7 @@ export function auswertungenScreen() {
     const mo = state.tab === 'senioren' ? shiftMonth(monthOf(today()), -1) : monthOf(today());
     state.from = `${mo}-01`; state.to = lastDayOfMonth(mo);
   } // nach Monatswechsel wieder der aktuelle Monat
-  const tabs = segmented(REPORTS.map(([value, label]) => ({ value, label })), state.tab, (v) => { state.tab = v; saveState(); nav.refresh(); });
+  const tabs = segmented(REPORTS.map(([value, label]) => ({ value, label })), state.tab, (v) => { state.tab = v; resetAuswertungen(); saveState(); nav.refresh(); });
   tabs.classList.add('compact');
   const body = { perioden, kategorien, senioren, treuhaender }[state.tab]();
   const vjBtn = state.tab === 'perioden' || state.tab === 'kategorien'
@@ -149,11 +152,11 @@ function kategorien() {
 // ---- Kundenliste (z. B. Seniorenzentrum): Vorname, Name, Betrag, gruppiert nach Tag, Total pro Monat ---------
 function senioren() {
   const kats = db.kategorienList('buchungskategorie', 'einnahme');
-  // Mehrfachauswahl; Vorgabe (noch nie gewählt): Stiftung
-  if (!Array.isArray(state.senKats)) state.senKats = kats.filter((c) => c.name === 'Stiftung').map((c) => c.id);
-  state.senKats = state.senKats.filter((id) => kats.some((c) => c.id === id));
-  const chosen = new Set(state.senKats);
-  const setKats = (ids) => { state.senKats = ids; saveState(); nav.refresh(); };
+  // Mehrfachauswahl, nicht gespeichert; Vorgabe: Stiftung
+  if (!senKats) senKats = kats.filter((c) => c.name === 'Stiftung').map((c) => c.id);
+  senKats = senKats.filter((id) => kats.some((c) => c.id === id));
+  const chosen = new Set(senKats);
+  const setKats = (ids) => { senKats = ids; nav.refresh(); };
   const allOn = kats.length > 0 && kats.every((c) => chosen.has(c.id));
   const kboxes = [checkField('Alle', h('input', { type: 'checkbox', checked: allOn, onchange: (e) => setKats(e.target.checked ? kats.map((c) => c.id) : []) })),
     ...kats.map((c) => checkField(c.name, h('input', { type: 'checkbox', checked: chosen.has(c.id), onchange: (e) => setKats(kats.filter((x) => (x.id === c.id ? e.target.checked : chosen.has(x.id))).map((x) => x.id)) })))];
