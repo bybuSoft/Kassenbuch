@@ -153,7 +153,7 @@ function kategorien() {
 function senioren() {
   const kats = db.kategorienList('buchungskategorie', 'einnahme');
   // Mehrfachauswahl, nicht gespeichert; Vorgabe: Stiftung
-  if (!senKats) senKats = kats.filter((c) => c.name === 'Stiftung').map((c) => c.id);
+  if (!senKats) senKats = (kats.some((c) => c.name === 'Stiftung') ? kats.filter((c) => c.name === 'Stiftung') : kats.slice(0, 1)).map((c) => c.id);
   senKats = senKats.filter((id) => kats.some((c) => c.id === id));
   const chosen = new Set(senKats);
   const setKats = (ids) => { senKats = ids; nav.refresh(); };

@@ -16,7 +16,7 @@ export function printKontakt(k, { from = '0000-01-01', to = '9999-12-31' } = {})
   const bs = db.buchungenOf(k.id).filter((b) => b.datum >= from && b.datum <= to).sort((a, b) => (a.datum === b.datum ? (a.created || 0) - (b.created || 0) : a.datum < b.datum ? -1 : 1));
   const total = bs.reduce((s, b) => s + b.betrag, 0);
   const adr = (c) => [c.strasse, [c.plz, c.ort].filter(Boolean).join(' ')].filter(Boolean);
-  const commText = (list) => list.map((c) => c.wert + (c.bevorzugt && list.length > 1 ? ' (bevorzugt)' : '')).join(', ');
+  const commText = (list) => list.map((c) => c.wert + (c.bevorzugt ? ' (bevorzugt)' : '')).join(', ');
   const mails = comms.filter((c) => c.typ === 'mail'); const tels = comms.filter((c) => c.typ !== 'mail');
 
   // Stammdaten kompakt: zwei Felder pro Zeile (alle Felder, leere mit «–»), Gesundheit und Notizen über die ganze Breite
@@ -24,7 +24,7 @@ export function printKontakt(k, { from = '0000-01-01', to = '9999-12-31' } = {})
     ['Art', k.istLieferant ? 'Lieferant' : 'Kunde'], ['Erfasst am', k.created ? fmtDateTime(k.created) : ''],
     ...(k.istLieferant
       ? [['Name 1', k.name1], ['Name 2', k.name2]]
-      : [['Vorname', k.vorname], ['Name', k.name], ['Geburtsdatum', fmtDate(k.geburtsdatum)], ['Kategorie / Stock', [kat?.name, k.stock].filter(Boolean).join(' / ')]]),
+      : [['Vorname', k.vorname], ['Name', k.name], ['Geburtsdatum', fmtDate(k.geburtsdatum)], ['Kategorie', kat?.name], ['Stock', k.stock]]),
     ['Geschlecht / Firma', GESCHLECHT[k.geschlecht]], ['Anrede', ANREDE[k.anrede]],
     ['Strasse', k.strasse], ['PLZ / Ort', [k.plz, k.ort].filter(Boolean).join(' ')],
     ['Telefon', commText(tels)], ['E-Mail', commText(mails)],
