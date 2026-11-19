@@ -63,11 +63,13 @@ export async function pruneBackups(dir, keep, justWritten) {
 }
 
 async function folderAccess(handle) {
-  try {
-    const opt = { mode: 'readwrite' };
+  // Mit Zeitlimit: auf manchen Geräten (z. B. Android) kann die Abfrage hängen -> dann Fallback auf Dateiauswahl/Download
+  const opt = { mode: 'readwrite' };
+  const check = (async () => {
     if ((await handle.queryPermission(opt)) === 'granted') return true;
     return (await handle.requestPermission(opt)) === 'granted';
-  } catch { return false; }
+  })().catch(() => false);
+  return Promise.race([check, new Promise((r) => setTimeout(() => r(false), 15000))]);
 }
 
 export async function makeBackup(pass) {
@@ -77,6 +79,11 @@ export async function makeBackup(pass) {
 }
 
 export async function startBackup() {
+  try { return await runBackup(); }
+  catch (e) { console.error(e); await alertDlg(`${e?.name || 'Fehler'}: ${e?.message || e}`, { title: 'Datensicherung fehlgeschlagen' }); return false; }
+}
+
+async function runBackup() {
   const hint = 'Die Sicherung wird mit diesem Passwort verschlüsselt. Das Passwort wird nirgends gespeichert – ohne Passwort kann die Sicherung nicht mehr gelesen werden.';
   let pass;
   for (;;) {
@@ -118,16 +125,24 @@ export async function startBackup() {
 // ---- Daten prüfen: jüngste Sicherung (nur Dateiname) mit dem lokalen Stand vergleichen ----------------
 /** Jüngste Sicherung im Standardordner bzw. aus der gewählten Dateiauswahl. null = abgebrochen, {none:true} = keine gefunden. */
 export async function latestBackupInfo() {
+  try { return await findLatestBackup(); }
+  catch (e) { console.error(e); await alertDlg(`${e?.name || 'Fehler'}: ${e?.message || e}`, { title: 'Daten prüfen fehlgeschlagen' }); return null; }
+}
+
+async function findLatestBackup() {
   let names = [];
   let dir = backupFolder();
   if (!dir && folderSupported()) {
     // noch kein Standardordner: einmal Ordner wählen und merken, danach werden die Dateinamen automatisch gelesen
-    try { dir = await chooseBackupFolder(); toast(`Ordner „${dir.name}“ als Standardordner gemerkt`); } catch (e) { if (e.name !== 'AbortError') toast(e.message, 'err'); return null; }
+    try { dir = await chooseBackupFolder(); toast(`Ordner „${dir.name}“ als Standardordner gemerkt`); }
+    catch (e) { if (e.name === 'AbortError') return null; toast(`Ordnerauswahl nicht möglich (${e.message}) – bitte Dateien wählen`, 'err'); dir = null; }
   }
+  let fromDir = false;
   if (dir && folderSupported() && await folderAccess(dir)) {
-    try { for await (const [name, entry] of dir.entries()) if (entry.kind === 'file' && /\.enc$/i.test(name)) names.push(name); }
-    catch (e) { toast(`Standardordner nicht lesbar (${e.message})`, 'err'); return null; }
-  } else {
+    try { for await (const [name, entry] of dir.entries()) if (entry.kind === 'file' && /\.enc$/i.test(name)) names.push(name); fromDir = true; }
+    catch (e) { toast(`Standardordner nicht lesbar (${e.message}) – bitte Dateien wählen`, 'err'); names = []; }
+  }
+  if (!fromDir) {
     const picked = await pickFile({ multiple: true });
     if (!picked.length) return null;
     names = picked.map((f) => f.name);
