@@ -41,6 +41,12 @@ export async function chooseBackupFolder() {
   await db.setMeta('backupDir', handle);
   return handle;
 }
+/** Namen (und Dateien) der .enc-Dateien im Ordner, mit Zeitlimit */
+const listEnc = (dir, withFile = false) => withTimeout((async () => {
+  const out = [];
+  for await (const [name, entry] of dir.entries()) if (entry.kind === 'file' && /\.enc$/i.test(name)) out.push(withFile ? await entry.getFile() : name);
+  return out;
+})(), 10000, 'Standardordner lesen');
 export const clearBackupFolder = () => db.setMeta('backupDir', null);
 
 export const pruneSettings = () => ({ on: !!db.data.meta.pruneOld, keep: Math.max(1, Number(db.data.meta.pruneKeep) || 5) });
@@ -61,6 +67,9 @@ export async function pruneBackups(dir, keep, justWritten) {
   }
   return n;
 }
+
+/** Wartet höchstens `ms` auf p; hängende Ordnerzugriffe (z. B. Android) werden so zu einem Fehler statt zu einem stillen Stillstand. */
+const withTimeout = (p, ms = 10000, what = 'Ordnerzugriff') => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error(`${what}: keine Antwort (Zeitüberschreitung)`)), ms))]);
 
 async function folderAccess(handle) {
   // Mit Zeitlimit: auf manchen Geräten (z. B. Android) kann die Abfrage hängen -> dann Fallback auf Dateiauswahl/Download
@@ -98,13 +107,16 @@ async function runBackup() {
     if (!pass) return false;
     break;
   }
+  toast('Sicherung wird erstellt …');
   const { blob, filename, createdAt } = await makeBackup(pass);
   let res;
   const dir = backupFolder();
   if (dir && folderSupported() && await folderAccess(dir)) {
     try {
-      const w = await (await dir.getFileHandle(filename, { create: true })).createWritable();
-      await w.write(blob); await w.close();
+      await withTimeout((async () => {
+        const w = await (await dir.getFileHandle(filename, { create: true })).createWritable();
+        await w.write(blob); await w.close();
+      })(), 20000, 'Standardordner schreiben');
       res = 'folder';
       const ps = pruneSettings();
       if (ps.on) {
@@ -139,7 +151,7 @@ async function findLatestBackup() {
   }
   let fromDir = false;
   if (dir && folderSupported() && await folderAccess(dir)) {
-    try { for await (const [name, entry] of dir.entries()) if (entry.kind === 'file' && /\.enc$/i.test(name)) names.push(name); fromDir = true; }
+    try { names = await listEnc(dir); fromDir = true; }
     catch (e) { toast(`Standardordner nicht lesbar (${e.message}) – bitte Dateien wählen`, 'err'); names = []; }
   }
   if (!fromDir) {
@@ -210,8 +222,7 @@ export async function startRestore() {
   const dir = backupFolder();
   if (dir && folderSupported() && await folderAccess(dir)) {
     try {
-      const found = [];
-      for await (const [name, entry] of dir.entries()) if (entry.kind === 'file' && /\.enc$/i.test(name)) found.push(await entry.getFile());
+      const found = await listEnc(dir, true);
       const r = await chooseFromList(found, { other: true });
       if (!r) return;
       if (r !== 'other') file = r;
