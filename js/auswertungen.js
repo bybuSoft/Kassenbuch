@@ -175,7 +175,7 @@ function senioren() {
     const groups = new Map();
     bs.forEach((b) => { (groups.get(b.kontaktId) || groups.set(b.kontaktId, []).get(b.kontaktId)).push(b); });
     const list = [...groups].map(([id, arr]) => ({ k: db.data.kontakt.get(id) || {}, arr }))
-      .sort((x, y) => collator.compare(`${x.k.name || ''} ${x.k.vorname || ''}`, `${y.k.name || ''} ${y.k.vorname || ''}`));
+      .sort((x, y) => db.compareKontakte(x.k, y.k));
     const rows = [];
     for (const { k, arr } of list) {
       const kat = db.data.kundenkategorie.get(k.kategorieId)?.name;

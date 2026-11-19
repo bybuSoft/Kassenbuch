@@ -48,7 +48,7 @@ export function printKontakt(k, { from = '0000-01-01', to = '9999-12-31' } = {})
 
   printNode(h('div', { class: 'kontaktdruck' },
     h('div', { class: 'kd-head' }, h('div', { class: 'q-absender' }, h('strong', {}, db.kontaktName(eig)), ...adr(eig).map((l) => h('span', {}, ` · ${l}`))), h('span', { class: 'muted' }, `Erstellt: ${fmtDateTime(Date.now())}`)),
-    h('h1', {}, `Gespeicherte Daten: ${db.kontaktName(k)}`),
+    h('h1', {}, `Gespeicherte Daten: ${db.kontaktListName(k)}`),
     h('h3', {}, 'Stammdaten'), stamm,
     h('h3', {}, alles ? 'Buchungen' : `Buchungen ${fmtDate(from)} – ${fmtDate(to)}`), buchungen));
 }

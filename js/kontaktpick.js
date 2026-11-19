@@ -12,7 +12,7 @@ export function kontaktPicker({ getId, onSelect, onClear }) {
     const label = 'Kunde / Lieferant';
     if (k) {
       box.replaceChildren(h('span', { class: 'lbl' }, k.istLieferant ? 'Lieferant' : 'Kunde'),
-        h('div', { class: 'chip' }, h('strong', {}, db.kontaktName(k)),
+        h('div', { class: 'chip' }, h('strong', {}, db.kontaktListName(k)),
           h('button', { type: 'button', class: 'btn small', onclick: () => { onClear(); draw(true); } }, 'Ändern'),
           db.isDummy(k) ? null : h('button', { type: 'button', class: 'btn small', onclick: async () => { await editKontakt({ id: k.id, lockType: k.istLieferant ? 'lieferant' : 'kunde' }); draw(); } }, 'Bearbeiten')));
       return;
@@ -25,7 +25,7 @@ export function kontaktPicker({ getId, onSelect, onClear }) {
       const pool = [...db.kontakteList(false, false), ...db.kontakteList(true, false)];
       found = !terms.length ? [] : pool.filter((c) => terms.every((t) => normalize(db.kontaktName(c)).includes(t))).slice(0, 8);
       sugg.replaceChildren(...found.map((c) => h('button', { type: 'button', class: 'row', onclick: () => onSelect(c.id) },
-        h('strong', {}, db.kontaktName(c)), h('span', { class: 'muted' }, [c.istLieferant ? 'Lieferant' : '', c.plz, c.ort, c.sys === 'eigene' ? 'eigene Firma' : ''].filter(Boolean).join(' ')))));
+        h('strong', {}, db.kontaktListName(c)), h('span', { class: 'muted' }, [c.istLieferant ? 'Lieferant' : '', c.plz, c.ort, c.sys === 'eigene' ? 'eigene Firma' : ''].filter(Boolean).join(' ')))));
       if (!found.length && terms.length) sugg.append(h('p', { class: 'muted pad' }, 'Nicht gefunden.'));
       newRow.hidden = !terms.length;
     };
@@ -78,5 +78,5 @@ export async function confirmBuchungDup(b) {
   const dups = db.findDuplicateBuchungen(b);
   if (!dups.length) return true;
   const lines = dups.map((d) => `• ${fmtDate(d.datum)}, CHF ${chf(d.betrag)}${d.text ? `, ${d.text}` : ''}`).join('\n');
-  return confirmDlg(`Für ${db.kontaktName(db.data.kontakt.get(b.kontaktId))} gibt es schon ${dups.length === 1 ? 'eine Buchung' : `${dups.length} Buchungen`} mit gleichem Datum und Betrag:\n${lines}\n\nTrotzdem speichern?`, { title: 'Dublettenprüfung', ok: 'Trotzdem speichern' });
+  return confirmDlg(`Für ${db.kontaktListName(db.data.kontakt.get(b.kontaktId))} gibt es schon ${dups.length === 1 ? 'eine Buchung' : `${dups.length} Buchungen`} mit gleichem Datum und Betrag:\n${lines}\n\nTrotzdem speichern?`, { title: 'Dublettenprüfung', ok: 'Trotzdem speichern' });
 }

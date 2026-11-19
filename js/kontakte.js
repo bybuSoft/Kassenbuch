@@ -37,7 +37,7 @@ export function kontakteScreen(typ) {
       const prefer = db.commsOf(k.id).filter((c) => c.bevorzugt)[0] || db.commsOf(k.id)[0];
       return h('button', { type: 'button', class: 'row', onclick: async () => { await editKontakt({ id: k.id }); nav.refresh(); } },
         h('div', { class: 'row-main' },
-          h('strong', {}, db.kontaktName(k) || '(ohne Name)'),
+          h('strong', {}, db.kontaktListName(k) || '(ohne Name)'),
           h('span', { class: 'muted small' }, k.created ? fmtDateTime(k.created) : '')),
         adr ? h('div', { class: 'row-sub muted' }, adr) : null,
         h('div', { class: 'row-sub muted' }, [kat?.name, prefer?.wert, k.sys === 'eigene' ? 'eigene Firma' : ''].filter(Boolean).join(' · ')));
@@ -103,7 +103,7 @@ function showKontaktBuchungen(k) {
     if (focusDatum) setTimeout(() => datum.focus(), 0);
   };
   draw(true);
-  return showModal({ title: `Buchungen: ${db.kontaktName(k)}`, wide: true, body,
+  return showModal({ title: `Buchungen: ${db.kontaktListName(k)}`, wide: true, body,
     buttons: [{ label: 'Schliessen' }, { label: 'Buchen', cls: 'primary', onClick: async () => { await doSave(); return false; } }] }).closed;
 }
 
@@ -117,7 +117,7 @@ async function ausgebenDlg(k) {
     range.textContent = from === '0000-01-01' && to === '9999-12-31' ? 'Zeitraum: alle Buchungen' : `Zeitraum: ${fmtDate(from)} – ${fmtDate(to)}`;
   };
   draw();
-  await showModal({ title: `Ausgeben: ${db.kontaktName(k)}`, body: h('div', { class: 'stack' }, bar, range),
+  await showModal({ title: `Ausgeben: ${db.kontaktListName(k)}`, body: h('div', { class: 'stack' }, bar, range),
     buttons: [{ label: 'Schliessen' }, { label: '🖨 Drucken', cls: 'primary', onClick: async () => { printKontakt(k, { from, to }); return false; } }] }).closed;
 }
 

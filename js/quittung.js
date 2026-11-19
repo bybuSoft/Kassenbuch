@@ -15,7 +15,7 @@ export function printQuittung(b) {
     h('h1', {}, 'Quittung'),
     h('table', {},
       row('Datum', fmtDate(b.datum)),
-      row('Erhalten von', h('div', {}, h('div', {}, db.kontaktName(k)), ...adr(k).map((l) => h('div', {}, l)))),
+      row('Erhalten von', h('div', {}, h('div', {}, db.kontaktListName(k)), ...adr(k).map((l) => h('div', {}, l)))),
       row('Betrag', `CHF ${chf(Math.abs(b.betrag))}`),
       row('Für', [kat?.name, b.text].filter(Boolean).join(' – '))),
     h('div', { class: 'q-sign' }, h('div', {}, `${eig.ort || ''}${eig.ort ? ', ' : ''}${fmtDate(b.datum)}`), h('div', { class: 'line' }, 'Unterschrift'))));
