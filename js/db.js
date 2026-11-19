@@ -141,8 +141,12 @@ export const sysKontakt = (sys) => [...data.kontakt.values()].find((k) => k.sys 
 export const eigene = () => sysKontakt('eigene');
 export const isDummy = (k) => k && (k.sys === 'dummyKunde' || k.sys === 'dummyLieferant');
 export const commsOf = (kontaktId) => [...data.kommunikation.values()].filter((c) => c.kontaktId === kontaktId);
-export const kontaktSortKey = (k) => (k.istLieferant ? kontaktName(k) : `${k.name} ${k.vorname}`);
-export const sortKontakte = (arr) => arr.sort((a, b) => collator.compare(kontaktSortKey(a), kontaktSortKey(b)));
+export const kontaktSortKey = (k) => (k.istLieferant ? kontaktName(k) : `${k.name || ''} ${k.vorname || ''}`.trim());
+/** Vergleich: Kunden nach Nachname, dann Vorname; Lieferanten nach Name */
+export const compareKontakte = (a, b) => (a.istLieferant || b.istLieferant
+  ? collator.compare(kontaktSortKey(a), kontaktSortKey(b))
+  : collator.compare(a.name || '', b.name || '') || collator.compare(a.vorname || '', b.vorname || ''));
+export const sortKontakte = (arr) => arr.sort(compareKontakte);
 export const kontakteList = (lieferant, includeSys = false) =>
   sortKontakte([...data.kontakt.values()].filter((k) => k.istLieferant === lieferant && (includeSys ? true : !isDummy(k))));
 export const kategorienList = (store, art) =>
