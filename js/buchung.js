@@ -68,8 +68,8 @@ export function buchungScreen() {
   };
   const cancel = () => { resetDraft(); nav.go('menu'); };
 
-  // ---- Liste der zuletzt erfassten Buchungen (nach Erfassungszeitpunkt absteigend)
-  const recent = [...db.data.buchung.values()].sort((a, b) => (b.created || 0) - (a.created || 0)).slice(0, 25);
+  // ---- Liste der zuletzt erfassten Buchungen (nach Buchungsdatum absteigend, innerhalb nach Erfassungszeitpunkt absteigend)
+  const recent = db.buchungenList().slice(0, 25);
   const list = h('div', { class: 'list' });
   if (!recent.length) list.append(h('p', { class: 'muted pad' }, 'Noch keine Buchungen erfasst.'));
   for (const b of recent) {
