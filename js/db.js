@@ -137,6 +137,8 @@ const systemKontaktOps = () => missingSystemKontakte().map((obj) => ({ op: 'put'
 
 // ---- Abfragen -------------------------------------------------------------
 export const kontaktName = (k) => (k ? (k.istLieferant ? [k.name1, k.name2] : [k.vorname, k.name]).filter(Boolean).join(' ').trim() : '');
+/** Anzeigename für Listen: Kunden als „Nachname Vorname“ */
+export const kontaktListName = (k) => (k && !k.istLieferant ? [k.name, k.vorname].filter(Boolean).join(' ').trim() : kontaktName(k));
 export const sysKontakt = (sys) => [...data.kontakt.values()].find((k) => k.sys === sys);
 export const eigene = () => sysKontakt('eigene');
 export const isDummy = (k) => k && (k.sys === 'dummyKunde' || k.sys === 'dummyLieferant');

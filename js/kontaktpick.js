@@ -25,7 +25,7 @@ export function kontaktPicker({ getId, onSelect, onClear }) {
       const pool = [...db.kontakteList(false, false), ...db.kontakteList(true, false)];
       found = !terms.length ? [] : pool.filter((c) => terms.every((t) => normalize(db.kontaktName(c)).includes(t))).slice(0, 8);
       sugg.replaceChildren(...found.map((c) => h('button', { type: 'button', class: 'row', onclick: () => onSelect(c.id) },
-        h('strong', {}, db.kontaktName(c)), h('span', { class: 'muted' }, [c.istLieferant ? 'Lieferant' : '', c.plz, c.ort, c.sys === 'eigene' ? 'eigene Firma' : ''].filter(Boolean).join(' ')))));
+        h('strong', {}, db.kontaktListName(c)), h('span', { class: 'muted' }, [c.istLieferant ? 'Lieferant' : '', c.plz, c.ort, c.sys === 'eigene' ? 'eigene Firma' : ''].filter(Boolean).join(' ')))));
       if (!found.length && terms.length) sugg.append(h('p', { class: 'muted pad' }, 'Nicht gefunden.'));
       newRow.hidden = !terms.length;
     };

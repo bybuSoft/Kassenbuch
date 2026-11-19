@@ -37,7 +37,7 @@ export function kontakteScreen(typ) {
       const prefer = db.commsOf(k.id).filter((c) => c.bevorzugt)[0] || db.commsOf(k.id)[0];
       return h('button', { type: 'button', class: 'row', onclick: async () => { await editKontakt({ id: k.id }); nav.refresh(); } },
         h('div', { class: 'row-main' },
-          h('strong', {}, db.kontaktName(k) || '(ohne Name)'),
+          h('strong', {}, db.kontaktListName(k) || '(ohne Name)'),
           h('span', { class: 'muted small' }, k.created ? fmtDateTime(k.created) : '')),
         adr ? h('div', { class: 'row-sub muted' }, adr) : null,
         h('div', { class: 'row-sub muted' }, [kat?.name, prefer?.wert, k.sys === 'eigene' ? 'eigene Firma' : ''].filter(Boolean).join(' · ')));
