@@ -6,7 +6,7 @@ import { nav } from './nav.js';
 import { printQuittung } from './quittung.js';
 import { printKontakt } from './kontaktdruck.js';
 import { periodBar } from './periodbar.js';
-import { fmtDate, fmtDateTime, chf, today, parseBetrag } from './util.js';
+import { fmtDate, chf, today, parseBetrag } from './util.js';
 import { betragFields, kategorienFor, prefillFor, confirmBuchungDup, confirmNullBetrag } from './kontaktpick.js';
 
 const HEALTH = [['diabetes', 'Diabetes'], ['antikoaguliert', 'Antikoaguliert'], ['allergien', 'Allergien'], ['hiv', 'HIV-positiv'], ['haemophilie', 'Hämophilie']];
@@ -37,8 +37,7 @@ export function kontakteScreen(typ) {
       const prefer = db.commsOf(k.id).filter((c) => c.bevorzugt)[0] || db.commsOf(k.id)[0];
       return h('button', { type: 'button', class: 'row', onclick: async () => { await editKontakt({ id: k.id }); nav.refresh(); } },
         h('div', { class: 'row-main' },
-          h('strong', {}, db.kontaktListName(k) || '(ohne Name)'),
-          h('span', { class: 'muted small' }, k.created ? fmtDateTime(k.created) : '')),
+          h('strong', {}, db.kontaktListName(k) || '(ohne Name)')),
         adr ? h('div', { class: 'row-sub muted' }, adr) : null,
         h('div', { class: 'row-sub muted' }, [kat?.name, prefer?.wert, k.sys === 'eigene' ? 'eigene Firma' : ''].filter(Boolean).join(' · ')));
     }) : [h('p', { class: 'muted pad' }, 'Keine Einträge.')]));
