@@ -77,7 +77,7 @@ export function buchungRow(b, sub) {
   const quittung = db.artOf(b) === 'einnahme' && b.betrag > 0;
   return h('div', { class: 'rowwrap' },
     h('button', { type: 'button', class: 'row', onclick: () => openBuchung(b) },
-      h('div', { class: 'row-main' }, h('strong', {}, db.kontaktName(k)), h('span', { class: b.betrag < 0 ? 'out' : 'in' }, chf(b.betrag))),
+      h('div', { class: 'row-main' }, h('strong', {}, db.kontaktListName(k)), h('span', { class: b.betrag < 0 ? 'out' : 'in' }, chf(b.betrag))),
       h('div', { class: 'row-sub muted' }, sub.filter(Boolean).join(' · '))),
     quittung ? h('button', { type: 'button', class: 'print-btn', title: 'Quittung drucken', 'aria-label': 'Quittung drucken', onclick: () => printQuittung(b) }, '🖨') : null);
 }

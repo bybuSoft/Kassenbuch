@@ -103,7 +103,7 @@ function showKontaktBuchungen(k) {
     if (focusDatum) setTimeout(() => datum.focus(), 0);
   };
   draw(true);
-  return showModal({ title: `Buchungen: ${db.kontaktName(k)}`, wide: true, body,
+  return showModal({ title: `Buchungen: ${db.kontaktListName(k)}`, wide: true, body,
     buttons: [{ label: 'Schliessen' }, { label: 'Buchen', cls: 'primary', onClick: async () => { await doSave(); return false; } }] }).closed;
 }
 
@@ -117,7 +117,7 @@ async function ausgebenDlg(k) {
     range.textContent = from === '0000-01-01' && to === '9999-12-31' ? 'Zeitraum: alle Buchungen' : `Zeitraum: ${fmtDate(from)} – ${fmtDate(to)}`;
   };
   draw();
-  await showModal({ title: `Ausgeben: ${db.kontaktName(k)}`, body: h('div', { class: 'stack' }, bar, range),
+  await showModal({ title: `Ausgeben: ${db.kontaktListName(k)}`, body: h('div', { class: 'stack' }, bar, range),
     buttons: [{ label: 'Schliessen' }, { label: '🖨 Drucken', cls: 'primary', onClick: async () => { printKontakt(k, { from, to }); return false; } }] }).closed;
 }
 
