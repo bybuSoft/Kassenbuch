@@ -77,6 +77,11 @@ export async function makeBackup(pass) {
 }
 
 export async function startBackup() {
+  try { return await runBackup(); }
+  catch (e) { console.error(e); await alertDlg(`${e?.name || 'Fehler'}: ${e?.message || e}`, { title: 'Datensicherung fehlgeschlagen' }); return false; }
+}
+
+async function runBackup() {
   const hint = 'Die Sicherung wird mit diesem Passwort verschlüsselt. Das Passwort wird nirgends gespeichert – ohne Passwort kann die Sicherung nicht mehr gelesen werden.';
   let pass;
   for (;;) {
@@ -118,6 +123,11 @@ export async function startBackup() {
 // ---- Daten prüfen: jüngste Sicherung (nur Dateiname) mit dem lokalen Stand vergleichen ----------------
 /** Jüngste Sicherung im Standardordner bzw. aus der gewählten Dateiauswahl. null = abgebrochen, {none:true} = keine gefunden. */
 export async function latestBackupInfo() {
+  try { return await findLatestBackup(); }
+  catch (e) { console.error(e); await alertDlg(`${e?.name || 'Fehler'}: ${e?.message || e}`, { title: 'Daten prüfen fehlgeschlagen' }); return null; }
+}
+
+async function findLatestBackup() {
   let names = [];
   let dir = backupFolder();
   if (!dir && folderSupported()) {
