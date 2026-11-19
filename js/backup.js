@@ -63,11 +63,13 @@ export async function pruneBackups(dir, keep, justWritten) {
 }
 
 async function folderAccess(handle) {
-  try {
-    const opt = { mode: 'readwrite' };
+  // Mit Zeitlimit: auf manchen Geräten (z. B. Android) kann die Abfrage hängen -> dann Fallback auf Dateiauswahl/Download
+  const opt = { mode: 'readwrite' };
+  const check = (async () => {
     if ((await handle.queryPermission(opt)) === 'granted') return true;
     return (await handle.requestPermission(opt)) === 'granted';
-  } catch { return false; }
+  })().catch(() => false);
+  return Promise.race([check, new Promise((r) => setTimeout(() => r(false), 15000))]);
 }
 
 export async function makeBackup(pass) {
@@ -132,12 +134,15 @@ async function findLatestBackup() {
   let dir = backupFolder();
   if (!dir && folderSupported()) {
     // noch kein Standardordner: einmal Ordner wählen und merken, danach werden die Dateinamen automatisch gelesen
-    try { dir = await chooseBackupFolder(); toast(`Ordner „${dir.name}“ als Standardordner gemerkt`); } catch (e) { if (e.name !== 'AbortError') toast(e.message, 'err'); return null; }
+    try { dir = await chooseBackupFolder(); toast(`Ordner „${dir.name}“ als Standardordner gemerkt`); }
+    catch (e) { if (e.name === 'AbortError') return null; toast(`Ordnerauswahl nicht möglich (${e.message}) – bitte Dateien wählen`, 'err'); dir = null; }
   }
+  let fromDir = false;
   if (dir && folderSupported() && await folderAccess(dir)) {
-    try { for await (const [name, entry] of dir.entries()) if (entry.kind === 'file' && /\.enc$/i.test(name)) names.push(name); }
-    catch (e) { toast(`Standardordner nicht lesbar (${e.message})`, 'err'); return null; }
-  } else {
+    try { for await (const [name, entry] of dir.entries()) if (entry.kind === 'file' && /\.enc$/i.test(name)) names.push(name); fromDir = true; }
+    catch (e) { toast(`Standardordner nicht lesbar (${e.message}) – bitte Dateien wählen`, 'err'); names = []; }
+  }
+  if (!fromDir) {
     const picked = await pickFile({ multiple: true });
     if (!picked.length) return null;
     names = picked.map((f) => f.name);
