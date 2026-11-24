@@ -225,7 +225,7 @@ export async function startRestore() {
     `Datensicherung vom: ${fmtDateTime(snap.createdAt)}`,
     `Letzte Änderung der Daten in der Sicherung: ${fmtDateTime(snap.lastChange)}`,
     `Letzte Änderung der lokalen Daten: ${local ? fmtDateTime(local) : 'keine Daten vorhanden'}`,
-    `Inhalt der Sicherung: ${snap.stores.buchung.length} Buchungen, ${snap.stores.kontakt.filter((k) => !k.sys).length} Kontakte`,
+    `Inhalt der Sicherung: ${(snap.stores.buchung2 || []).length} Buchungen (neue Struktur), ${snap.stores.buchung.length} alte Buchungen, ${snap.stores.kontakt.filter((k) => !k.sys).length} Kontakte`,
   ];
   let warn = '';
   if (local && local > (snap.lastChange || 0)) warn = '\n\nACHTUNG: Die lokalen Daten sind neuer als die Sicherung.\nWillst du die lokalen Daten wirklich überschreiben?';

@@ -1,64 +1,48 @@
-// Buchungsseite: Erfassung (Datum, Kunde, Betrag, Art, Kategorie, Text) und Liste der zuletzt erfassten Buchungen
+// Buchungsseite: Erfassung (Datum, Kunde/Lieferant, Positionen mit Kategorie/Betrag/Stiftung, Text) und Liste der zuletzt erfassten Buchungen
 import * as db from './db.js';
-import { h, uuid, parseBetrag, today, fmtDate } from './util.js';
+import { h, uuid, today, fmtDate } from './util.js';
 import { field, toast, confirmDlg } from './ui.js';
-import { kontaktPicker, betragFields, kategorienFor, prefillFor, confirmBuchungDup, confirmNullBetrag } from './kontaktpick.js';
+import { kontaktPicker, positionenEditor, defaultRows, prefillRows, confirmBuchungDup, confirmNullBetrag } from './kontaktpick.js';
 import { startBackup, beenden } from './backup.js';
 import { offline } from './net.js';
 import { buchungRow } from './kassenbuch.js';
 import { nav } from './nav.js';
 
 // Entwurf bleibt über Neuzeichnen erhalten
-const draft = { datum: today(), datumGeaendert: false, kontaktId: null, sign: '+', betrag: '', kategorieId: '', text: '' };
-const resetDraft = () => Object.assign(draft, { kontaktId: null, sign: '+', betrag: '', kategorieId: '', text: '' });
+const draft = { datum: today(), datumGeaendert: false, kontaktId: null, rows: defaultRows(null), text: '' };
+const resetDraft = () => Object.assign(draft, { kontaktId: null, rows: defaultRows(null), text: '' });
 
 export function buchungScreen() {
   if (!draft.datumGeaendert) draft.datum = today(); // App kann über Nacht offen bleiben: Vorgabe immer der heutige Tag
   if (!db.data.kontakt.has(draft.kontaktId)) draft.kontaktId = null;
-  if (draft.kategorieId && !db.data.buchungskategorie.has(draft.kategorieId)) draft.kategorieId = '';
 
   const datum = h('input', { type: 'date', value: draft.datum, required: true, onchange: (e) => { draft.datum = e.target.value; draft.datumGeaendert = true; } });
-  const bf = betragFields(draft.sign, draft.betrag);
-  bf.input.addEventListener('input', () => { draft.betrag = bf.input.value; });
-  bf.signSel.addEventListener('change', () => { draft.sign = bf.signSel.value; });
-  const katSel = h('select', { 'aria-label': 'Buchungskategorie', onchange: (e) => { draft.kategorieId = e.target.value; } });
   const text = h('input', { type: 'text', value: draft.text, placeholder: 'optional', autocomplete: 'off', oninput: (e) => { draft.text = e.target.value; } });
+  const editor = positionenEditor({ rows: draft.rows, getKontakt: () => db.data.kontakt.get(draft.kontaktId), onEnterLast: () => text.focus() });
 
-  const drawKat = () => {
-    const k = db.data.kontakt.get(draft.kontaktId);
-    const cats = kategorienFor(k);
-    katSel.replaceChildren(h('option', { value: '' }, k ? '– wählen –' : '– zuerst Kontakt wählen –'), ...cats.map((c) => h('option', { value: c.id }, c.name)));
-    katSel.value = cats.some((c) => c.id === draft.kategorieId) ? draft.kategorieId : '';
-    draft.kategorieId = katSel.value;
-  };
-
-  /** Kontakt gewählt: Vorzeichen, Betrag und Kategorie aus der letzten Buchung vorbelegen */
+  /** Kontakt gewählt: Kategorien, Vorzeichen, Beträge und Stiftung aus der letzten Buchung vorbelegen */
   const picker = kontaktPicker({
     getId: () => draft.kontaktId,
     onSelect: (id) => {
       draft.kontaktId = id;
-      const k = db.data.kontakt.get(id);
-      const p = prefillFor(k);
-      draft.sign = p.sign; draft.betrag = p.betrag; draft.kategorieId = p.kategorieId;
-      bf.signSel.value = draft.sign; bf.input.value = draft.betrag;
-      drawKat(); picker.draw();
-      bf.input.focus(); bf.input.select();
+      editor.set(prefillRows(db.data.kontakt.get(id)));
+      picker.draw();
+      editor.focusFirst();
     },
-    onClear: () => { draft.kontaktId = null; drawKat(); },
+    onClear: () => { draft.kontaktId = null; editor.set(defaultRows(null)); },
   });
-  picker.draw(); drawKat();
+  picker.draw();
 
   const save = async (again) => {
-    const cents = parseBetrag(bf.input.value);
     if (!datum.value) { toast('Bitte ein Datum wählen.', 'err'); return; }
     const k = db.data.kontakt.get(draft.kontaktId);
     if (!k) { toast('Bitte einen Kunden oder Lieferanten wählen.', 'err'); return; }
-    if (cents === null) { toast('Bitte einen Betrag erfassen (z. B. 65.00).', 'err'); bf.input.focus(); return; }
-    if (!katSel.value) { toast('Bitte eine Buchungskategorie wählen.', 'err'); return; }
-    if (cents === 0 && !(await confirmNullBetrag())) return;
-    const nb = { id: uuid(), datum: datum.value, betrag: bf.signSel.value === '-' ? -cents : cents, kontaktId: k.id, kategorieId: katSel.value, text: text.value.trim(), created: Date.now() };
+    const r = editor.read();
+    if (r.error) { toast(r.error, 'err'); return; }
+    const nb = { id: uuid(), datum: datum.value, kontaktId: k.id, text: text.value.trim(), created: Date.now(), positionen: r.positionen };
+    if (db.posSum(nb) === 0 && !(await confirmNullBetrag())) return;
     if (!(await confirmBuchungDup(nb))) return;
-    await db.put('buchung', nb);
+    await db.put('buchung2', nb);
     toast('Buchung gespeichert');
     resetDraft();
     if (again) { nav.refresh(); return; }
@@ -73,8 +57,7 @@ export function buchungScreen() {
   const list = h('div', { class: 'list' });
   if (!recent.length) list.append(h('p', { class: 'muted pad' }, 'Noch keine Buchungen erfasst.'));
   for (const b of recent) {
-    const kat = db.data.buchungskategorie.get(b.kategorieId);
-    list.append(buchungRow(b, [fmtDate(b.datum), kat?.name, b.text, b.test ? 'Test' : '']));
+    list.append(buchungRow(b, [fmtDate(b.datum), db.posText(b), b.text, b.test ? 'Test' : '']));
   }
 
   setTimeout(() => { if (!document.getElementById('modal-root').children.length && !draft.kontaktId) picker.el.querySelector('input')?.focus(); }, 0);
@@ -84,8 +67,8 @@ export function buchungScreen() {
     actions: [h('button', { class: 'btn', onclick: () => beenden() }, 'Beenden')],
     node: h('div', { class: 'stack' },
       h('div', { class: 'card stack' },
-        field('Datum', datum), picker.el, bf.el,
-        field('Buchungskategorie', katSel), field('Buchungstext', text),
+        field('Datum', datum), picker.el, editor.el,
+        field('Buchungstext', text),
         h('div', { class: 'btnrow' },
           h('button', { type: 'button', class: 'btn', onclick: cancel }, 'Abbrechen'),
           h('button', { type: 'button', class: 'btn', onclick: () => save(true) }, 'Speichern & neu'),

@@ -10,6 +10,8 @@ import { offline } from './net.js';
 import { startBackup, startRestore, folderSupported, backupFolder, chooseBackupFolder, clearBackupFolder, pruneSettings } from './backup.js';
 import { nav } from './nav.js';
 import { validMail } from './notizen.js';
+import { openMigration } from './migrationui.js';
+import { offeneAlt, migrierte } from './migration.js';
 
 /** Liste der Kategorien mit Neu/Ändern/Löschen (nur wenn nirgends verwendet) */
 function kategorieCard(title, store, art) {
@@ -102,6 +104,9 @@ export function einstellungenScreen() {
           : h('p', { class: 'muted' }, 'Ein fester Standardordner kann auf iPhone/iPad nicht eingestellt werden (Einschränkung von Safari). Beim Sichern „In Dateien sichern“ wählen – iOS merkt sich meist den zuletzt benutzten Ordner. Auf Desktop-Chrome/Edge ist die Einstellung möglich.'),
         h('div', { class: 'presets' }, h('button', { class: 'btn', disabled: offline(), onclick: () => startBackup() }, 'Sicherung erstellen'), h('button', { class: 'btn', disabled: offline(), onclick: () => startRestore() }, 'Restore aus Datei')),
         offline() ? h('p', { class: 'muted' }, 'Ohne Internet sind Sicherung und Restore nicht möglich.') : null),
+      db.data.buchung.size ? h('div', { class: 'card stack' }, h('h3', {}, 'Buchungen migrieren'),
+        h('p', { class: 'muted' }, `Die bisherigen Buchungen (eine Kategorie je Buchung) werden in die neue Struktur mit mehreren Beträgen je Buchung übernommen (Stiftung als Zahlungsart). Alt: ${db.data.buchung.size} Buchungen, noch offen: ${offeneAlt().length}, migriert: ${migrierte().length}. Die alten Buchungen bleiben unverändert, die Migration ist wiederholbar. Vorher eine Datensicherung erstellen!`),
+        h('button', { class: 'btn primary', onclick: () => openMigration() }, 'Migration öffnen')) : null,
       h('div', { class: 'card stack' }, h('h3', {}, 'PIN'),
         h('button', { class: 'btn', onclick: async () => {
           const o = h('input', { type: 'password', inputmode: 'numeric', autocomplete: 'off' }), n = h('input', { type: 'password', inputmode: 'numeric', autocomplete: 'off' });

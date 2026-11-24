@@ -12,9 +12,10 @@ const state = {
   vj: false, level: 'monat', year: '',
 };
 const FKEYS = ['tab', 'custom', 'from', 'to', 'vj', 'level', 'year'];
-let senKats = null; // Auswahl der Kundenliste: wird nicht gespeichert, Vorgabe immer Stiftung (null = Vorgabe)
+let senKats = null; // Auswahl der Kundenliste: wird nicht gespeichert, Vorgabe alle Kategorien (null = Vorgabe)
+let senZahl = 'stiftung'; // Zahlungsart der Kundenliste: 'stiftung' (Vorgabe), 'alle' oder 'bar'; nicht gespeichert
 /** Beim Öffnen der Auswertungen und beim Reiterwechsel zurück auf die Vorgabe */
-export const resetAuswertungen = () => { senKats = null; };
+export const resetAuswertungen = () => { senKats = null; senZahl = 'stiftung'; };
 const saveState = () => db.saveFilter('auswertungen', Object.fromEntries(FKEYS.map((k) => [k, state[k]]))); // Filter werden mitgesichert
 const opened = new Set(); // aufgeklappte Drilldown-Zeilen (Schlüssel = Lieferant)
 const REPORTS = [
@@ -92,14 +93,15 @@ function compareTable(title, firstCol, rows, cls, { count = false } = {}) {
 /** Gruppiert Buchungen (aktuell/Vorjahr) nach keyFn und liefert [name, summe, vorjahr, anzahl] */
 function groupRows(cur, prev, keyFn, nameFn) {
   const m = new Map();
-  const add = (arr, i) => arr.forEach((b) => { const k = keyFn(b); const o = m.get(k) || [0, 0, 0]; o[i] += db.artOf(b) === 'ausgabe' ? -b.betrag : b.betrag; if (i === 0) o[2]++; m.set(k, o); });
+  // o: [aktuell, Vorjahr, Menge der Buchungen (Anzahl zählt Buchungen, nicht Positionen)]
+  const add = (arr, i) => arr.forEach((b) => { const k = keyFn(b); const o = m.get(k) || [0, 0, new Set()]; o[i] += db.artOf(b) === 'ausgabe' ? -b.betrag : b.betrag; if (i === 0) o[2].add(b.buchungId); m.set(k, o); });
   add(cur, 0); if (state.vj) add(prev, 1);
-  return [...m].map(([k, o]) => [nameFn(k), o[0], o[1], o[2]]).sort((a, b) => collator.compare(a[0], b[0]));
+  return [...m].map(([k, o]) => [nameFn(k), o[0], o[1], o[2].size]).sort((a, b) => collator.compare(a[0], b[0]));
 }
 
 // ---- Perioden ---------------------------------------------------------------
 function perioden() {
-  const all = db.buchungenList();
+  const all = db.zeilen(db.buchungenList());
   const bs = all.filter(inRange), pv = state.vj ? all.filter(prevRange) : [];
   const isE = (b) => db.artOf(b) === 'einnahme', isA = (b) => db.artOf(b) === 'ausgabe';
   const ein = sum(bs.filter(isE)), aus = -sum(bs.filter(isA));
@@ -122,13 +124,14 @@ function perioden() {
     h('div', { class: 'summary' }, sm('Einnahmen (Kunden)', ein, pein, 'in'), sm('Ausgaben (Lieferanten)', aus, paus, 'out'), sm('Saldo', ein - aus, pein - paus, '')),
     compareTable('Einnahmen (Kunden) nach Kategorie', 'Kategorie', byCat('einnahme'), 'in'),
     compareTable('Ausgaben (Lieferanten) nach Kategorie', 'Kategorie', byCat('ausgabe'), 'out'),
+    compareTable('Einnahmen (Kunden) nach Zahlungsart', 'Zahlungsart', groupRows(bs.filter(isE), pv.filter(isE), (b) => (b.stiftung ? 'Stiftung' : 'Bar'), (n) => n), 'in'),
     h('div', { class: 'card' }, h('h3', {}, 'Nach Monat'),
       h('table', { class: 'tbl amt' }, th('Monat', { t: 'Einnahmen', num: 1 }, { t: 'Ausgaben', num: 1 }, { t: 'Saldo', num: 1 }, ...(state.vj ? [{ t: 'Saldo Vorjahr', num: 1 }] : [])), h('tbody', {}, ...monthRows))));
 }
 
 // ---- Kategorien: Kunden (nach Kundenkategorie) und Lieferanten (nach Lieferant) -----------------
 function kategorien() {
-  const all = db.buchungenList();
+  const all = db.zeilen(db.buchungenList());
   const sel = (arr) => arr.filter((b) => db.artOf(b) === 'einnahme');
   const lie = (arr) => arr.filter((b) => db.artOf(b) === 'ausgabe');
   const cur = all.filter(inRange), prev = state.vj ? all.filter(prevRange) : [];
@@ -151,50 +154,59 @@ function kategorien() {
 
 // ---- Kundenliste (z. B. Seniorenzentrum): Vorname, Name, Betrag, gruppiert nach Tag, Total pro Monat ---------
 function senioren() {
-  const kats = db.kategorienList('buchungskategorie', 'einnahme');
-  // Mehrfachauswahl, nicht gespeichert; Vorgabe: Stiftung
-  if (!senKats) senKats = (kats.some((c) => c.name === 'Stiftung') ? kats.filter((c) => c.name === 'Stiftung') : kats.slice(0, 1)).map((c) => c.id);
+  const kats = db.erfassKategorien('einnahme');
+  // Mehrfachauswahl, nicht gespeichert; Vorgabe: alle Einnahme-Kategorien und Zahlungsart Stiftung
+  if (!senKats) senKats = kats.map((c) => c.id);
   senKats = senKats.filter((id) => kats.some((c) => c.id === id));
   const chosen = new Set(senKats);
   const setKats = (ids) => { senKats = ids; nav.refresh(); };
   const allOn = kats.length > 0 && kats.every((c) => chosen.has(c.id));
   const kboxes = [checkField('Alle', h('input', { type: 'checkbox', checked: allOn, onchange: (e) => setKats(e.target.checked ? kats.map((c) => c.id) : []) })),
     ...kats.map((c) => checkField(c.name, h('input', { type: 'checkbox', checked: chosen.has(c.id), onchange: (e) => setKats(kats.filter((x) => (x.id === c.id ? e.target.checked : chosen.has(x.id))).map((x) => x.id)) })))];
+  const zahlSel = segmented([{ value: 'stiftung', label: 'Stiftung' }, { value: 'bar', label: 'Bar' }, { value: 'alle', label: 'Alle' }], senZahl, (v) => { senZahl = v; nav.refresh(); });
   const multi = chosen.size > 1;
-  const bs = db.buchungenList().filter(inRange).filter((b) => db.artOf(b) === 'einnahme' && chosen.has(b.kategorieId))
-    .sort((a, b) => (a.datum < b.datum ? -1 : a.datum > b.datum ? 1 : 0));
+  const showZahl = senZahl === 'alle';
+  const bs = db.zeilen(db.buchungenList()).filter(inRange).filter((b) => db.artOf(b) === 'einnahme' && chosen.has(b.kategorieId)
+    && (senZahl === 'alle' || (senZahl === 'stiftung') === b.stiftung))
+    .sort((a, b) => (a.datum < b.datum ? -1 : a.datum > b.datum ? 1 : (a.created || 0) - (b.created || 0)));
   const out = h('div', { class: 'report' });
-  const catName = allOn ? 'alle Buchungskategorien' : kats.filter((c) => chosen.has(c.id)).map((c) => c.name).join(', ');
+  const katName = allOn ? 'alle Buchungskategorien' : kats.filter((c) => chosen.has(c.id)).map((c) => c.name).join(', ');
+  const zahlName = { stiftung: 'Zahlungsart Stiftung', bar: 'Zahlungsart bar', alle: 'alle Zahlungsarten' }[senZahl];
   const eig = db.eigene();
-  out.append(h('p', {}, h('strong', {}, db.kontaktName(eig))), h('h3', {}, `Kundenliste${catName ? ` ${catName}` : ''}`),
+  out.append(h('p', {}, h('strong', {}, db.kontaktName(eig))), h('h3', {}, `Kundenliste${katName ? ` ${katName}` : ''} – ${zahlName}`),
     h('p', { class: 'muted' }, `${fmtDate(state.from)} – ${fmtDate(state.to)}`, h('br'), `Erstellt: ${fmtDateTime(Date.now())}`));
   if (!chosen.size) out.append(h('p', { class: 'muted' }, 'Bitte mindestens eine Buchungskategorie wählen.'));
-  else if (!bs.length) out.append(h('p', { class: 'muted' }, 'Keine Buchungen für die gewählten Buchungskategorien im gewählten Zeitraum.'));
+  else if (!bs.length) out.append(h('p', { class: 'muted' }, 'Keine Buchungen für die gewählten Buchungskategorien und die Zahlungsart im gewählten Zeitraum.'));
   else {
-    // je Kunde eine Gruppe (Name, Vorname), darin Buchungen nach Datum aufsteigend, mit Zwischensumme
+    // je Kunde eine Gruppe (Name, Vorname), darin Positionen nach Datum aufsteigend, mit Zwischensumme
     const groups = new Map();
     bs.forEach((b) => { (groups.get(b.kontaktId) || groups.set(b.kontaktId, []).get(b.kontaktId)).push(b); });
     const list = [...groups].map(([id, arr]) => ({ k: db.data.kontakt.get(id) || {}, arr }))
       .sort((x, y) => db.compareKontakte(x.k, y.k));
+    const cols = 2 + (multi ? 1 : 0) + (showZahl ? 1 : 0);
     const rows = [];
     for (const { k, arr } of list) {
       const kat = db.data.kundenkategorie.get(k.kategorieId)?.name;
       const info = [kat, k.stock ? `Stock ${k.stock}` : ''].filter(Boolean).join(' · ');
-      rows.push(h('tr', { class: 'daytr' }, h('td', { colspan: multi ? 3 : 2 }, [[k.name, k.vorname].filter(Boolean).join(' ') || db.kontaktName(k), info].filter(Boolean).join(' – '))));
-      arr.forEach((b) => rows.push(h('tr', {}, h('td', {}, fmtDate(b.datum)), ...(multi ? [h('td', {}, db.data.buchungskategorie.get(b.kategorieId)?.name || '?')] : []), h('td', { class: 'num' }, chf(b.betrag)))));
-      rows.push(h('tr', { class: 'total' }, h('td', { colspan: multi ? 2 : 1 }, 'Total'), h('td', { class: 'num' }, chf(sum(arr)))));
+      rows.push(h('tr', { class: 'daytr' }, h('td', { colspan: cols }, [[k.name, k.vorname].filter(Boolean).join(' ') || db.kontaktName(k), info].filter(Boolean).join(' – '))));
+      arr.forEach((b) => rows.push(h('tr', {}, h('td', {}, fmtDate(b.datum)), ...(multi ? [h('td', {}, db.data.buchungskategorie.get(b.kategorieId)?.name || '?')] : []),
+        ...(showZahl ? [h('td', {}, b.stiftung ? 'Stiftung' : 'Bar')] : []), h('td', { class: 'num' }, chf(b.betrag)))));
+      rows.push(h('tr', { class: 'total' }, h('td', { colspan: cols - 1 }, 'Total'), h('td', { class: 'num' }, chf(sum(arr)))));
     }
-    rows.push(h('tr', { class: 'total' }, h('td', { colspan: multi ? 2 : 1 }, `Gesamttotal (${list.length} Kunde${list.length === 1 ? '' : 'n'})`), h('td', { class: 'num' }, chf(sum(bs)))));
-    out.append(h('table', { class: 'tbl amt' }, th('Datum', ...(multi ? ['Buchungskategorie'] : []), { t: 'Betrag (CHF)', num: 1 }), h('tbody', {}, ...rows)));
+    rows.push(h('tr', { class: 'total' }, h('td', { colspan: cols - 1 }, `Gesamttotal (${list.length} Kunde${list.length === 1 ? '' : 'n'})`), h('td', { class: 'num' }, chf(sum(bs)))));
+    out.append(h('table', { class: 'tbl amt' }, th('Datum', ...(multi ? ['Buchungskategorie'] : []), ...(showZahl ? ['Zahlungsart'] : []), { t: 'Betrag (CHF)', num: 1 }), h('tbody', {}, ...rows)));
   }
-  const node = h('div', { class: 'stack' }, h('fieldset', { class: 'fs' }, h('legend', {}, 'Buchungskategorien'), h('div', { class: 'checks' }, ...kboxes)), h('div', { class: 'card' }, out));
+  const node = h('div', { class: 'stack' },
+    h('fieldset', { class: 'fs' }, h('legend', {}, 'Buchungskategorien'), h('div', { class: 'checks' }, ...kboxes)),
+    field('Zahlungsart', zahlSel),
+    h('div', { class: 'card' }, out));
   if (chosen.size) node._print = () => printNode(out.cloneNode(true));
   return node;
 }
 
 // ---- Treuhänder-Export ---------------------------------------------------------------
 /** Anzahl Buchungen, bei denen die Kategorie nicht zum Kontakttyp passt (Kunde: Einnahme, Lieferant: Ausgabe) */
-export const unstimmigeBuchungen = (bs) => bs.filter((b) => { const k = db.data.kontakt.get(b.kontaktId); return k && db.artOf(b) !== db.artOfKontakt(k); }).length;
+export const unstimmigeBuchungen = (bs) => new Set(bs.filter((b) => { const k = db.data.kontakt.get(b.kontaktId); return k && db.artOf(b) !== db.artOfKontakt(k); }).map((b) => b.buchungId)).size;
 
 export const LEVELS = [['einzel', 'Einzelbuchung'], ['tag', 'Tag'], ['monat', 'Monat'], ['jahr', 'Jahr']];
 const selYear = () => state.year || String(new Date().getFullYear() - 1); // Vorgabe: Vorjahr (bei jedem Aufruf aktuell)
@@ -205,7 +217,7 @@ const levelLabel = (l) => LEVELS.find(([v]) => v === l)?.[1] || 'Monat';
  * Personenbezug: Namen nur bei Lieferanten (nie bei Kunden), keine Buchungstexte.
  */
 export function treuhaenderRows(from, to, level = 'monat', now = Date.now()) {
-  const bs = db.buchungenList().filter((b) => b.datum >= from && b.datum <= to);
+  const bs = db.zeilen(db.buchungenList()).filter((b) => b.datum >= from && b.datum <= to); // je Position eine Zeile
   const B = (s) => ({ s, b: true });
   const eig = db.eigene();
   const firma = [[B(db.kontaktName(eig))], ...[eig.strasse, [eig.plz, eig.ort].filter(Boolean).join(' ')].filter(Boolean).map((l) => [l]), ['Zeitraum', `${fmtDate(from)} – ${fmtDate(to)}`], ['Erzeugt', fmtDateTime(now)], ['Zusammenfassung', levelLabel(level)]];
@@ -217,19 +229,20 @@ export function treuhaenderRows(from, to, level = 'monat', now = Date.now()) {
     const k = db.data.kontakt.get(b.kontaktId);
     const lief = !!k?.istLieferant;
     return { b, per: periodKey(b), lief: lief ? (db.kontaktName(k) || '?') : '', liefId: lief ? b.kontaktId : '',
-      kk: lief ? '' : (db.data.kundenkategorie.get(k?.kategorieId)?.name || ''), bk: db.data.buchungskategorie.get(b.kategorieId)?.name || '' };
+      kk: lief ? '' : (db.data.kundenkategorie.get(k?.kategorieId)?.name || ''), bk: db.data.buchungskategorie.get(b.kategorieId)?.name || '',
+      zahl: lief ? '' : (b.stiftung ? 'Stiftung' : 'Bar') }; // Zahlungsart nur bei Kunden (Lieferanten bezahlt die Firma bar/auf Rechnung)
   });
   let lines;
   if (level === 'einzel') lines = items.map((i) => ({ ...i, betrag: i.b.betrag, created: i.b.created || 0 }));
   else {
     const m = new Map();
-    for (const i of items) { const key = [i.per, i.liefId, i.kk, i.bk].join('\u0001'); const o = m.get(key); if (o) o.betrag += i.b.betrag; else m.set(key, { ...i, betrag: i.b.betrag }); }
+    for (const i of items) { const key = [i.per, i.liefId, i.kk, i.bk, i.zahl].join('\u0001'); const o = m.get(key); if (o) o.betrag += i.b.betrag; else m.set(key, { ...i, betrag: i.b.betrag }); }
     lines = [...m.values()];
   }
-  lines.sort((x, y) => (x.per < y.per ? -1 : x.per > y.per ? 1 : collator.compare(x.lief, y.lief) || collator.compare(x.kk, y.kk) || collator.compare(x.bk, y.bk) || (x.created || 0) - (y.created || 0)));
-  const buchungen = [[B('Datum'), B('Lieferant'), B('Kundenkategorie'), B('Buchungskategorie'), B('Betrag CHF')],
-    ...lines.map((l) => [periodCell(l.per), l.lief, l.kk, l.bk, { n: l.betrag / 100, f: 'money' }])];
-  return { firma, buchungen, count: bs.length, unstimmig: unstimmigeBuchungen(bs) };
+  lines.sort((x, y) => (x.per < y.per ? -1 : x.per > y.per ? 1 : collator.compare(x.lief, y.lief) || collator.compare(x.kk, y.kk) || collator.compare(x.bk, y.bk) || collator.compare(x.zahl, y.zahl) || (x.created || 0) - (y.created || 0)));
+  const buchungen = [[B('Datum'), B('Lieferant'), B('Kundenkategorie'), B('Buchungskategorie'), B('Zahlungsart'), B('Betrag CHF')],
+    ...lines.map((l) => [periodCell(l.per), l.lief, l.kk, l.bk, l.zahl, { n: l.betrag / 100, f: 'money' }])];
+  return { firma, buchungen, count: new Set(bs.map((b) => b.buchungId)).size, unstimmig: unstimmigeBuchungen(bs) };
 }
 
 function treuhaender() {
@@ -240,7 +253,7 @@ function treuhaender() {
   return h('div', { class: 'stack' },
     h('div', { class: 'card stack' },
       h('h3', {}, 'Export für den Treuhänder (Excel)'),
-      h('p', { class: 'notice' }, 'Hinweis: Es werden keine personenbezogenen Daten exportiert. Kunden erscheinen nur mit ihrer Kategorie, ohne Name und Buchungstext; bei Lieferanten steht der Name.'),
+      h('p', { class: 'notice' }, 'Hinweis: Es werden keine personenbezogenen Daten exportiert. Kunden erscheinen nur mit ihrer Kategorie und der Zahlungsart (Bar/Stiftung), ohne Name und Buchungstext; bei Lieferanten steht der Name.'),
       unstimmig ? h('p', { class: 'notice' }, `Hinweis: ${unstimmig} Buchung${unstimmig === 1 ? '' : 'en'} mit unstimmiger Zuordnung (Kategorie passt nicht zum Kontakttyp, z. B. nach Typwechsel eines Kontakts). Bitte vor dem Versand prüfen.`) : null,
       field('Zusammenfassungsebene', levels),
       h('p', { class: 'muted' }, `${count} Buchungen im Jahr ${selYear()}.`),
@@ -250,7 +263,7 @@ function treuhaender() {
         if (firmaTab.toLowerCase() === 'buchungen') firmaTab = 'Firma';
         const bytes = buildXlsx([
           { name: firmaTab, rows: firma, widths: [24, 30] },
-          { name: 'Buchungen', rows: buchungen, widths: [14, 30, 24, 24, 14] },
+          { name: 'Buchungen', rows: buchungen, widths: [14, 30, 24, 24, 12, 14] },
         ]);
         const name = `kassenbuch-treuhaender-${selYear()}.xlsx`;
         await saveBlob(new Blob([bytes], { type: XLSX_MIME }), name);

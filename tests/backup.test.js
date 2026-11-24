@@ -32,7 +32,7 @@ test('Daten prüfen: grün / gelb / rot / keine Sicherung', async () => {
   // lokale Daten vorhanden (Kontakt + Buchung)
   const k = db.newKontakt({ name: 'Meier' });
   await db.put('kontakt', k);
-  await db.put('buchung', { id: 'b1', datum: '2026-11-01', betrag: 100, kontaktId: k.id, kategorieId: [...db.data.buchungskategorie.keys()][0], text: '', created: 1 });
+  await db.put('buchung2', { id: 'b1', datum: '2026-11-01', kontaktId: k.id, text: '', created: 1, positionen: [{ kategorieId: [...db.data.buchungskategorie.keys()][0], betrag: 100, stiftung: false }] });
   const now = Date.now();
   db.data.meta.lastChange = now - 10000;
   db.data.meta.syncedTo = now - 5000;                                         // gesichert nach letzter Änderung

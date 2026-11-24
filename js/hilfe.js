@@ -30,7 +30,7 @@ export function helpContent() {
         'Menü → „Kunden“ (bzw. „Lieferanten“) → „+ Neu“: Kontakt mit Name, Adresse, Anrede, Telefon/E-Mail und Kategorie erfassen. Mit „Speichern und neu“ folgt gleich der nächste Kontakt.',
         'Kontakt in der Liste antippen und auf „Buchungen“ tippen. Oben erscheint die Erfassungszeile für eine neue Buchung.',
         'Datum der ersten Altbuchung eintragen (tippen oder 📅). Das Datum bleibt nach „Buchen“ stehen, bei der nächsten Buchung änderst du es nur bei Bedarf.',
-        'Betrag und Kategorie prüfen bzw. anpassen, optional Text. „Buchen“ speichert, der Dialog bleibt für die nächste Buchung dieses Kontakts offen.',
+        'Beträge je Kategorie (Podologie, Verkauf), Vorzeichen und „Stiftung“ prüfen bzw. anpassen, optional Text. „Buchen“ speichert, der Dialog bleibt für die nächste Buchung dieses Kontakts offen.',
         'Alle Buchungen des Kontakts nacheinander erfassen, dann schliessen und den nächsten Kontakt öffnen. Die Liste „Buchungen“ zeigt zur Kontrolle alle Einträge, neueste zuerst.',
         'Warnungen bei Dubletten oder Betrag 0 genau lesen: nur „Trotzdem speichern“, wenn die Buchung wirklich doppelt bzw. gewollt ist.',
         'Zum Schluss Summen im Kassenbuch und unter Auswertungen mit den Altunterlagen vergleichen und eine Datensicherung erstellen.',
@@ -38,7 +38,7 @@ export function helpContent() {
       h('h4', {}, 'Vorgehen Tageserfassung'),
       ul(
         'Menü → „Buchung“. Datum ist der heutige Tag (bei Nacherfassung ändern).',
-        'Kundennamen oder Vornamen eintippen und den Treffer antippen. Neu: „+ Neuer Kunde“. Betrag, Vorzeichen und Kategorie sind aus der letzten Buchung vorbelegt; Betrag direkt überschreiben, Kategorie wählen, bei Bedarf Text.',
+        'Kundennamen oder Vornamen eintippen und den Treffer antippen. Neu: „+ Neuer Kunde“. Kategorien, Vorzeichen, Beträge und die Checkbox „Stiftung“ sind aus der letzten Buchung vorbelegt. Bei Kunden gibt es die Zeilen Podologie und Verkauf: nur die Beträge erfassen, die vorkommen (leere Zeilen werden ignoriert); „Stiftung“ ankreuzen, wenn der Betrag über die Stiftung abgerechnet wird; „+ Zeile“ für weitere Positionen. Bei Lieferanten eine Zeile (Kategorie wählen), weitere mit „+ Zeile“.',
         '„Speichern & neu“ für die nächste Behandlung des Tages; nach der letzten „Speichern“ und die Datensicherung bestätigen.',
         'Ausgaben: Lieferant statt Kunde wählen, Vorzeichen − (Ausgabe) und passende Kategorie.',
         'Kontrolle: Unter dem Formular stehen die zuletzt erfassten Buchungen (antippen = ändern). Am Tagesende im Kassenbuch die Tagessumme mit der Kasse abgleichen.',
@@ -91,7 +91,7 @@ export function helpContent() {
       ul(
         '„VJ-Vergleich“ zeigt zusätzlich die Vorjahreswerte und die Differenz.',
         'Kategorien: Eine Lieferantenzeile antippen zeigt die Aufteilung nach Buchungskategorie.',
-        'Kundenliste: nach Buchungskategorie (Mehrfachauswahl, wird nicht gespeichert, Vorgabe immer Stiftung; mit „Alle“ eine Liste über alles), Vorgabe-Zeitraum Vormonat, gruppiert nach Name und Vorname mit Kategorie und Stock des Kunden, Buchungen aufsteigend nach Datum, Total je Kunde.',
+        'Kundenliste: nach Buchungskategorie (Mehrfachauswahl) und Zahlungsart (Vorgabe Stiftung, oder Bar/Alle); beides wird nicht gespeichert, Vorgabe-Zeitraum Vormonat, gruppiert nach Name und Vorname mit Kategorie und Stock des Kunden, Buchungen aufsteigend nach Datum, Total je Kunde.',
         'Treuhänder: immer ein ganzes Jahr (Vorgabe: Vorjahr), Ebene Einzelbuchung, Tag, Monat (Vorgabe) oder Jahr. Bei Monat steht der letzte Tag des Monats, bei Jahr der 31.12. Bei Kunden werden weder Name noch Buchungstext exportiert, bei Lieferanten der Name. Ein Hinweis erscheint, wenn eine Buchung nicht zum Kontakttyp passt.',
       )),
 

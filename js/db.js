@@ -1,12 +1,14 @@
 // Datenhaltung: IndexedDB mit Write-Through-Cache im Speicher.
 // Tabellen verknüpfen immer über IDs; referenzielle Integrität wird hier sichergestellt.
-import { uuid, normalize, collator } from './util.js';
+import { uuid, normalize, collator, chf } from './util.js';
 
 const DB_NAME = 'kassenbuch';
-const DB_VERSION = 2; // 2: Store „notiz“
-export const STORES = ['kontakt', 'kommunikation', 'kundenkategorie', 'buchungskategorie', 'buchung', 'notiz'];
-/** Tabellen, die in jeder Sicherung vorkommen müssen (Sicherungen vor Version 0.32 haben keine Notizen). */
-const REQUIRED_STORES = STORES.filter((s) => s !== 'notiz');
+const DB_VERSION = 3; // 2: Store „notiz“, 3: Store „buchung2“ (Buchungen mit mehreren Positionen)
+// „buchung“ ist die ALTE Struktur (eine Kategorie je Buchung): sie bleibt unverändert als Quelle der Migration erhalten.
+// „buchung2“ ist die neue Struktur: eine Buchung mit mehreren Positionen {kategorieId, betrag, stiftung}.
+export const STORES = ['kontakt', 'kommunikation', 'kundenkategorie', 'buchungskategorie', 'buchung', 'buchung2', 'notiz'];
+/** Tabellen, die in jeder Sicherung vorkommen müssen (Sicherungen vor Version 0.32 haben keine Notizen, vor der Umstellung keine „buchung2“). */
+const REQUIRED_STORES = STORES.filter((s) => s !== 'notiz' && s !== 'buchung2');
 const ALL_STORES = [...STORES, 'meta'];
 
 /** Entwicklermodus (Testdaten): nur im Arbeitsspeicher, gilt bis zum Sperren/Beenden/Schliessen der App. */
@@ -15,7 +17,7 @@ export const devMode = { unlocked: false };
 /** Cache: je Tabelle eine Map id -> Objekt; meta ist ein einfaches Objekt key -> value */
 export const data = {
   kontakt: new Map(), kommunikation: new Map(), kundenkategorie: new Map(),
-  buchungskategorie: new Map(), buchung: new Map(), notiz: new Map(), meta: {},
+  buchungskategorie: new Map(), buchung: new Map(), buchung2: new Map(), notiz: new Map(), meta: {},
 };
 
 let idb = null;
@@ -62,7 +64,7 @@ export async function batch(ops, touch = true) {
   if (data.meta.testMode && devMode.unlocked) {
     // neue Kontakte und Buchungen werden als Test markiert
     for (const o of ops) {
-      if ((o.store === 'kontakt' || o.store === 'buchung') && isNew(o)) { o.obj = { ...o.obj, test: true }; if (o.store === 'kontakt') testKontakte.add(o.obj.id); }
+      if ((o.store === 'kontakt' || o.store === 'buchung2') && isNew(o)) { o.obj = { ...o.obj, test: true }; if (o.store === 'kontakt') testKontakte.add(o.obj.id); }
     }
   }
   // Kommunikation ist nur dann Test, wenn der zugehörige Kontakt ein Test-Kontakt ist (nie bei echten Kontakten)
@@ -101,7 +103,7 @@ export const saveFilter = (name, obj) => setMeta('filters', { ...(data.meta.filt
 
 // ---- Stammdaten / Seed --------------------------------------------------
 export const DEFAULT_KUNDENKATEGORIEN = ['Maria', 'Michael', 'Externe'];
-export const DEFAULT_EINNAHMEN = ['Podologie', 'Verkauf', 'Stiftung'];
+export const DEFAULT_EINNAHMEN = ['Podologie', 'Verkauf']; // „Stiftung“ ist seit der Umstellung keine Kategorie mehr, sondern eine Zahlungsart je Position
 export const DEFAULT_AUSGABEN = ['Waren/Material', 'Miete Lokal', 'Miete Parkplatz', 'Strom', 'Versicherungen', 'Telefon',
   'IT', 'Beiträge/Spenden', 'Treuhand/Beratung', 'Werbung', 'Verpflegung', 'Spesen'];
 
@@ -153,15 +155,42 @@ export const kontakteList = (lieferant, includeSys = false) =>
   sortKontakte([...data.kontakt.values()].filter((k) => k.istLieferant === lieferant && (includeSys ? true : !isDummy(k))));
 export const kategorienList = (store, art) =>
   [...data[store].values()].filter((c) => !art || c.art === art).sort((a, b) => collator.compare(a.name, b.name));
-export const buchungenList = () =>
+/** Alte Struktur (nur noch Quelle der Migration): eine Kategorie und ein Betrag je Buchung */
+export const altBuchungenList = () =>
   [...data.buchung.values()].sort((a, b) => (a.datum === b.datum ? (b.created || 0) - (a.created || 0) : a.datum < b.datum ? 1 : -1));
-/** Art einer Buchung (Einnahme/Ausgabe) ergibt sich aus der Buchungskategorie; Vorzeichen des Betrags (Gutschrift/Rückzahlung) ändert sie nicht. */
+/** Buchungen (neue Struktur), jüngste zuerst: nach Buchungsdatum, innerhalb nach Erfassungszeitpunkt */
+export const buchungenList = () =>
+  [...data.buchung2.values()].sort((a, b) => (a.datum === b.datum ? (b.created || 0) - (a.created || 0) : a.datum < b.datum ? 1 : -1));
+
+/** Stiftung ist keine Buchungskategorie mehr (nur noch Zahlungsart): die alte Kategorie bleibt für die Migration bestehen, wird aber nicht mehr angeboten. */
+export const isStiftungKat = (c) => !!c && c.art === 'einnahme' && normalize(c.name) === 'stiftung';
+/** Kategorien für die Erfassung und Filter (ohne die alte Kategorie „Stiftung“) */
+export const erfassKategorien = (art) => kategorienList('buchungskategorie', art).filter((c) => !isStiftungKat(c));
+
+/** Summe einer Buchung (Positionen) */
+export const posSum = (b) => (b.positionen || []).reduce((s, p) => s + p.betrag, 0);
+export const posBar = (b) => (b.positionen || []).filter((p) => !p.stiftung).reduce((s, p) => s + p.betrag, 0);
+export const posStiftung = (b) => (b.positionen || []).filter((p) => p.stiftung).reduce((s, p) => s + p.betrag, 0);
+export const hasStiftung = (b) => (b.positionen || []).some((p) => p.stiftung);
+/** Auswertungen rechnen je Position: jede Position wird zu einer Zeile {…Buchung, kategorieId, betrag, stiftung} (ohne positionen) */
+export const zeilenOf = (b) => (b.positionen || []).map((p) => { const { positionen, ...rest } = b; return { ...rest, buchungId: b.id, kategorieId: p.kategorieId, betrag: p.betrag, stiftung: !!p.stiftung }; });
+export const zeilen = (bs) => bs.flatMap(zeilenOf);
+/** Art einer Buchung (Einnahme/Ausgabe): nach der Kategorie der ersten Position */
+export const artOfBuchung = (b) => { const p = (b.positionen || [])[0]; return p ? artOf({ kategorieId: p.kategorieId, betrag: p.betrag }) : artOfKontakt(data.kontakt.get(b.kontaktId) || {}); };
+/** Kurztext der Positionen für Listen: „Podologie · Stiftung“ bzw. „Podologie 91.00 (Stiftung) + Verkauf 25.00“ */
+export function posText(b, ps = b.positionen || []) {
+  const nm = (p) => data.buchungskategorie.get(p.kategorieId)?.name || '?';
+  if (ps.length === 1) return `${nm(ps[0])}${ps[0].stiftung ? ' (Stiftung)' : ''}`;
+  return ps.map((p) => `${nm(p)} ${chf(p.betrag)}${p.stiftung ? ' (Stiftung)' : ''}`).join(' + ');
+}
+/** Art einer Zeile/alten Buchung (Einnahme/Ausgabe) ergibt sich aus der Buchungskategorie; Vorzeichen des Betrags (Gutschrift/Rückzahlung) ändert sie nicht. */
 export const artOf = (b) => data.buchungskategorie.get(b.kategorieId)?.art || (b.betrag < 0 ? 'ausgabe' : 'einnahme');
 export const artOfKontakt = (k) => (k.istLieferant ? 'ausgabe' : 'einnahme');
 
 export function kategorieInUse(store, id) {
   if (store === 'kundenkategorie') return [...data.kontakt.values()].some((k) => k.kategorieId === id);
-  return [...data.buchung.values()].some((b) => b.kategorieId === id);
+  return [...data.buchung.values()].some((b) => b.kategorieId === id)
+    || [...data.buchung2.values()].some((b) => (b.positionen || []).some((p) => p.kategorieId === id));
 }
 
 /** Mögliche Dubletten: gleicher Name UND (gleiche PLZ ODER gemeinsame Telefonnummer ODER gemeinsame E-Mail-Adresse ODER bei einem der Einträge keine weiteren Daten). */
@@ -185,11 +214,11 @@ export function findDuplicates(k, comms) {
   });
 }
 
-/** Mögliche doppelte Buchung: gleicher Kontakt, gleiches Datum und gleicher Betrag (ohne die Buchung selbst). */
+/** Mögliche doppelte Buchung: gleicher Kontakt, gleiches Datum und gleiche Summe (ohne die Buchung selbst). */
 export const findDuplicateBuchungen = (b) =>
-  [...data.buchung.values()].filter((o) => o.id !== b.id && o.kontaktId === b.kontaktId && o.datum === b.datum && o.betrag === b.betrag);
+  [...data.buchung2.values()].filter((o) => o.id !== b.id && o.kontaktId === b.kontaktId && o.datum === b.datum && posSum(o) === posSum(b));
 
-export const buchungenOf = (kontaktId) => [...data.buchung.values()].filter((b) => b.kontaktId === kontaktId);
+export const buchungenOf = (kontaktId) => [...data.buchung2.values()].filter((b) => b.kontaktId === kontaktId);
 
 /** Kontakt löschen: Buchungen bleiben erhalten und werden dem Dummy-Kontakt zugeordnet. */
 export async function deleteKontakt(id) {
@@ -197,7 +226,8 @@ export async function deleteKontakt(id) {
   if (!k || k.sys) throw new Error('Dieser Kontakt kann nicht gelöscht werden.');
   const dummy = sysKontakt(k.istLieferant ? 'dummyLieferant' : 'dummyKunde');
   const ops = [];
-  buchungenOf(id).forEach((b) => ops.push({ op: 'put', store: 'buchung', obj: { ...b, kontaktId: dummy.id } }));
+  buchungenOf(id).forEach((b) => ops.push({ op: 'put', store: 'buchung2', obj: { ...b, kontaktId: dummy.id } }));
+  [...data.buchung.values()].filter((b) => b.kontaktId === id).forEach((b) => ops.push({ op: 'put', store: 'buchung', obj: { ...b, kontaktId: dummy.id } })); // alte Struktur bleibt konsistent
   commsOf(id).forEach((c) => ops.push({ op: 'del', store: 'kommunikation', id: c.id }));
   ops.push({ op: 'del', store: 'kontakt', id });
   await batch(ops);
@@ -212,7 +242,7 @@ export const notizenList = () => [...data.notiz.values()].sort((a, b) => (b.modi
 export function snapshot() {
   const stores = {};
   STORES.forEach((s) => { stores[s] = [...data[s].values()]; });
-  return { app: 'kassenbuch', schema: 1, createdAt: Date.now(), lastChange: data.meta.lastChange || 0, filters: data.meta.filters || {}, stores };
+  return { app: 'kassenbuch', schema: 2, createdAt: Date.now(), lastChange: data.meta.lastChange || 0, filters: data.meta.filters || {}, stores };
 }
 
 export function validateSnapshot(snap) {
@@ -221,6 +251,9 @@ export function validateSnapshot(snap) {
   const ids = (s) => new Set(snap.stores[s].map((o) => o.id));
   const kon = ids('kontakt'), kk = ids('kundenkategorie'), bk = ids('buchungskategorie');
   for (const b of snap.stores.buchung) if (!kon.has(b.kontaktId) || !bk.has(b.kategorieId)) throw new Error('Datensicherung inkonsistent (Buchung ohne Kontakt/Kategorie).');
+  for (const b of snap.stores.buchung2 || []) {
+    if (!kon.has(b.kontaktId) || !Array.isArray(b.positionen) || !b.positionen.length || b.positionen.some((p) => !bk.has(p.kategorieId) || !Number.isInteger(p.betrag))) throw new Error('Datensicherung inkonsistent (Buchung ohne Kontakt/Positionen).');
+  }
   for (const c of snap.stores.kommunikation) if (!kon.has(c.kontaktId)) throw new Error('Datensicherung inkonsistent (Kommunikation ohne Kontakt).');
   for (const k of snap.stores.kontakt) if (k.kategorieId && !kk.has(k.kategorieId)) throw new Error('Datensicherung inkonsistent (Kundenkategorie).');
 }
@@ -288,5 +321,5 @@ export async function replaceAll(snap) {
   }
 }
 
-export const isEmpty = () => data.buchung.size === 0 && ![...data.kontakt.values()].some((k) => !k.sys);
+export const isEmpty = () => data.buchung.size === 0 && data.buchung2.size === 0 && ![...data.kontakt.values()].some((k) => !k.sys);
 export const hasUnsavedChanges = () => (data.meta.lastChange || 0) > (data.meta.lastBackup || 0);

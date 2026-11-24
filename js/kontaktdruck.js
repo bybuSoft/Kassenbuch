@@ -14,7 +14,7 @@ export function printKontakt(k, { from = '0000-01-01', to = '9999-12-31' } = {})
   const comms = db.commsOf(k.id).sort((a, b) => (b.bevorzugt ? 1 : 0) - (a.bevorzugt ? 1 : 0));
   const alles = from === '0000-01-01' && to === '9999-12-31';
   const bs = db.buchungenOf(k.id).filter((b) => b.datum >= from && b.datum <= to).sort((a, b) => (a.datum === b.datum ? (a.created || 0) - (b.created || 0) : a.datum < b.datum ? -1 : 1));
-  const total = bs.reduce((s, b) => s + b.betrag, 0);
+  const total = bs.reduce((s, b) => s + db.posSum(b), 0);
   const adr = (c) => [c.strasse, [c.plz, c.ort].filter(Boolean).join(' ')].filter(Boolean);
   const commText = (list) => list.map((c) => c.wert + (c.bevorzugt ? ' (bevorzugt)' : '')).join(', ');
   const mails = comms.filter((c) => c.typ === 'mail'); const tels = comms.filter((c) => c.typ !== 'mail');
@@ -38,8 +38,8 @@ export function printKontakt(k, { from = '0000-01-01', to = '9999-12-31' } = {})
   const stamm = h('table', { class: 'kd-tbl' }, ...trs);
 
   const rows = bs.map((b) => h('tr', {}, h('td', {}, fmtDate(b.datum)),
-    h('td', {}, [db.data.buchungskategorie.get(b.kategorieId)?.name, b.text].filter(Boolean).join(' – ')),
-    h('td', { class: 'num' }, chf(b.betrag))));
+    h('td', {}, [db.posText(b), b.text].filter(Boolean).join(' – ')),
+    h('td', { class: 'num' }, chf(db.posSum(b)))));
   const buchungen = bs.length
     ? h('table', { class: 'tbl amt kd-bu' },
       h('thead', {}, h('tr', {}, h('th', {}, 'Datum'), h('th', {}, 'Buchungskategorie / Text'), h('th', { class: 'num' }, 'Betrag (CHF)'))),

@@ -1,6 +1,6 @@
 // Gemeinsame Bausteine für Buchungserfassung: Kontaktwahl mit Smartsuche (nur Namen) und Vorzeichen-/Betragsfeld
 import * as db from './db.js';
-import { h, normalize, chf, fmtDate } from './util.js';
+import { h, normalize, chf, fmtDate, parseBetrag } from './util.js';
 import { confirmDlg } from './ui.js';
 import { editKontakt } from './kontakte.js';
 
@@ -45,29 +45,112 @@ export function kontaktPicker({ getId, onSelect, onClear }) {
   return { el: box, draw };
 }
 
-/** Vorzeichenfeld (+/−) links neben dem Betrag. Beide Vorzeichen sind bei Kunden (Rückzahlung) und Lieferanten (Gutschrift) möglich. */
-export function betragFields(sign = '+', value = '') {
-  const signSel = h('select', { class: 'sign', 'aria-label': 'Vorzeichen' }, h('option', { value: '+' }, '+'), h('option', { value: '-' }, '−'));
-  signSel.value = sign;
+/** Betragsfeld: erster Klick markiert den ganzen Betrag (direkt überschreibbar), der zweite setzt den Cursor */
+function betragInput(value = '') {
   const input = h('input', { type: 'text', inputmode: 'decimal', placeholder: '0.00', value, autocomplete: 'off', 'aria-label': 'Betrag in CHF' });
-  // Erster Klick ins Feld markiert den ganzen Betrag (direkt überschreibbar), der zweite setzt den Cursor
   let fresh = false;
   input.addEventListener('focus', () => { fresh = true; setTimeout(() => { input.select(); }, 0); setTimeout(() => { fresh = false; }, 600); });
   input.addEventListener('blur', () => { fresh = false; });
   for (const ev of ['mouseup', 'touchend']) input.addEventListener(ev, (e) => { if (fresh) { e.preventDefault(); fresh = false; } });
-  const el = h('label', { class: 'field' }, h('span', { class: 'lbl' }, 'Betrag (CHF)'), h('div', { class: 'amount-row' }, signSel, input));
-  return { el, signSel, input };
+  return input;
+}
+const signSelect = (sign) => {
+  const signSel = h('select', { class: 'sign', 'aria-label': 'Vorzeichen' }, h('option', { value: '+' }, '+'), h('option', { value: '-' }, '−'));
+  signSel.value = sign;
+  return signSel;
+};
+
+/** Buchungskategorien passend zum Kontakt (Kunde: Einnahmen, Lieferant: Ausgaben); die alte Kategorie „Stiftung“ wird nicht mehr angeboten */
+export const kategorienFor = (k) => (k ? db.erfassKategorien(db.artOfKontakt(k)) : []);
+
+const leereZeile = (over = {}) => ({ kategorieId: '', sign: '+', betrag: '', stiftung: false, ...over });
+const katByName = (name) => db.erfassKategorien('einnahme').find((c) => c.name.toLowerCase() === name.toLowerCase());
+/** Erfassungszeilen (Kategorie, +/−, Betrag, Stiftung) aus den Positionen einer Buchung */
+export const rowsFromPositionen = (ps) => ps.map((p) => leereZeile({ kategorieId: p.kategorieId, sign: p.betrag < 0 ? '-' : '+', betrag: (Math.abs(p.betrag) / 100).toFixed(2), stiftung: !!p.stiftung }));
+
+/** Vorgabezeilen ohne Vorbuchung: Kunde: Podologie und Verkauf, Lieferant: eine leere Zeile (Kategorie wählen) */
+export function defaultRows(kontakt) {
+  if (kontakt && !kontakt.istLieferant) return ['Podologie', 'Verkauf'].map((n) => leereZeile({ kategorieId: katByName(n)?.id || '' }));
+  return [leereZeile({ sign: kontakt?.istLieferant ? '-' : '+' })];
 }
 
-/** Buchungskategorien passend zum Kontakt (Kunde: Einnahmen, Lieferant: Ausgaben) */
-export const kategorienFor = (k) => (k ? db.kategorienList('buchungskategorie', db.artOfKontakt(k)) : []);
-
-/** Vorbelegung nach der Kontaktwahl aus der letzten Buchung dieses Kontakts (ohne excludeId); ohne Buchung: Standard je Kontakttyp. */
-export function prefillFor(kontakt, excludeId = null) {
+/** Vorbelegung nach der Kontaktwahl aus der letzten Buchung dieses Kontakts (ohne excludeId): Kategorien, Vorzeichen, Beträge, Stiftung.
+ *  Kunden haben immer die Zeilen Podologie und Verkauf; ohne Buchung: Standard je Kontakttyp. */
+export function prefillRows(kontakt, excludeId = null) {
   const last = db.buchungenOf(kontakt.id).filter((b) => b.id !== excludeId).sort((a, b) => (b.created || 0) - (a.created || 0))[0];
-  if (!last) return { sign: kontakt.istLieferant ? '-' : '+', betrag: '', kategorieId: '' };
-  const kat = db.data.buchungskategorie.get(last.kategorieId);
-  return { sign: last.betrag < 0 ? '-' : '+', betrag: (Math.abs(last.betrag) / 100).toFixed(2), kategorieId: kat && kat.art === db.artOfKontakt(kontakt) ? kat.id : '' };
+  if (!last) return defaultRows(kontakt);
+  const valid = new Set(kategorienFor(kontakt).map((c) => c.id));
+  const rows = rowsFromPositionen(last.positionen.filter((p) => valid.has(p.kategorieId)));
+  if (kontakt.istLieferant) return rows.length ? rows : defaultRows(kontakt);
+  const stiftung = db.hasStiftung(last);
+  for (const n of ['Podologie', 'Verkauf']) {
+    const c = katByName(n);
+    if (c && !rows.some((r) => r.kategorieId === c.id)) rows.push(leereZeile({ kategorieId: c.id, stiftung }));
+  }
+  const rank = (r) => ['podologie', 'verkauf'].indexOf((db.data.buchungskategorie.get(r.kategorieId)?.name || '').toLowerCase());
+  return rows.map((r, i) => ({ r, i })).sort((x, y) => (rank(x.r) < 0 ? 9 : rank(x.r)) - (rank(y.r) < 0 ? 9 : rank(y.r)) || x.i - y.i).map((x) => x.r);
+}
+
+/** Zeilen → Positionen. Zeilen ohne Betrag werden übersprungen. Liefert {positionen} oder {error, index}. */
+export function positionenFromRows(rows) {
+  const positionen = [];
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    if (!String(r.betrag).trim()) continue;
+    const cents = parseBetrag(r.betrag);
+    if (cents === null) return { error: 'Bitte einen gültigen Betrag erfassen (z. B. 65.00).', index: i };
+    if (!r.kategorieId) return { error: 'Bitte eine Buchungskategorie wählen.', index: i };
+    positionen.push({ kategorieId: r.kategorieId, betrag: r.sign === '-' ? -cents : cents, stiftung: !!r.stiftung });
+  }
+  if (!positionen.length) return { error: 'Bitte mindestens einen Betrag erfassen (z. B. 65.00).', index: 0 };
+  return { positionen };
+}
+
+/**
+ * Editor für die Positionen einer Buchung: je Zeile Kategorie, +/−, Betrag und Checkbox „Stiftung“ (nur bei Kunden).
+ * `rows` ist ein Array von {kategorieId, sign, betrag (Text), stiftung} und wird direkt verändert (bleibt so über Neuzeichnen erhalten).
+ * Zeilen ohne Betrag werden beim Speichern ignoriert. onEnterLast: Enter im letzten Betragsfeld.
+ */
+export function positionenEditor({ rows, getKontakt, onEnterLast }) {
+  const el = h('div', { class: 'stack posedit' });
+  const inputs = [];
+  const draw = () => {
+    const k = getKontakt();
+    const cats = kategorienFor(k);
+    const showStiftung = !k?.istLieferant;
+    inputs.length = 0;
+    const rowEls = rows.map((r, i) => {
+      const katSel = h('select', { 'aria-label': 'Buchungskategorie', onchange: () => { r.kategorieId = katSel.value; } },
+        h('option', { value: '' }, k ? '– Kategorie wählen –' : '– zuerst Kontakt wählen –'), ...cats.map((c) => h('option', { value: c.id }, c.name)));
+      if (r.kategorieId && !cats.some((c) => c.id === r.kategorieId)) r.kategorieId = '';
+      katSel.value = r.kategorieId;
+      const signSel = signSelect(r.sign); signSel.addEventListener('change', () => { r.sign = signSel.value; });
+      const inp = betragInput(r.betrag); inp.addEventListener('input', () => { r.betrag = inp.value; });
+      inputs.push(inp);
+      inp.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        const n = inputs[inputs.indexOf(inp) + 1];
+        if (n) { n.focus(); n.select(); } else onEnterLast?.();
+      });
+      const stift = h('input', { type: 'checkbox', checked: !!r.stiftung, onchange: (e) => { r.stiftung = e.target.checked; } });
+      const del = rows.length > 1 ? h('button', { type: 'button', class: 'btn small', 'aria-label': 'Zeile entfernen', title: 'Zeile entfernen', onclick: () => { rows.splice(i, 1); draw(); } }, '✕') : null;
+      return h('div', { class: 'posrow' }, katSel,
+        h('div', { class: 'amount-row' }, signSel, inp,
+          showStiftung ? h('label', { class: 'check stift' }, stift, h('span', {}, 'Stiftung')) : null, del));
+    });
+    el.replaceChildren(...rowEls,
+      h('button', { type: 'button', class: 'btn small', onclick: () => { rows.push(leereZeile({ sign: rows.at(-1)?.sign || '+' })); draw(); inputs.at(-1)?.focus(); } }, '+ Zeile'));
+  };
+  draw();
+  return {
+    el, draw,
+    /** Zeilen ersetzen (z. B. nach der Kontaktwahl) */
+    set(newRows) { rows.splice(0, rows.length, ...newRows); draw(); },
+    focusFirst() { inputs[0]?.focus(); inputs[0]?.select(); },
+    /** Positionen lesen; bei Fehler Meldung und {error} */
+    read() { return positionenFromRows(rows); },
+  };
 }
 
 /** Warnung bei Betrag 0: true = trotzdem speichern, false = abbrechen. */
@@ -77,6 +160,6 @@ export const confirmNullBetrag = () => confirmDlg('Der Betrag ist 0.00. Soll die
 export async function confirmBuchungDup(b) {
   const dups = db.findDuplicateBuchungen(b);
   if (!dups.length) return true;
-  const lines = dups.map((d) => `• ${fmtDate(d.datum)}, CHF ${chf(d.betrag)}${d.text ? `, ${d.text}` : ''}`).join('\n');
-  return confirmDlg(`Für ${db.kontaktListName(db.data.kontakt.get(b.kontaktId))} gibt es schon ${dups.length === 1 ? 'eine Buchung' : `${dups.length} Buchungen`} mit gleichem Datum und Betrag:\n${lines}\n\nTrotzdem speichern?`, { title: 'Dublettenprüfung', ok: 'Trotzdem speichern' });
+  const lines = dups.map((d) => `• ${fmtDate(d.datum)}, CHF ${chf(db.posSum(d))}${d.text ? `, ${d.text}` : ''}`).join('\n');
+  return confirmDlg(`Für ${db.kontaktListName(db.data.kontakt.get(b.kontaktId))} gibt es schon ${dups.length === 1 ? 'eine Buchung' : `${dups.length} Buchungen`} mit gleichem Datum und gleicher Summe:\n${lines}\n\nTrotzdem speichern?`, { title: 'Dublettenprüfung', ok: 'Trotzdem speichern' });
 }

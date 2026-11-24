@@ -10,7 +10,7 @@ test('Treuhänder-Export: Namen/Texte nur bei Lieferanten, nie bei Kunden – au
   const { treuhaenderRows } = await import('../js/auswertungen.js');
   const kunde = db.newKontakt({ vorname: 'Anna', name: 'Geheim' }); await db.put('kontakt', kunde);
   const lief = db.newKontakt({ istLieferant: true, name1: 'Podo Supply' }); await db.put('kontakt', lief);
-  const mk = (id, kontaktId, kat, betrag, text) => db.put('buchung', { id, datum: '2026-11-05', betrag, kontaktId, kategorieId: kat.id, text, created: 1 });
+  const mk = (id, kontaktId, kat, betrag, text, stiftung = false) => db.put('buchung2', { id, datum: '2026-11-05', kontaktId, text, created: 1, positionen: [{ kategorieId: kat.id, betrag, stiftung }] });
   await mk('b1', kunde.id, cat(db, 'einnahme'), 6500, 'Fusspflege Anna');
   await mk('b2', lief.id, cat(db, 'ausgabe'), -31240, 'Material');
   await mk('b3', lief.id, cat(db, 'ausgabe'), 1000, 'Gutschrift');
@@ -29,7 +29,7 @@ test('Treuhänder-Export: Namen/Texte nur bei Lieferanten, nie bei Kunden – au
   assert.deepEqual(m[1][0], { d: '2026-11-30' }); // Monat: letzter Tag
   assert.ok(m.slice(1).every((r) => r[1] === '' || r[1] === 'Podo Supply'));
   const podo = m.slice(1).filter((r) => r[1] === 'Podo Supply');
-  assert.equal(podo.length, 1); assert.equal(podo[0][4].n, -302.4);
+  assert.equal(podo.length, 1); assert.equal(podo[0][5].n, -302.4);
   assert.deepEqual(treuhaenderRows('2026-11-01', '2026-11-30', 'jahr').buchungen[1][0], { d: '2026-12-31' }); // Jahr: 31.12.
 });
 
@@ -39,9 +39,9 @@ test('Treuhänder-Export: Zusammenfassung nach Tag fasst gleiche Kategorien zusa
   const kunde = db.newKontakt({ name: 'Muster' }); await db.put('kontakt', kunde);
   const c = cat(db, 'einnahme');
   for (const [id, d, b] of [['x1', '2026-03-05', 1000], ['x2', '2026-03-05', 2500], ['x3', '2026-03-06', 500]])
-    await db.put('buchung', { id, datum: d, betrag: b, kontaktId: kunde.id, kategorieId: c.id, text: 't', created: 1 });
+    await db.put('buchung2', { id, datum: d, kontaktId: kunde.id, text: 't', created: 1, positionen: [{ kategorieId: c.id, betrag: b, stiftung: false }] });
   const rows = treuhaenderRows('2026-01-01', '2026-12-31', 'tag').buchungen;
   assert.equal(rows.length, 3); // Kopf + 2 Tage
-  assert.equal(rows[1][4].n, 35);
+  assert.equal(rows[1][5].n, 35);
   assert.ok(!/Muster/.test(JSON.stringify(rows)));
 });

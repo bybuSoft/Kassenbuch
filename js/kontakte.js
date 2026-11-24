@@ -7,7 +7,7 @@ import { printQuittung } from './quittung.js';
 import { printKontakt } from './kontaktdruck.js';
 import { periodBar } from './periodbar.js';
 import { fmtDate, chf, today, parseBetrag } from './util.js';
-import { betragFields, kategorienFor, prefillFor, confirmBuchungDup, confirmNullBetrag } from './kontaktpick.js';
+import { positionenEditor, prefillRows, confirmBuchungDup, confirmNullBetrag } from './kontaktpick.js';
 
 const HEALTH = [['diabetes', 'Diabetes'], ['antikoaguliert', 'Antikoaguliert'], ['allergien', 'Allergien'], ['hiv', 'HIV-positiv'], ['haemophilie', 'Hämophilie']];
 const listState = { kunde: { q: '', kat: '' }, lieferant: { q: '' } };
@@ -60,44 +60,37 @@ function showKontaktBuchungen(k) {
   let lastDatum = today(); // Datum bleibt nach dem Buchen stehen (Nacherfassen mehrerer Buchungen)
   const draw = (focusDatum) => {
     const bs = db.buchungenOf(k.id).sort((a, b) => (a.datum === b.datum ? (b.created || 0) - (a.created || 0) : a.datum < b.datum ? 1 : -1));
-    const total = bs.reduce((s, b) => s + b.betrag, 0);
-    // Neue Buchung: Datum (heute, änderbar), Betrag und Kategorie aus der jüngsten Buchung vorbelegt
-    const p = prefillFor(k);
+    const total = bs.reduce((s, b) => s + db.posSum(b), 0);
+    // Neue Buchung: Datum (heute, änderbar), Kategorien, Beträge und Stiftung aus der jüngsten Buchung vorbelegt
     const df = datumField(lastDatum, { selectAll: true }); const datum = df.input;
-    const bf = betragFields(p.sign, p.betrag);
-    const cats = kategorienFor(k);
-    const kat = h('select', { 'aria-label': 'Buchungskategorie' }, h('option', { value: '' }, '– wählen –'), ...cats.map((c) => h('option', { value: c.id }, c.name)));
-    kat.value = p.kategorieId;
     const text = h('input', { type: 'text', placeholder: 'optional', autocomplete: 'off', 'aria-label': 'Buchungstext' });
+    const editor = positionenEditor({ rows: prefillRows(k), getKontakt: () => k, onEnterLast: () => text.focus() });
     let busy = false; // verhindert doppeltes Speichern bei Doppeltipp
     const save = async () => {
       if (busy) return;
-      const cents = parseBetrag(bf.input.value);
       const dv = df.value;
       if (!dv) { toast('Bitte ein gültiges Datum erfassen (TT.MM.JJJJ).', 'err'); datum.focus(); return; }
-      if (cents === null) { toast('Bitte einen Betrag erfassen.', 'err'); bf.input.focus(); return; }
-      if (!kat.value) { toast('Bitte eine Buchungskategorie wählen.', 'err'); kat.focus(); return; }
+      const r = editor.read();
+      if (r.error) { toast(r.error, 'err'); return; }
       busy = true;
-      if (cents === 0 && !(await confirmNullBetrag())) { busy = false; return; }
       try {
-        const nb = { id: uuid(), datum: dv, betrag: bf.signSel.value === '-' ? -cents : cents, kontaktId: k.id, kategorieId: kat.value, text: text.value.trim(), created: Date.now() };
+        const nb = { id: uuid(), datum: dv, kontaktId: k.id, text: text.value.trim(), created: Date.now(), positionen: r.positionen };
+        if (db.posSum(nb) === 0 && !(await confirmNullBetrag())) { busy = false; return; }
         if (!(await confirmBuchungDup(nb))) { busy = false; return; }
-        await db.put('buchung', nb);
+        await db.put('buchung2', nb);
       } catch (e) { busy = false; throw e; }
       toast('Buchung gespeichert');
       lastDatum = dv;
       draw(true);
     };
-    datum.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); bf.input.focus(); bf.input.select(); } });
-    bf.input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); kat.focus(); } });
-    kat.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); text.focus(); } });
+    datum.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); editor.focusFirst(); } });
     text.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); save(); } });
     doSave = save;
-    const form = h('div', { class: 'stack' }, field('Datum', df.el), bf.el, field('Buchungskategorie', kat), field('Buchungstext', text));
+    const form = h('div', { class: 'stack' }, field('Datum', df.el), editor.el, field('Buchungstext', text));
     const list = h('div', { class: 'list' }, ...(bs.length ? bs.map((b) => h('div', { class: 'row static' },
-      h('div', { class: 'row-main' }, h('strong', {}, fmtDate(b.datum)), h('div', { class: 'amt' }, h('span', { class: b.betrag < 0 ? 'out' : 'in' }, chf(b.betrag)),
-        db.artOf(b) === 'einnahme' && b.betrag > 0 ? h('button', { type: 'button', class: 'print-btn', title: 'Quittung drucken', 'aria-label': 'Quittung drucken', onclick: () => printQuittung(b) }, '🖨') : null)),
-      h('div', { class: 'row-sub muted' }, [db.data.buchungskategorie.get(b.kategorieId)?.name, b.text].filter(Boolean).join(' · ')))) : [h('p', { class: 'muted pad' }, 'Keine Buchungen vorhanden.')]));
+      h('div', { class: 'row-main' }, h('strong', {}, fmtDate(b.datum)), h('div', { class: 'amt' }, h('span', { class: db.posSum(b) < 0 ? 'out' : 'in' }, chf(db.posSum(b))),
+        db.artOfBuchung(b) === 'einnahme' && db.posSum(b) > 0 ? h('button', { type: 'button', class: 'print-btn', title: 'Quittung drucken', 'aria-label': 'Quittung drucken', onclick: () => printQuittung(b) }, '🖨') : null)),
+      h('div', { class: 'row-sub muted' }, [db.posText(b), b.text].filter(Boolean).join(' · ')))) : [h('p', { class: 'muted pad' }, 'Keine Buchungen vorhanden.')]));
     body.replaceChildren(form, h('p', { class: 'muted small' }, `${bs.length} Buchung${bs.length === 1 ? '' : 'en'} · Total ${chf(total)}`), list);
     if (focusDatum) setTimeout(() => datum.focus(), 0);
   };
