@@ -117,7 +117,7 @@ export function positionenEditor({ rows, getKontakt, onEnterLast }) {
   const draw = () => {
     const k = getKontakt();
     const cats = kategorienFor(k);
-    const showStiftung = !k?.istLieferant;
+    const showStiftung = !!k && !k.istLieferant; // Stiftung gibt es nur bei Kunden
     inputs.length = 0;
     const rowEls = rows.map((r, i) => {
       const katSel = h('select', { 'aria-label': 'Buchungskategorie', onchange: () => { r.kategorieId = katSel.value; } },
@@ -149,7 +149,11 @@ export function positionenEditor({ rows, getKontakt, onEnterLast }) {
     set(newRows) { rows.splice(0, rows.length, ...newRows); draw(); },
     focusFirst() { inputs[0]?.focus(); inputs[0]?.select(); },
     /** Positionen lesen; bei Fehler Meldung und {error} */
-    read() { return positionenFromRows(rows); },
+    read() {
+      const r = positionenFromRows(rows);
+      if (r.positionen && getKontakt()?.istLieferant) r.positionen.forEach((p) => { p.stiftung = false; }); // Lieferanten: nie Stiftung
+      return r;
+    },
   };
 }
 
