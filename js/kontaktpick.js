@@ -135,9 +135,9 @@ export function positionenEditor({ rows, getKontakt, onEnterLast }) {
       });
       const stift = h('input', { type: 'checkbox', checked: !!r.stiftung, onchange: (e) => { r.stiftung = e.target.checked; } });
       const del = rows.length > 1 ? h('button', { type: 'button', class: 'btn small', 'aria-label': 'Zeile entfernen', title: 'Zeile entfernen', onclick: () => { rows.splice(i, 1); draw(); } }, '✕') : null;
-      return h('div', { class: 'posrow' }, katSel,
-        h('div', { class: 'amount-row' }, signSel, inp,
-          showStiftung ? h('label', { class: 'check stift' }, stift, h('span', {}, 'Stiftung')) : null, del));
+      // eine Zeile: Kategorie, +/−, Betrag, Stiftung (nur Kunden), Entfernen
+      return h('div', { class: 'posrow' }, katSel, signSel, inp,
+        showStiftung ? h('label', { class: 'check stift' }, stift, h('span', {}, 'Stiftung')) : null, del);
     });
     el.replaceChildren(...rowEls,
       h('button', { type: 'button', class: 'btn small', onclick: () => { rows.push(leereZeile({ sign: rows.at(-1)?.sign || '+' })); draw(); inputs.at(-1)?.focus(); } }, '+ Zeile'));

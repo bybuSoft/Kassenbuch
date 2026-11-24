@@ -159,12 +159,14 @@ input[aria-invalid=true]{border-color:#c0392b;box-shadow:0 0 0 1px #c0392b}
 .note-img img{width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid var(--line);display:block}
 .note-img .icon-btn{position:absolute;top:2px;right:2px;background:var(--card);border-radius:50%;width:28px;height:28px;min-width:0;min-height:0;font-size:1.2rem;line-height:1}
 .note-full{max-width:100%;height:auto;display:block;border-radius:8px}
-/* Buchungspositionen (Kategorie, +/−, Betrag, Stiftung) */
-.posedit{gap:10px}
-.posrow{display:flex;flex-direction:column;gap:6px;background:var(--bg);border-radius:10px;padding:8px}
-.posrow .amount-row{align-items:center}
-.posrow .check.stift{flex:none;min-height:44px;padding:0 4px;white-space:nowrap}
-.posrow .amount-row .btn{flex:none}
+/* Buchungspositionen: immer eine Zeile (Kategorie, +/−, Betrag, Stiftung, Entfernen); Felder schrumpfen bei schmalem Bildschirm */
+.posedit{gap:8px}
+.posrow{display:flex;align-items:center;gap:6px}
+.posrow>select:first-child{flex:3 1 0;min-width:6.6rem;padding-left:8px;padding-right:4px}
+.posrow>.sign{width:3.4rem;flex:none;font-size:1.1rem;text-align:center;padding-left:4px;padding-right:2px}
+.posrow>input[type=text]{flex:2 1 0;min-width:3.8rem}
+.posrow .check.stift{flex:none;gap:3px;min-height:44px;padding:0;white-space:nowrap;font-size:.85rem}
+.posrow>.btn{flex:none;padding-left:8px;padding-right:8px}
 /* Migrationsdialog */
 .mig-row{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-bottom:1px solid var(--line)}
 .mig-row.warn{background:var(--notice)}
