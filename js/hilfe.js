@@ -91,7 +91,7 @@ export function helpContent() {
       ul(
         '„VJ-Vergleich“ zeigt zusätzlich die Vorjahreswerte und die Differenz.',
         'Kategorien: Eine Lieferantenzeile antippen zeigt die Aufteilung nach Buchungskategorie.',
-        'Kundenliste: nach Buchungskategorie (Mehrfachauswahl) und Zahlungsart (Vorgabe Stiftung, oder Bar/Alle); beides wird nicht gespeichert, Vorgabe-Zeitraum Vormonat, gruppiert nach Name und Vorname mit Kategorie und Stock des Kunden, Buchungen aufsteigend nach Datum, Total je Kunde.',
+        'Kundenliste: nach Buchungskategorie (Mehrfachauswahl) und Zahlungsart (Vorgabe Stiftung, oder Bar/Alle); Beträge je Kunde und Tag werden standardmässig zusammengefasst (ohne Kategorie), abschaltbar für die Einzelpositionen; die Auswahl wird nicht gespeichert, Vorgabe-Zeitraum Vormonat, gruppiert nach Name und Vorname mit Kategorie und Stock des Kunden, Buchungen aufsteigend nach Datum, Total je Kunde.',
         'Treuhänder: immer ein ganzes Jahr (Vorgabe: Vorjahr), Ebene Einzelbuchung, Tag, Monat (Vorgabe) oder Jahr. Bei Monat steht der letzte Tag des Monats, bei Jahr der 31.12. Bei Kunden werden weder Name noch Buchungstext exportiert, bei Lieferanten der Name. Ein Hinweis erscheint, wenn eine Buchung nicht zum Kontakttyp passt.',
       )),
 

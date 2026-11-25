@@ -14,8 +14,9 @@ const state = {
 const FKEYS = ['tab', 'custom', 'from', 'to', 'vj', 'level', 'year'];
 let senKats = null; // Auswahl der Kundenliste: wird nicht gespeichert, Vorgabe alle Kategorien (null = Vorgabe)
 let senZahl = 'stiftung'; // Zahlungsart der Kundenliste: 'stiftung' (Vorgabe), 'alle' oder 'bar'; nicht gespeichert
+let senSum = true; // Kundenliste: Beträge je Kunde und Tag zusammenfassen (Vorgabe ja); nicht gespeichert
 /** Beim Öffnen der Auswertungen und beim Reiterwechsel zurück auf die Vorgabe */
-export const resetAuswertungen = () => { senKats = null; senZahl = 'stiftung'; };
+export const resetAuswertungen = () => { senKats = null; senZahl = 'stiftung'; senSum = true; };
 const saveState = () => db.saveFilter('auswertungen', Object.fromEntries(FKEYS.map((k) => [k, state[k]]))); // Filter werden mitgesichert
 const opened = new Set(); // aufgeklappte Drilldown-Zeilen (Schlüssel = Lieferant)
 const REPORTS = [
@@ -164,8 +165,9 @@ function senioren() {
   const kboxes = [checkField('Alle', h('input', { type: 'checkbox', checked: allOn, onchange: (e) => setKats(e.target.checked ? kats.map((c) => c.id) : []) })),
     ...kats.map((c) => checkField(c.name, h('input', { type: 'checkbox', checked: chosen.has(c.id), onchange: (e) => setKats(kats.filter((x) => (x.id === c.id ? e.target.checked : chosen.has(x.id))).map((x) => x.id)) })))];
   const zahlSel = segmented([{ value: 'stiftung', label: 'Stiftung' }, { value: 'bar', label: 'Bar' }, { value: 'alle', label: 'Alle' }], senZahl, (v) => { senZahl = v; nav.refresh(); });
-  const multi = chosen.size > 1;
-  const showZahl = senZahl === 'alle';
+  // Zusammengefasst: eine Zeile je Kunde und Tag, ohne Kategorie und Zahlungsart
+  const multi = chosen.size > 1 && !senSum;
+  const showZahl = senZahl === 'alle' && !senSum;
   const bs = db.zeilen(db.buchungenList()).filter(inRange).filter((b) => db.artOf(b) === 'einnahme' && chosen.has(b.kategorieId)
     && (senZahl === 'alle' || (senZahl === 'stiftung') === b.stiftung))
     .sort((a, b) => (a.datum < b.datum ? -1 : a.datum > b.datum ? 1 : (a.created || 0) - (b.created || 0)));
@@ -189,7 +191,9 @@ function senioren() {
       const kat = db.data.kundenkategorie.get(k.kategorieId)?.name;
       const info = [kat, k.stock ? `Stock ${k.stock}` : ''].filter(Boolean).join(' · ');
       rows.push(h('tr', { class: 'daytr' }, h('td', { colspan: cols }, [[k.name, k.vorname].filter(Boolean).join(' ') || db.kontaktName(k), info].filter(Boolean).join(' – '))));
-      arr.forEach((b) => rows.push(h('tr', {}, h('td', {}, fmtDate(b.datum)), ...(multi ? [h('td', {}, db.data.buchungskategorie.get(b.kategorieId)?.name || '?')] : []),
+      // je Kunde und Tag eine Zeile mit der Summe (nur Datum und Betrag), sonst jede Position einzeln
+      const lines = senSum ? [...arr.reduce((m, b) => m.set(b.datum, (m.get(b.datum) || 0) + b.betrag), new Map())].map(([datum, betrag]) => ({ datum, betrag })) : arr;
+      lines.forEach((b) => rows.push(h('tr', {}, h('td', {}, fmtDate(b.datum)), ...(multi ? [h('td', {}, db.data.buchungskategorie.get(b.kategorieId)?.name || '?')] : []),
         ...(showZahl ? [h('td', {}, b.stiftung ? 'Stiftung' : 'Bar')] : []), h('td', { class: 'num' }, chf(b.betrag)))));
       rows.push(h('tr', { class: 'total' }, h('td', { colspan: cols - 1 }, 'Total'), h('td', { class: 'num' }, chf(sum(arr)))));
     }
@@ -199,6 +203,7 @@ function senioren() {
   const node = h('div', { class: 'stack' },
     h('fieldset', { class: 'fs' }, h('legend', {}, 'Buchungskategorien'), h('div', { class: 'checks' }, ...kboxes)),
     field('Zahlungsart', zahlSel),
+    checkField('Beträge je Kunde und Tag zusammenfassen (ohne Kategorie)', h('input', { type: 'checkbox', checked: senSum, onchange: (e) => { senSum = e.target.checked; nav.refresh(); } })),
     h('div', { class: 'card' }, out));
   if (chosen.size) node._print = () => printNode(out.cloneNode(true));
   return node;
