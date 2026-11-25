@@ -40,7 +40,7 @@ function startScreen() {
       h('h2', {}, 'Willkommen'),
       h('p', { class: 'muted pre' }, empty
         ? 'Auf diesem Gerät sind noch keine Daten vorhanden.\nPrüfe, ob eine Datensicherung vorhanden ist.'
-        : `Lokale Daten: ${db.data.buchung.size} Buchungen, ${n} Kontakte\nLetzte Änderung: ${fmtDateTime(db.data.meta.lastChange)}\nLetzte Datensicherung: ${fmtDateTime(db.data.meta.lastBackup)}`),
+        : `Lokale Daten: ${db.data.buchung2.size} Buchungen, ${n} Kontakte\nLetzte Änderung: ${fmtDateTime(db.data.meta.lastChange)}\nLetzte Datensicherung: ${fmtDateTime(db.data.meta.lastBackup)}`),
       offline() ? h('p', { class: 'status warn' }, NO_NET) : null,
       startCheck ? h('p', { class: `status pre ${lvl}` }, startCheck.text) : null,
       h('button', { class: `btn big ${startCheck ? '' : 'primary'}`, disabled: offline(), onclick: async () => {

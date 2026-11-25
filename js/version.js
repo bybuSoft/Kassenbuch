@@ -2,12 +2,13 @@
 // (die Zeichen nach dem letzten "-" im Branch-Namen, z. B. claude/festive-cray-4a3xvr -> 4a3xvr).
 // BRANCH_CODE wird beim Commit automatisch gesetzt (tools/set-version.sh, Hook in .githooks/).
 export const MAJOR = 0;
-export const MINOR = 48;
+export const MINOR = 49;
 export const BRANCH_CODE = '2lojnj';
 export const VERSION = `${MAJOR}.${MINOR}.${BRANCH_CODE}`;
 
 // Kurze Beschreibung je Änderung (neueste zuerst)
 export const CHANGES = [
+  { v: '0.49', text: 'Review: Willkommensscreen zählt die Buchungen der neuen Struktur. Hilfe und README zu Positionen, Stiftung als Zahlungsart, Migration, Kundenliste und Treuhänder-Export aktualisiert.' },
   { v: '0.48', text: 'Kundenliste: Beträge je Kunde und Tag zusammenfassen (Vorgabe ein, ohne Kategorie und Zahlungsart); abschaltbar für die Einzelpositionen. Periodenwahl wirkt beim ersten Klick.' },
   { v: '0.47', text: 'Buchungen mit mehreren Beträgen: je Buchung Positionen mit Kategorie (Podologie/Verkauf), Vorzeichen, Betrag und Checkbox „Stiftung“ (Zahlungsart statt Kategorie). Auswertungen, Kundenliste (Filter Stiftung/Bar/Alle) und Treuhänder-Export (Bar/Stiftung je Monat) angepasst; Quittung fragt bei Stiftung-Anteil nach dem Betrag. Einmalige, wiederholbare Migration der bisherigen Buchungen (Einstellungen → Buchungen migrieren, alte Buchungen bleiben unverändert).' },
   { v: '0.46', text: 'Restore-Rollback verbessert: Rollback nur, wenn die Sicherung bereits geschrieben war; ist auch das nicht möglich, wird die App neu geladen. Klarere Fehlermeldungen, mehr Tests.' },

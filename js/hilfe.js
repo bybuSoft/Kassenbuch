@@ -22,13 +22,13 @@ export function helpContent() {
     sec('2. Datenerfassung: Datenübernahme und tägliche Erfassung',
       h('p', {}, 'Es gibt zwei Erfassungswege. Sie unterscheiden sich, weil die Ausgangslage und die Arbeitsweise verschieden sind:'),
       ul(
-        h('span', {}, b('Datenübernahme (Altdaten): '), 'Du gehst vom Kontakt aus. Bei bestehenden Kunden liegen die Unterlagen meist pro Kunde vor (Karteikarte, Liste). Wenn du zuerst den Kunden vollständig erfasst und danach alle seine Buchungen am Stück, musst du den Kontakt nur einmal wählen, die Vorbelegung (Betrag, Kategorie aus der jüngsten Buchung) spart Tipparbeit, und du kannst pro Kunde auf Vollständigkeit prüfen.'),
+        h('span', {}, b('Datenübernahme (Altdaten): '), 'Du gehst vom Kontakt aus. Bei bestehenden Kunden liegen die Unterlagen meist pro Kunde vor (Karteikarte, Liste). Wenn du zuerst den Kunden vollständig erfasst und danach alle seine Buchungen am Stück, musst du den Kontakt nur einmal wählen, die Vorbelegung (Kategorien, Beträge, Stiftung aus der jüngsten Buchung) spart Tipparbeit, und du kannst pro Kunde auf Vollständigkeit prüfen.'),
         h('span', {}, b('Tägliche Erfassung: '), 'Du gehst vom Tag aus. Im Alltag fallen die Behandlungen eines Tages in zeitlicher Reihenfolge an und kommen aus Tageskasse oder Terminliste. Über „Buchung“ erfasst du sie direkt mit dem Datum des Tages, Kunde für Kunde, ohne jedes Mal den Kontakt öffnen zu müssen. So bleibt nichts liegen, und Dubletten werden sofort erkannt.'),
       ),
       h('h4', {}, 'Vorgehen Datenübernahme'),
       ul(
         'Menü → „Kunden“ (bzw. „Lieferanten“) → „+ Neu“: Kontakt mit Name, Adresse, Anrede, Telefon/E-Mail und Kategorie erfassen. Mit „Speichern und neu“ folgt gleich der nächste Kontakt.',
-        'Kontakt in der Liste antippen und auf „Buchungen“ tippen. Oben erscheint die Erfassungszeile für eine neue Buchung.',
+        'Kontakt in der Liste antippen und auf „Buchungen“ tippen. Oben erscheint die Erfassung für eine neue Buchung.',
         'Datum der ersten Altbuchung eintragen (tippen oder 📅). Das Datum bleibt nach „Buchen“ stehen, bei der nächsten Buchung änderst du es nur bei Bedarf.',
         'Beträge je Kategorie (Podologie, Verkauf), Vorzeichen und „Stiftung“ prüfen bzw. anpassen, optional Text. „Buchen“ speichert, der Dialog bleibt für die nächste Buchung dieses Kontakts offen.',
         'Alle Buchungen des Kontakts nacheinander erfassen, dann schliessen und den nächsten Kontakt öffnen. Die Liste „Buchungen“ zeigt zur Kontrolle alle Einträge, neueste zuerst.',
@@ -42,7 +42,7 @@ export function helpContent() {
         '„Speichern & neu“ für die nächste Behandlung des Tages; nach der letzten „Speichern“ und die Datensicherung bestätigen.',
         'Ausgaben: Lieferant statt Kunde wählen, Vorzeichen − (Ausgabe) und passende Kategorie.',
         'Kontrolle: Unter dem Formular stehen die zuletzt erfassten Buchungen (antippen = ändern). Am Tagesende im Kassenbuch die Tagessumme mit der Kasse abgleichen.',
-        'Quittung: Bei Einnahmen über das Druck-Icon.',
+        'Quittung: Bei Einnahmen über das Druck-Icon (bei einem Stiftung-Anteil wird vor dem Druck nach dem Betrag gefragt).',
       )),
 
     sec('3. Menü',
@@ -50,9 +50,11 @@ export function helpContent() {
 
     sec('4. Buchung erfassen',
       ul(
-        'Das Datum ist vorbelegt mit dem heutigen Tag. Nach der Kontaktwahl werden Vorzeichen, Betrag und Kategorie aus der letzten Buchung dieses Kontakts vorbelegt; der Betrag ist markiert und direkt überschreibbar.',
+        'Das Datum ist vorbelegt mit dem heutigen Tag. Nach der Kontaktwahl werden Kategorien, Vorzeichen, Beträge und „Stiftung“ aus der letzten Buchung dieses Kontakts vorbelegt; der Betrag ist markiert und direkt überschreibbar.',
+        'Eine Buchung kann mehrere Beträge enthalten (Positionen). Jede Position ist eine Zeile: Kategorie, Vorzeichen, Betrag und bei Kunden die Checkbox „Stiftung“. Kunden haben die Zeilen Podologie und Verkauf; Zeilen ohne Betrag werden nicht gespeichert. Lieferanten starten mit einer Zeile; „+ Zeile“ fügt weitere hinzu, ✕ entfernt eine Zeile.',
+        h('span', {}, b('Stiftung: '), 'Stiftung ist keine Kategorie mehr, sondern eine Zahlungsart je Position: angekreuzt = der Betrag wird über die Stiftung abgerechnet, sonst bar. Bei Lieferanten gibt es kein „Stiftung“. Ist ein Kunde und ein Tag gemischt (z. B. Podologie über die Stiftung, Verkauf bar), setzt du „Stiftung“ nur bei der betreffenden Zeile.'),
         'Vorzeichen: Kunde + = Einnahme, − = Rückzahlung; Lieferant − = Ausgabe, + = Gutschrift.',
-        'Betrag 0 löst eine Warnung aus („Trotzdem speichern“ möglich); ein leeres oder ungültiges Betragsfeld wird abgelehnt.',
+        'Ist die Summe 0, erscheint eine Warnung („Trotzdem speichern“ möglich); ein ungültiger Betrag oder eine Zeile mit Betrag ohne Kategorie wird abgelehnt.',
         '„Speichern & neu“ lässt das Formular für die nächste Buchung leer; „Speichern“ fragt nach einer Datensicherung und geht zum Menü.',
         'Zuletzt erfasste Buchungen stehen unter dem Formular (antippen = bearbeiten; bei Einnahmen mit Druck-Icon für die Quittung).',
       )),
@@ -60,15 +62,15 @@ export function helpContent() {
     sec('5. Kassenbuch',
       ul(
         'Die Suche gilt für Name, Text, Kategorie und Betrag. Ein roter Punkt am Button „Filter“ zeigt einen aktiven Filter.',
-        'Vorgabe ist „alles“: alle Zeiträume, Einnahmen und Ausgaben, alle Kategorien. Zeitraum, Art und Kategorie werden gespeichert (der Suchtext nicht).',
-        'Eine Buchung antippen: bearbeiten oder löschen. Quittung: Druck-Icon neben dem Betrag (auf iPhone/iPad: Drucken → Als PDF sichern).',
+        'Vorgabe ist „alles“: alle Zeiträume, Einnahmen und Ausgaben, alle Kategorien, bar und Stiftung. Zeitraum, Art, Kategorie und Zahlungsart werden gespeichert (der Suchtext nicht). Die Filter wirken auf die einzelnen Positionen: bei „Nur Stiftung“ zeigen Betrag und Summen nur die Stiftung-Anteile einer Buchung.',
+        'Eine Buchung zeigt Kategorien und Beträge der Positionen, bei Stiftung mit „(Stiftung)“. Antippen: bearbeiten oder löschen. Quittung: Druck-Icon neben dem Betrag (auf iPhone/iPad: Drucken → Als PDF sichern). Hat die Buchung einen Stiftung-Anteil, fragst du vor dem Druck, ob Gesamt-, Bar- oder Stiftungsbetrag auf die Quittung soll.',
       )),
 
     sec('6. Kunden und Lieferanten',
       ul(
         'Telefon und E-Mail: mehrere Einträge möglich, genau einer ist „bevorzugt“; ☎ und ✉ öffnen die Telefon- bzw. Mail-App.',
-        'Der Button „Buchungen“ zeigt alle Buchungen des Kontakts und erlaubt die direkte Erfassung (siehe Abschnitt 2). Datum und Kategorie bleiben nach „Buchen“ stehen.',
-        'Dublettenprüfung: Gleicher Name mit gleicher PLZ, Telefonnummer oder E-Mail-Adresse (oder ein Eintrag ohne weitere Daten) löst eine Warnung aus. Ebenso Buchungen mit gleichem Kontakt, Datum und Betrag.',
+        'Der Button „Buchungen“ zeigt alle Buchungen des Kontakts und erlaubt die direkte Erfassung (siehe Abschnitt 2). Das Datum bleibt nach „Buchen“ stehen; Kategorien, Beträge und Stiftung sind aus der jüngsten Buchung vorbelegt.',
+        'Dublettenprüfung: Gleicher Name mit gleicher PLZ, Telefonnummer oder E-Mail-Adresse (oder ein Eintrag ohne weitere Daten) löst eine Warnung aus. Ebenso Buchungen mit gleichem Kontakt, Datum und gleicher Summe.',
         'Speichern: „Speichern und buchen“ öffnet danach direkt die Buchungen des Kontakts (Vorgabe, in den Einstellungen änderbar); „Speichern und zurück“ schliesst den Dialog.',
         'Ausgeben (im Kontakt): Zeitraum wählen (Vorgabe alles), dann drucken: alle Felder (kompakt) und die Buchungen, in der Regel Stammdaten und rund 20 Buchungen auf der ersten Seite, z. B. für Auskunftsbegehren nach Datenschutzrecht.',
         'Kunden haben zusätzlich die Felder „Kategorie“ und „Stock“ (Freitext, z. B. Stockwerk im Heim).',
@@ -90,15 +92,18 @@ export function helpContent() {
     sec('8. Auswertungen',
       ul(
         '„VJ-Vergleich“ zeigt zusätzlich die Vorjahreswerte und die Differenz.',
-        'Kategorien: Eine Lieferantenzeile antippen zeigt die Aufteilung nach Buchungskategorie.',
+        'Perioden: Einnahmen und Ausgaben nach Kategorie, zusätzlich die Einnahmen nach Zahlungsart (Bar/Stiftung). Es wird je Position gerechnet, die Summen entsprechen der Summe aller Beträge.',
+        'Kategorien: Eine Lieferantenzeile antippen zeigt die Aufteilung nach Buchungskategorie. „Anzahl“ zählt Buchungen, nicht Positionen.',
         'Kundenliste: nach Buchungskategorie (Mehrfachauswahl) und Zahlungsart (Vorgabe Stiftung, oder Bar/Alle); Beträge je Kunde und Tag werden standardmässig zusammengefasst (ohne Kategorie), abschaltbar für die Einzelpositionen; die Auswahl wird nicht gespeichert, Vorgabe-Zeitraum Vormonat, gruppiert nach Name und Vorname mit Kategorie und Stock des Kunden, Buchungen aufsteigend nach Datum, Total je Kunde.',
-        'Treuhänder: immer ein ganzes Jahr (Vorgabe: Vorjahr), Ebene Einzelbuchung, Tag, Monat (Vorgabe) oder Jahr. Bei Monat steht der letzte Tag des Monats, bei Jahr der 31.12. Bei Kunden werden weder Name noch Buchungstext exportiert, bei Lieferanten der Name. Ein Hinweis erscheint, wenn eine Buchung nicht zum Kontakttyp passt.',
+        'Treuhänder: immer ein ganzes Jahr (Vorgabe: Vorjahr), Ebene Einzelbuchung, Tag, Monat (Vorgabe) oder Jahr. Bei Monat steht der letzte Tag des Monats, bei Jahr der 31.12. Je Zusammenfassungsebene (z. B. je Monat) sind Bar und Stiftung getrennt ausgewiesen (Spalte „Zahlungsart“, nur bei Kunden). Bei Kunden werden weder Name noch Buchungstext exportiert, bei Lieferanten der Name. Ein Hinweis erscheint, wenn eine Buchung nicht zum Kontakttyp passt.',
       )),
 
     sec('9. Einstellungen',
       ul(
         'Eigene Firma (erscheint auf Quittungen), Start (Menü oder Buchung nach „Daten prüfen“), Standard-Speicherbutton bei Kunden/Lieferanten, Gerätename, Sicherungs-Optionen, PIN ändern.',
-        'Kategorien: neu, ändern, löschen; Löschen nur, wenn sie nirgends verwendet werden.',
+        'Kategorien: neu, ändern, löschen; Löschen nur, wenn sie nirgends verwendet werden. Die frühere Kategorie „Stiftung“ wird bei der Erfassung nicht mehr angeboten; sie bleibt bestehen, solange alte Buchungen sie verwenden.',
+        h('span', {}, b('Buchungen migrieren (einmalig): '), 'Einstellungen → „Buchungen migrieren“ → „Migration öffnen“. Die bisherigen Buchungen (eine Kategorie je Buchung) werden in die neue Struktur übernommen: Buchungen eines Kunden am selben Tag werden zu einer Buchung zusammengefasst, Stiftung-Buchungen werden aufgeteilt (über CHF 91.00: 91.00 Podologie und der Rest Verkauf; genau 91.00 oder negativ: Podologie; darunter: Verkauf; alle mit „Stiftung“). Der Dialog zeigt je Vorschlag „Alt“ und „Neu“ sowie Kontrollsummen; Auffälliges (⚠) ist nicht vorgewählt und muss bestätigt werden. Es wird nur übernommen, was gewählt ist und wenn die Summen alt und neu übereinstimmen. Vorher eine Datensicherung erstellen.'),
+        'Die alten Buchungen werden nie verändert. Die Migration lässt sich wiederholen: „Neu aufbauen“ verwirft die migrierten Buchungen (von Hand erfasste bleiben) und berechnet die Vorschläge neu. Im Menü weist ein Hinweis auf noch nicht übernommene Buchungen hin. Das Kassenbuch und die Auswertungen zeigen nur übernommene bzw. neu erfasste Buchungen.',
       )),
 
     sec('10. Notizen',
