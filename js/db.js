@@ -99,7 +99,12 @@ export const kontaktSaveDefault = () => (data.meta.kontaktSaveDefault === 'zurue
 export const setMeta = (key, value, touch = false) => put('meta', { key, value }, touch);
 /** Filtereinstellungen je Bildschirm (Kassenbuch, Auswertungen): liegen in meta.filters, gehen in die Sicherung und werden beim Restore wiederhergestellt. */
 export const getFilter = (name) => ({ ...(data.meta.filters?.[name] || {}) });
-export const saveFilter = (name, obj) => setMeta('filters', { ...(data.meta.filters || {}), [name]: obj });
+/** Der Arbeitsspeicher wird sofort aktualisiert (nicht erst nach dem Schreiben in die Datenbank): Screens zeichnen direkt nach dem Klick neu und lesen die Filter wieder aus dem Cache. */
+export const saveFilter = (name, obj) => {
+  const filters = { ...(data.meta.filters || {}), [name]: obj };
+  data.meta.filters = filters;
+  return setMeta('filters', filters);
+};
 
 // ---- Stammdaten / Seed --------------------------------------------------
 export const DEFAULT_KUNDENKATEGORIEN = ['Maria', 'Michael', 'Externe'];

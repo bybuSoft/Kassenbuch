@@ -171,3 +171,13 @@ test('Dublettenprüfung Buchungen: gleicher Kontakt, Datum, Summe', async () => 
   assert.equal(db.findDuplicateBuchungen(buchung(db, k.id, c, 7000, 'neu')).length, 0, 'anderer Betrag');
   assert.equal(db.findDuplicateBuchungen({ ...buchung(db, k.id, c, 6500, 'neu'), datum: '2026-11-02' }).length, 0, 'anderes Datum');
 });
+
+test('Filter: nach saveFilter (ohne await) liefert getFilter sofort den neuen Wert (Neuzeichnen direkt nach dem Klick)', async () => {
+  const db = await freshDb();
+  const p = db.saveFilter('auswertungen', { custom: true, from: '2026-10-01', to: '2026-10-31' });
+  assert.equal(db.getFilter('auswertungen').from, '2026-10-01', 'sofort, nicht erst nach dem Schreiben');
+  await p;
+  assert.equal(db.getFilter('auswertungen').to, '2026-10-31');
+  db.saveFilter('kassenbuch', { art: 'einnahme' });
+  assert.equal(db.getFilter('auswertungen').from, '2026-10-01', 'andere Filter bleiben erhalten');
+});
