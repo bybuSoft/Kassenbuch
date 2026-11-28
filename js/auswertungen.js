@@ -15,8 +15,10 @@ const FKEYS = ['tab', 'custom', 'from', 'to', 'vj', 'level', 'year'];
 let senKats = null; // Auswahl der Kundenliste: wird nicht gespeichert, Vorgabe alle Kategorien (null = Vorgabe)
 let senZahl = 'stiftung'; // Zahlungsart der Kundenliste: 'stiftung' (Vorgabe), 'alle' oder 'bar'; nicht gespeichert
 let senSum = true; // Kundenliste: Beträge je Kunde und Tag zusammenfassen (Vorgabe ja); nicht gespeichert
+let senAlt = false; // Kundenliste: Datenquelle alt (Store „buchung“, vor der Migration); nur wählbar, solange es beide Datenstrukturen gibt
+let senKatsAlt = null; // Kategorienauswahl für die alten Daten (Vorgabe Stiftung)
 /** Beim Öffnen der Auswertungen und beim Reiterwechsel zurück auf die Vorgabe */
-export const resetAuswertungen = () => { senKats = null; senZahl = 'stiftung'; senSum = true; };
+export const resetAuswertungen = () => { senKats = null; senZahl = 'stiftung'; senSum = true; senAlt = false; senKatsAlt = null; };
 const saveState = () => db.saveFilter('auswertungen', Object.fromEntries(FKEYS.map((k) => [k, state[k]]))); // Filter werden mitgesichert
 const opened = new Set(); // aufgeklappte Drilldown-Zeilen (Schlüssel = Lieferant)
 const REPORTS = [
@@ -155,30 +157,37 @@ function kategorien() {
 
 // ---- Kundenliste (z. B. Seniorenzentrum): Vorname, Name, Betrag, gruppiert nach Tag, Total pro Monat ---------
 function senioren() {
-  const kats = db.erfassKategorien('einnahme');
-  // Mehrfachauswahl, nicht gespeichert; Vorgabe: alle Einnahme-Kategorien und Zahlungsart Stiftung
-  if (!senKats) senKats = kats.map((c) => c.id);
-  senKats = senKats.filter((id) => kats.some((c) => c.id === id));
-  const chosen = new Set(senKats);
-  const setKats = (ids) => { senKats = ids; nav.refresh(); };
+  // Datenquelle: neu (Positionen) oder alt (vor der Migration). Die Wahl gibt es nur, solange beide Datenstrukturen vorhanden sind.
+  const both = db.data.buchung.size > 0;
+  const alt = both && senAlt;
+  // Alte Daten: Kategorie je Buchung inkl. „Stiftung“ (Vorgabe Stiftung). Neue Daten: Kategorien ohne Stiftung, Zahlungsart je Position.
+  const kats = alt ? db.kategorienList('buchungskategorie', 'einnahme') : db.erfassKategorien('einnahme');
+  // Mehrfachauswahl, nicht gespeichert; Vorgabe neu: alle Einnahme-Kategorien und Zahlungsart Stiftung
+  let sel = alt ? senKatsAlt : senKats;
+  if (!sel) sel = alt ? (kats.some((c) => c.name === 'Stiftung') ? kats.filter((c) => c.name === 'Stiftung') : kats.slice(0, 1)).map((c) => c.id) : kats.map((c) => c.id);
+  sel = sel.filter((id) => kats.some((c) => c.id === id));
+  if (alt) senKatsAlt = sel; else senKats = sel;
+  const chosen = new Set(sel);
+  const setKats = (ids) => { if (alt) senKatsAlt = ids; else senKats = ids; nav.refresh(); };
   const allOn = kats.length > 0 && kats.every((c) => chosen.has(c.id));
   const kboxes = [checkField('Alle', h('input', { type: 'checkbox', checked: allOn, onchange: (e) => setKats(e.target.checked ? kats.map((c) => c.id) : []) })),
     ...kats.map((c) => checkField(c.name, h('input', { type: 'checkbox', checked: chosen.has(c.id), onchange: (e) => setKats(kats.filter((x) => (x.id === c.id ? e.target.checked : chosen.has(x.id))).map((x) => x.id)) })))];
   const zahlSel = segmented([{ value: 'stiftung', label: 'Stiftung' }, { value: 'bar', label: 'Bar' }, { value: 'alle', label: 'Alle' }], senZahl, (v) => { senZahl = v; nav.refresh(); });
   // Zusammengefasst: eine Zeile je Kunde und Tag, ohne Kategorie und Zahlungsart
   const multi = chosen.size > 1 && !senSum;
-  const showZahl = senZahl === 'alle' && !senSum;
-  const bs = db.zeilen(db.buchungenList()).filter(inRange).filter((b) => db.artOf(b) === 'einnahme' && chosen.has(b.kategorieId)
-    && (senZahl === 'alle' || (senZahl === 'stiftung') === b.stiftung))
+  const showZahl = !alt && senZahl === 'alle' && !senSum;
+  const quelle = alt ? db.altBuchungenList() : db.zeilen(db.buchungenList());
+  const bs = quelle.filter(inRange).filter((b) => db.artOf(b) === 'einnahme' && chosen.has(b.kategorieId)
+    && (alt || senZahl === 'alle' || (senZahl === 'stiftung') === b.stiftung))
     .sort((a, b) => (a.datum < b.datum ? -1 : a.datum > b.datum ? 1 : (a.created || 0) - (b.created || 0)));
   const out = h('div', { class: 'report' });
   const katName = allOn ? 'alle Buchungskategorien' : kats.filter((c) => chosen.has(c.id)).map((c) => c.name).join(', ');
   const zahlName = { stiftung: 'Zahlungsart Stiftung', bar: 'Zahlungsart bar', alle: 'alle Zahlungsarten' }[senZahl];
   const eig = db.eigene();
-  out.append(h('p', {}, h('strong', {}, db.kontaktName(eig))), h('h3', {}, `Kundenliste${katName ? ` ${katName}` : ''} – ${zahlName}`),
+  out.append(h('p', {}, h('strong', {}, db.kontaktName(eig))), h('h3', {}, `Kundenliste${katName ? ` ${katName}` : ''}${alt ? ' – alte Daten' : ` – ${zahlName}`}`),
     h('p', { class: 'muted' }, `${fmtDate(state.from)} – ${fmtDate(state.to)}`, h('br'), `Erstellt: ${fmtDateTime(Date.now())}`));
   if (!chosen.size) out.append(h('p', { class: 'muted' }, 'Bitte mindestens eine Buchungskategorie wählen.'));
-  else if (!bs.length) out.append(h('p', { class: 'muted' }, 'Keine Buchungen für die gewählten Buchungskategorien und die Zahlungsart im gewählten Zeitraum.'));
+  else if (!bs.length) out.append(h('p', { class: 'muted' }, alt ? 'Keine alten Buchungen für die gewählten Buchungskategorien im gewählten Zeitraum.' : 'Keine Buchungen für die gewählten Buchungskategorien und die Zahlungsart im gewählten Zeitraum.'));
   else {
     // je Kunde eine Gruppe (Name, Vorname), darin Positionen nach Datum aufsteigend, mit Zwischensumme
     const groups = new Map();
@@ -200,9 +209,11 @@ function senioren() {
     rows.push(h('tr', { class: 'total' }, h('td', { colspan: cols - 1 }, `Gesamttotal (${list.length} Kunde${list.length === 1 ? '' : 'n'})`), h('td', { class: 'num' }, chf(sum(bs)))));
     out.append(h('table', { class: 'tbl amt' }, th('Datum', ...(multi ? ['Buchungskategorie'] : []), ...(showZahl ? ['Zahlungsart'] : []), { t: 'Betrag (CHF)', num: 1 }), h('tbody', {}, ...rows)));
   }
+  const quelleSel = both ? segmented([{ value: 'neu', label: 'Neu' }, { value: 'alt', label: 'Alt (vor Migration)' }], alt ? 'alt' : 'neu', (v) => { senAlt = v === 'alt'; nav.refresh(); }) : null;
   const node = h('div', { class: 'stack' },
+    quelleSel ? field('Daten (nur bis zum Entfernen der alten Struktur)', quelleSel) : null,
     h('fieldset', { class: 'fs' }, h('legend', {}, 'Buchungskategorien'), h('div', { class: 'checks' }, ...kboxes)),
-    field('Zahlungsart', zahlSel),
+    alt ? null : field('Zahlungsart', zahlSel),
     checkField('Beträge je Kunde und Tag zusammenfassen (ohne Kategorie)', h('input', { type: 'checkbox', checked: senSum, onchange: (e) => { senSum = e.target.checked; nav.refresh(); } })),
     h('div', { class: 'card' }, out));
   if (chosen.size) node._print = () => printNode(out.cloneNode(true));
